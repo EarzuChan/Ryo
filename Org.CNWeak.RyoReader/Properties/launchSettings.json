@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Org.CNWeak.RyoReader": {
+      "commandName": "Project",
+      "commandLineArgs": "load \"D:\\A Sources\\WeakPipeRecovery\\assets\\main.fs\""
+    }
+  }
+}
