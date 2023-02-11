@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Org.CNWeak.RyoReader
+namespace Org.CNWeak.RyoManipulator
 {
     class Program
     {
@@ -84,11 +84,12 @@ namespace Org.CNWeak.RyoReader
 
             if (args.Length > 0)
             {
+                manager.RunningWithArgs = true;
                 manager.ParseCommand(args);
                 return;
             }
 
-            Console.WriteLine("欢迎使用Ryo Reader：");
+            Console.WriteLine("欢迎使用Ryo Manipulator：");
             while (true)
             {
                 Console.Write("\n> ");
@@ -103,6 +104,7 @@ namespace Org.CNWeak.RyoReader
         {
             private List<Command> commands = new List<Command>();
             private Action<string> LogListener;
+            public bool RunningWithArgs = false;
 
             public CommandManager()
             {
@@ -148,6 +150,11 @@ namespace Org.CNWeak.RyoReader
                         LogListener($"成员数：{mass.MyIdStrMap.Count}");
                         foreach (var item in mass.MyIdStrMap) LogListener($"-- Id.{item.Value} Name：{item.Key}");
                     }
+                    else
+                    {
+                        LogListener("加载失败，文件无效");
+                        MassManager.MassList.Remove(mass);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -168,6 +175,7 @@ namespace Org.CNWeak.RyoReader
                     LogListener($"找到文件：{str.ToUpper()}");
                     LogListener(mass.DumpBuffer());
                 }
+                else LogListener($"找不到文件：{str.ToUpper()}，请查看拼写是否正确，文件是否已正确加载？");
             }
 
             public void Pack()
@@ -184,6 +192,9 @@ namespace Org.CNWeak.RyoReader
                 {
                     LogListener($"No.{i++} {cmd.Name} 用法：{cmd.Help}");
                 }
+
+                if (!RunningWithArgs) LogListener("如需退出，键入Exit。");
+                LogListener("唯科出品，必属精品。");
             }
 
             public void ParseCommandLine(string input)
