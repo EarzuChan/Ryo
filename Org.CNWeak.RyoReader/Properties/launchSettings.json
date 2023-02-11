@@ -1,6 +1,10 @@
 {
   "profiles": {
-    "Org.CNWeak.RyoReader": {
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    },
+    "Org.CNWeak.RyoManipulator": {
       "commandName": "Project"
     }
   }
