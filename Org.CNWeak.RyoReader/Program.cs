@@ -3,8 +3,10 @@ using Org.CNWeak.Ryo.Commands;
 using Org.CNWeak.Ryo.IO;
 using Org.CNWeak.Ryo.Mass;
 using Org.CNWeak.Ryo.Utils;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Enumeration;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -16,7 +18,7 @@ namespace Org.CNWeak.Ryo
     {
         static void Main(string[] args)
         {
-            UsefulUtils.INSTANCE.SetLogger(str => Console.WriteLine(str));
+            LogUtil.INSTANCE.SetLogger(str => Console.WriteLine(str));
 
             if (args.Length > 0)
             {
@@ -90,7 +92,7 @@ namespace Org.CNWeak.Ryo
                 //Console.WriteLine("解析命令：");
                 if (args == null || args.Length == 0)
                 {
-                    UsefulUtils.INSTANCE.PrintInfo("命令为空，输入Help查看支持的命令。");
+                    LogUtil.INSTANCE.PrintInfo("命令为空，输入Help查看支持的命令。");
                     return;
                 }
 
@@ -111,11 +113,11 @@ namespace Org.CNWeak.Ryo
                                 return;
                             }
                         }
-                        UsefulUtils.INSTANCE.PrintInfo($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Help}");
+                        LogUtil.INSTANCE.PrintInfo($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Help}");
                         return;
                     }
                 }
-                UsefulUtils.INSTANCE.PrintInfo($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
+                LogUtil.INSTANCE.PrintInfo($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
             }
         }
 
@@ -147,17 +149,17 @@ namespace Org.CNWeak.Ryo
         [Command("Load", "Load file from path")]
         public class LoadCommand : ICommand
         {
-            public string path;
+            public string PathString;
             public LoadCommand(string path)
             {
-                this.path = path;
+                PathString = path;
             }
 
             public void Execute()
             {
                 try
                 {
-                    var stream = new FileStream(this.path, FileMode.Open);
+                    var stream = new FileStream(PathString, FileMode.Open);
                     if (stream.Length == 0) throw new Exception("文件长度为零");
 
                     var fileName = Path.GetFileNameWithoutExtension(stream.Name);
@@ -169,18 +171,19 @@ namespace Org.CNWeak.Ryo
 
                     if (mass.ReadyToUse)
                     {
+                        LogUtil.INSTANCE.PrintInfo("已载入，索引信息如下：\n");
                         CommandManager.INSTANCE.ParseCommand("Info", fileName);
-                        UsefulUtils.INSTANCE.PrintInfo($"\n档案已载入，名称：{fileName.ToUpper()}，稍后可凭借该名称Dump文件、查看索引信息、进行增删改查等操作。");
+                        LogUtil.INSTANCE.PrintInfo($"\n档案已载入，名称：{fileName.ToUpper()}，稍后可凭借该名称Dump文件、查看索引信息、进行增删改查等操作。");
                     }
                     else
                     {
-                        UsefulUtils.INSTANCE.PrintInfo("加载失败，文件无效，请检查您指定的文件是否存在、正确、未损坏。");
+                        LogUtil.INSTANCE.PrintInfo("载入失败，文件无效，请检查您指定的文件是否存在、正确、未损坏。");
                         CommandManager.INSTANCE.ParseCommand("Unload", fileName);
                     }
                 }
                 catch (Exception e)
                 {
-                    UsefulUtils.INSTANCE.PrintError("加载文件失败", e);
+                    LogUtil.INSTANCE.PrintError("载入文件失败", e);
                 }
             }
         }
@@ -188,41 +191,35 @@ namespace Org.CNWeak.Ryo
         [Command("Info", "Show the info of a file")]
         public class InfoCommand : ICommand
         {
-            public string str;
-            public InfoCommand(string str)
+            public string FileName;
+            public InfoCommand(string fileName)
             {
-                this.str = str;
+                FileName = fileName;
             }
             public void Execute()
             {
-                var mass = MassManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == str.ToLower());
+                var mass = MassManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == FileName.ToLower());
                 if (mass != null && mass.ReadyToUse)
                 {
-                    UsefulUtils.INSTANCE.PrintInfo(str.ToUpper() + "的索引信息：\n");
-                    UsefulUtils.INSTANCE.PrintInfo($"整数数组数据数：{mass.ObjCount}，以下为已序列化类ID、压缩情况、索引、G3：");
-                    for (var i = 0; i < mass.ObjCount; i++) UsefulUtils.INSTANCE.PrintInfo($"-- No.{i + 1} 已序列化类ID：{mass.已序列化类IDs[i]} 已压缩：{(mass.已压缩List[i] ? "是" : "否")} 末尾索引：{mass.EndPosition[i]} G3：{mass.IntGroup3[i]}");
-                    UsefulUtils.INSTANCE.PrintInfo($"G3L1数：{mass.G3L1}，以下为G4");
+                    LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
+                    LogUtil.INSTANCE.PrintInfo($"碎片数据数：{mass.ObjCount}");
+                    for (var i = 0; i < mass.ObjCount; i++) LogUtil.INSTANCE.PrintInfo($"-- Id.{i} 适配项ID：{mass.DataAdapterIdArray[i]} 已压缩：{(mass.IsItemDeflatedArray[i] ? "是" : "否")} 起始索引：{(i == 0 ? 0 : mass.EndPosition[i - 1])} 长度：{mass.EndPosition[i] - (i == 0 ? 0 : mass.EndPosition[i - 1])} 粘连数据：{mass.StickedDataList[i]}");
+                    LogUtil.INSTANCE.PrintInfo($"\n粘连元数据数：{mass.StickedMetaDataItemCount}，以下为粘连元数据");
                     int currentIndex = 0;
-                    while (currentIndex < mass.G3L1)
+                    while (currentIndex < mass.StickedMetaDataItemCount)
                     {
                         List<string> str = new();
-                        for (int i = 0; i < 4 && currentIndex < mass.G3L1; i++)
+                        for (int i = 0; i < 4 && currentIndex < mass.StickedMetaDataItemCount; i++)
                         {
-                            str.Add("No." + (currentIndex + 1) + "：" + mass.IntGroup4[currentIndex]);
+                            str.Add("No." + (currentIndex + 1) + "：" + mass.StickedMetaDataList[currentIndex]);
                             currentIndex++;
                         }
-                        UsefulUtils.INSTANCE.PrintInfo(str.ToArray());
+                        LogUtil.INSTANCE.PrintInfo(str.ToArray());
                     }
-                    UsefulUtils.INSTANCE.PrintInfo($"\n类注册数：{mass.MyRegList.Count}");
-                    foreach (var item in mass.MyRegList) UsefulUtils.INSTANCE.PrintInfo($"-- No.{item.Id} 类名：{item.ClazzName} 序列化器：{item.序列化器Name}");
-                    UsefulUtils.INSTANCE.PrintInfo($"\n成员数：{mass.MyIdStrMap.Count}");
-                    var j = 1;
-                    foreach (var item in mass.MyIdStrMap)
-                    {
-                        UsefulUtils.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key} 对应No.{j}");
-                        j++;
-                    }
-
+                    LogUtil.INSTANCE.PrintInfo($"\n数据适配项数：{mass.MyRegableDataAdaptionList.Count}");
+                    foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} 数据类型：{item.DataType} 适配器：{item.AdapterType}");
+                    LogUtil.INSTANCE.PrintInfo($"\n正式数据项数：{mass.MyIdStrMap.Count}");
+                    foreach (var item in mass.MyIdStrMap) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key}");
                 }
             }
         }
@@ -230,34 +227,34 @@ namespace Org.CNWeak.Ryo
         [Command("Unload", "Unload a file by its name")]
         public class UnloadCommand : ICommand
         {
-            public string fileName;
+            public string FileName;
             public UnloadCommand(string fileName)
             {
-                this.fileName = fileName;
+                FileName = fileName;
             }
             public void Execute()
             {
-                MassManager.INSTANCE.MassList.Remove(MassManager.INSTANCE.MassList.Find(a => a.Name == fileName)!);
+                MassManager.INSTANCE.MassList.Remove(MassManager.INSTANCE.MassList.Find(a => a.Name == FileName)!);
             }
         }
 
         [Command("Dump", "Dump the objects blob of a file")]
         public class DumpCommand : ICommand
         {
-            public string str;
+            public string FileName;
             public DumpCommand(string str)
             {
-                this.str = str;
+                FileName = str;
             }
             public void Execute()
             {
-                var mass = MassManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == str.ToLower());
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
                 if (mass != null && mass.ReadyToUse)
                 {
-                    UsefulUtils.INSTANCE.PrintInfo($"找到文件：{str.ToUpper()}");
-                    UsefulUtils.INSTANCE.PrintInfo(mass.DumpBuffer());
+                    LogUtil.INSTANCE.PrintInfo($"找到文件：{FileName.ToUpper()}");
+                    LogUtil.INSTANCE.PrintInfo(mass.DumpBuffer());
                 }
-                else UsefulUtils.INSTANCE.PrintInfo($"找不到文件：{str.ToUpper()}，请查看拼写是否正确，文件是否已正确加载？");
+                else LogUtil.INSTANCE.PrintInfo($"找不到文件：{FileName.ToUpper()}，请查看拼写是否正确，文件是否已正确加载？");
             }
         }
 
@@ -266,26 +263,61 @@ namespace Org.CNWeak.Ryo
         {
             public void Execute()
             {
-                UsefulUtils.INSTANCE.PrintInfo($"如今支持{CommandManager.INSTANCE.commands.Count}个命令，使用方法如下：");
+                LogUtil.INSTANCE.PrintInfo($"如今支持{CommandManager.INSTANCE.commands.Count}个命令，使用方法如下：");
 
                 int i = 1;
                 foreach (var cmd in CommandManager.INSTANCE.commands)
                 {
-                    UsefulUtils.INSTANCE.PrintInfo($"No.{i++} {cmd.Key.Name} 用法：{cmd.Key.Help}");
+                    LogUtil.INSTANCE.PrintInfo($"No.{i++} {cmd.Key.Name} 用法：{cmd.Key.Help}");
                 }
 
-                if (!CommandManager.INSTANCE.RunningWithArgs) UsefulUtils.INSTANCE.PrintInfo("\n如需退出，键入Exit。");
+                if (!CommandManager.INSTANCE.RunningWithArgs) LogUtil.INSTANCE.PrintInfo("\n如需退出，键入Exit。");
+            }
+        }
+
+        [Command("Get", "Get the item infomation of your given id in a file")]
+        public class ReadCommand : ICommand
+        {
+            public string FileName;
+            public int Id;
+            public ReadCommand(string fileName, string id)
+            {
+                FileName = fileName;
+                Id = int.Parse(id);
+            }
+            public void Execute()
+            {
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
+                try
+                {
+                    if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+                    var buffer = mass!.GetItemById<byte[]>(Id);
+                    if (buffer == null || buffer.Length == 0) throw new Exception("请求的对象为空");
+                    if (string.IsNullOrWhiteSpace(mass.FullPath)) throw new Exception("保存路径为空");
+
+                    using (FileStream fs = new(mass.FullPath + $".{Id}.dump", FileMode.Create, FileAccess.Write))
+                    {
+                        fs.Write(buffer, 0, buffer.Length);
+                    }
+                    LogUtil.INSTANCE.PrintInfo("保存成功，路径：" + mass.FullPath + $".{Id}.dump");
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.INSTANCE.PrintError($"不能写出对象，因为{ex.Message}", ex);
+                }
             }
         }
     }
 
     namespace Utils
     {
-        public class UsefulUtils
+        public class LogUtil
         {
-            public static UsefulUtils INSTANCE { get { instance ??= new(); return instance; } }
-            private static UsefulUtils? instance;
-            private Action<string> Logger = (str) => { Trace.WriteLine(str); };
+            public static LogUtil INSTANCE { get { instance ??= new(); return instance; } }
+            private static LogUtil? instance;
+
+            private Action<string> Logger = str => Trace.WriteLine(str);
+
             public void SetLogger(Action<string> logger) => Logger = logger;
             public void PrintError(String info, Exception e)
             {
@@ -297,6 +329,12 @@ namespace Org.CNWeak.Ryo
             {
                 Logger(string.Join(' ', args));
             }
+        }
+
+        public class CompressionUtil
+        {
+            public static CompressionUtil INSTANCE { get { instance ??= new(); return instance; } }
+            private static CompressionUtil? instance;
 
             public byte[] Inflate(byte[] input, int offset, int length)
             {
@@ -316,7 +354,7 @@ namespace Org.CNWeak.Ryo
                 }
                 catch (Exception e)
                 {
-                    PrintError("解压出错", e);
+                    LogUtil.INSTANCE.PrintError("解压出错", e);
                     return Array.Empty<byte>();
                 }
             }
@@ -340,10 +378,11 @@ namespace Org.CNWeak.Ryo
             {
                 get => Reader.BaseStream.Position;
             }
+            public byte[] Buffer { get; set; }
 
             public InputStreamReader(Stream inputStream)
             {
-                this.Reader = new BinaryReader(inputStream);
+                Reader = new BinaryReader(inputStream);
             }
 
             public byte[] ReadBytes(int length)
@@ -410,33 +449,75 @@ namespace Org.CNWeak.Ryo
 
             public int ObjCount = 0;
             public int CurrentObjCount = 0;
-            public List<int> 已序列化类IDs = new();
+            public List<int> DataAdapterIdArray = new();
             public List<int> EndPosition = new();
-            public List<bool> 已压缩List = new();
-            public List<int> IntGroup3 = new();
-            public List<int> IntGroup4 = new();
-            public int G3L1 = 0;
-            //public int RegCount = 0;
-            public int KVCount = 0;
-            public byte[] Buffer = Array.Empty<byte>();
+            public List<bool> IsItemDeflatedArray = new();
+            public List<int> StickedDataList = new();
+            public List<int> StickedMetaDataList = new();
+            public byte[] RealItemDataBuffer = Array.Empty<byte>();
+            public byte[] WorkBuffer = Array.Empty<byte>();
             public Dictionary<string, int> MyIdStrMap = new();
-            public List<RegItem> MyRegList = new();
+            public int StickedMetaDataItemCount = 0;
+            public List<RegableDataAdaption> MyRegableDataAdaptionList = new();
 
             public bool ReadyToUse = true;
             public bool IsEmpty = true;
+            public int SavedStickedDataIntArrayIdMinusOne = -1;
+            public int SavedStickedDataIntArrayId = -1;
+            public int SavedId = -1;
 
-            public class RegItem
+            public class RegableDataAdaption
             {
-                public string ClazzName { get; set; }
-                public string 序列化器Name { get; set; }
+                public string DataType { get; set; }
+                public string AdapterType { get; set; }
                 public int Id { get; set; }
 
-                public RegItem(int id, string str1, string str2)
+                public RegableDataAdaption(int id, string dataType, string adapterType)
                 {
                     Id = id;
-                    ClazzName = str1;
-                    序列化器Name = str2;
+                    DataType = dataType;
+                    AdapterType = adapterType;
                 }
+            }
+
+            public T? GetItemById<T>(int id)
+            {
+                if (!ReadyToUse) throw new Exception("文件未准备好");
+
+                bool isItemDeflated = IsItemDeflatedArray[id];
+                int dataAdapterId = DataAdapterIdArray[id];
+
+                //Class <?> theObjTypeShouldBe = 方法_取已序列化的类(idOfXuLieHuaQi);
+                //接口_序列化器 <?> xuliehuaqi = 方法_取序列化器(idOfXuLieHuaQi);
+
+                byte[] oldWorkBuffer = WorkBuffer;
+                /*byte[] bufferOfInputStream = Reader.Buffer;
+                int inputReaderPosition = (int)Reader.Position;
+                int inputReaderLimit = (int)Reader.Length;*/
+                int oldStickedDataIntArrayIdMinusOne = SavedStickedDataIntArrayIdMinusOne;
+                int oldStickedDataIntArrayId = SavedStickedDataIntArrayId;
+                int oldIdSaves = SavedId;
+
+                int blobStartPosition = id == 0 ? 0 : EndPosition[id - 1];
+                int blobLength = EndPosition[id] - blobStartPosition;
+
+                SavedId = id;
+                SavedStickedDataIntArrayIdMinusOne = id == 0 ? 0 : StickedDataList[id - 1];
+                SavedStickedDataIntArrayId = StickedDataList[id];
+
+                //LogUtil.INSTANCE.PrintInfo("ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", blobLength.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
+
+                WorkBuffer = isItemDeflated ? CompressionUtil.INSTANCE.Inflate(RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray(), 0, blobLength) : RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray();
+
+                if (typeof(T) == typeof(byte[])) return (T)(object)WorkBuffer;
+                else
+                {
+                    //TODO:拨弄构建李建新
+                }
+
+
+                WorkBuffer = oldWorkBuffer;
+                return default;
             }
 
             public MassFile(string name)
@@ -454,21 +535,23 @@ namespace Org.CNWeak.Ryo
                     Writer = new();
                     ObjCount = 0;
                     CurrentObjCount = 0;
-                    已序列化类IDs = new();
+                    DataAdapterIdArray = new();
                     EndPosition = new();
-                    IntGroup3 = new();
-                    IntGroup4 = new();
-                    G3L1 = 0;
-                    //RegCount = 0;
-                    KVCount = 0;
-                    Buffer = Array.Empty<byte>();
+                    StickedDataList = new();
+                    StickedMetaDataList = new();
+                    StickedMetaDataItemCount = 0;
+                    RealItemDataBuffer = Array.Empty<byte>();
+                    WorkBuffer = Array.Empty<byte>();
 
+                    SavedStickedDataIntArrayId = -1;
+                    SavedStickedDataIntArrayIdMinusOne = -1;
+                    SavedId = -1;
                     IsEmpty = true;
                     ReadyToUse = true;
                 }
                 catch (Exception e)
                 {
-                    UsefulUtils.INSTANCE.PrintError("加载Mass失败", e);
+                    LogUtil.INSTANCE.PrintError("加载Mass失败", e);
                 }
             }
 
@@ -488,8 +571,8 @@ namespace Org.CNWeak.Ryo
 
                     var num = Reader.ReadInt();
                     var isDeflated = (num & 1) != 0;
-                    var deflateLen = num >> 1;//Reader.ReadInt() >> 1;
-                    var indexDataBlob = isDeflated ? UsefulUtils.INSTANCE.Inflate(Reader.ReadBytes(deflateLen), 0, deflateLen) : Reader.ReadBytes(deflateLen);
+                    var deflateLen = num >> 1;
+                    var indexDataBlob = isDeflated ? CompressionUtil.INSTANCE.Inflate(Reader.ReadBytes(deflateLen), 0, deflateLen) : Reader.ReadBytes(deflateLen);
 
                     if (indexDataBlob != null && indexDataBlob.Length != 0)
                     {
@@ -500,20 +583,20 @@ namespace Org.CNWeak.Ryo
                         for (var i = 0; i < ObjCount; i++)
                         {
                             int j = inflatedDataReader.ReadInt();
-                            已序列化类IDs.Add(j >> 1);
-                            已压缩List.Add((j & 1) != 0);
+                            DataAdapterIdArray.Add(j >> 1);
+                            IsItemDeflatedArray.Add((j & 1) != 0);
                         }
 
                         for (var i = 0; i < ObjCount; i++)
                             EndPosition.Add(inflatedDataReader.ReadInt());
 
                         for (var i = 0; i < ObjCount; i++)
-                            IntGroup3.Add(inflatedDataReader.ReadInt());
+                            StickedDataList.Add(inflatedDataReader.ReadInt());
 
-                        G3L1 = IntGroup3.Last();
+                        StickedMetaDataItemCount = StickedDataList.Last();
 
-                        for (var i = 0; i < G3L1; i++)
-                            IntGroup4.Add(inflatedDataReader.ReadInt());
+                        for (var i = 0; i < StickedMetaDataItemCount; i++)
+                            StickedMetaDataList.Add(inflatedDataReader.ReadInt());
 
                         var regCount = inflatedDataReader.ReadInt();
                         for (var i = 0; i < regCount; i++)
@@ -521,7 +604,7 @@ namespace Org.CNWeak.Ryo
                             var id = inflatedDataReader.ReadInt();
                             var str1 = inflatedDataReader.ReadString();
                             var str2 = inflatedDataReader.ReadString();
-                            MyRegList.Add(new RegItem(id, str1, str2));
+                            MyRegableDataAdaptionList.Add(new RegableDataAdaption(id, str1, str2));
                         }
 
                         var idStrMapCount = inflatedDataReader.ReadInt();
@@ -532,36 +615,38 @@ namespace Org.CNWeak.Ryo
                             MyIdStrMap.Add(str, id);
                         }
                     }
-                    Buffer = Reader.ReadAllBytes();
+                    RealItemDataBuffer = Reader.ReadAllBytes();
 
                     ReadyToUse = true;
                     IsEmpty = false;
                 }
                 catch (Exception e)
                 {
-                    UsefulUtils.INSTANCE.PrintError("加载Mass失败", e);
+                    LogUtil.INSTANCE.PrintError("加载Mass失败", e);
                 }
-
-                file.Dispose();
+                finally
+                {
+                    file.Dispose();
+                }
             }
 
             public string DumpBuffer()
             {
                 if (!ReadyToUse || IsEmpty) return "未准备好或者内容为空";
-                if (String.IsNullOrWhiteSpace(FullPath)) return "保存路径为空";
+                if (string.IsNullOrWhiteSpace(FullPath)) return "保存路径为空";
                 var info = "保存";
                 try
                 {
-                    using (FileStream fs = new (FullPath + ".dump", FileMode.Create, FileAccess.Write))
+                    using (FileStream fs = new(FullPath + ".dump", FileMode.Create, FileAccess.Write))
                     {
-                        fs.Write(Buffer, 0, Buffer.Length);
+                        fs.Write(RealItemDataBuffer, 0, RealItemDataBuffer.Length);
                     }
                     info += "成功，路径：" + FullPath + ".dump";
                 }
                 catch (Exception ex)
                 {
-                    UsefulUtils.INSTANCE.PrintError("保存时错误", ex);
-                    info += "保存失败（悲";
+                    LogUtil.INSTANCE.PrintError("保存时错误", ex);
+                    info += "失败（悲";
                 }
                 return info;
             }
@@ -573,6 +658,8 @@ namespace Org.CNWeak.Ryo
             private static MassManager? instance;
 
             public List<MassFile> MassList = new();
+
+            public MassFile? GetMassFileByFileName(string fileName) => MassList.Find((MassFile m) => m.Name.ToLower() == fileName.ToLower());
         }
     }
 }
