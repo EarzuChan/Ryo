@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ryo 底层实现", "Org.CNWeak.RyoReader\Ryo 底层实现.csproj", "{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ryo", "Org.CNWeak.RyoReader\Ryo.csproj", "{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

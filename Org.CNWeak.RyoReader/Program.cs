@@ -1,18 +1,15 @@
 ﻿using ICSharpCode.SharpZipLib.Zip.Compression;
-using Org.CNWeak.Ryo.Commands;
-using Org.CNWeak.Ryo.IO;
-using Org.CNWeak.Ryo.Mass;
-using Org.CNWeak.Ryo.Utils;
-using System;
+using Me.Earzu.Ryo.Commands;
+using Me.Earzu.Ryo.Formats;
+using Me.Earzu.Ryo.IO;
+using Me.Earzu.Ryo.Mass;
+using Me.Earzu.Ryo.Utils;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Enumeration;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Input;
 
-namespace Org.CNWeak.Ryo
+namespace Me.Earzu.Ryo
 {
     public class ProgramMainBlob
     {
@@ -64,10 +61,7 @@ namespace Org.CNWeak.Ryo
                 }
             }
 
-            public CommandManager()
-            {
-                RegCmds();
-            }
+            public CommandManager() => RegCmds();
 
             public void ParseCommandLine(string input)
             {
@@ -167,7 +161,7 @@ namespace Org.CNWeak.Ryo
 
                     var mass = new MassFile(fileName);
 
-                    mass.Load(stream, "FileSystem");
+                    mass.Load(stream);
 
                     if (mass.ReadyToUse)
                     {
@@ -198,7 +192,7 @@ namespace Org.CNWeak.Ryo
             }
             public void Execute()
             {
-                var mass = MassManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == FileName.ToLower());
+                var mass = MassManager.INSTANCE.MassList.Find((MassBase m) => m.Name.ToLower() == FileName.ToLower());
                 if (mass != null && mass.ReadyToUse)
                 {
                     LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
@@ -217,9 +211,10 @@ namespace Org.CNWeak.Ryo
                         LogUtil.INSTANCE.PrintInfo(str.ToArray());
                     }
                     LogUtil.INSTANCE.PrintInfo($"\n数据适配项数：{mass.MyRegableDataAdaptionList.Count}");
+                    if (!typeof(MassFile).IsInstanceOfType(mass)) return;
                     foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} 数据类型：{item.DataType} 适配器：{item.AdapterType}");
-                    LogUtil.INSTANCE.PrintInfo($"\n正式数据项数：{mass.MyIdStrMap.Count}");
-                    foreach (var item in mass.MyIdStrMap) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key}");
+                    LogUtil.INSTANCE.PrintInfo($"\n正式数据项数：{((MassFile)mass).MyIdStrMap.Count}");
+                    foreach (var item in ((MassFile)mass).MyIdStrMap) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key}");
                 }
             }
         }
@@ -291,20 +286,214 @@ namespace Org.CNWeak.Ryo
                 try
                 {
                     if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
-                    var buffer = mass!.GetItemById<byte[]>(Id);
-                    if (buffer == null || buffer.Length == 0) throw new Exception("请求的对象为空");
-                    if (string.IsNullOrWhiteSpace(mass.FullPath)) throw new Exception("保存路径为空");
+                    var typename = mass.MyRegableDataAdaptionList[mass.DataAdapterIdArray[Id]].DataType;
+                    var item = mass.GetItemById(Id);
+                    /*if (buffer == null || buffer.Length == 0) throw new Exception("请求的对象为空");
+                    if (string.IsNullOrWhiteSpace(mass.FullPath)) throw new Exception("保存路径为空");*/
 
-                    using (FileStream fs = new(mass.FullPath + $".{Id}.dump", FileMode.Create, FileAccess.Write))
+                    LogUtil.INSTANCE.PrintInfo($"数据类型：{typename}\n数据：{FormatManager.INSTANCE.ItemToString(item)}");
+
+                    /*using (FileStream fs = new(mass.FullPath + $".{Id}.dump", FileMode.Create, FileAccess.Write))
                     {
                         fs.Write(buffer, 0, buffer.Length);
                     }
-                    LogUtil.INSTANCE.PrintInfo("保存成功，路径：" + mass.FullPath + $".{Id}.dump");
+                    LogUtil.INSTANCE.PrintInfo("保存成功，路径：" + mass.FullPath + $".{Id}.dump");*/
                 }
                 catch (Exception ex)
                 {
-                    LogUtil.INSTANCE.PrintError($"不能写出对象，因为{ex.Message}", ex);
+                    LogUtil.INSTANCE.PrintError($"不能获取对象 因为", ex);
                 }
+            }
+        }
+
+        [Command("Fuqi", "For dev only", true)]
+        public class FuqiCommand : ICommand
+        {
+            public void Execute()
+            {
+                CommandManager.INSTANCE.ParseCommand("Load", "D:\\A Sources\\WeakPipeRecovery\\assets\\fuqi.fs");
+            }
+        }
+    }
+
+    namespace Formats
+    {
+        public class FormatManager
+        {
+            public static FormatManager INSTANCE { get { instance ??= new(); return instance; } }
+            private static FormatManager? instance;
+
+            public Dictionary<ConverterAttribute, IConverter> converters = new();
+
+            public FormatManager() => RegConverterProxies();
+
+            public void RegConverterProxies()
+            {
+                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+                foreach (var type in types)
+                {
+                    var attribute = type.GetCustomAttribute<ConverterAttribute>();
+                    if (attribute != null && typeof(IConverter).IsAssignableFrom(type)) converters.Add(attribute, (IConverter)Activator.CreateInstance(type)!);
+                }
+            }
+
+            public IConverter GetConverterByName(string name)
+            {
+                foreach (var item in converters) if (name == item.Key.Name && item.Key.AllMatches) return item.Value;
+                LogUtil.INSTANCE.PrintInfo($"没有对于{name}的精确匹配");
+                foreach (var item in converters) if (name.StartsWith(item.Key.Name) && !item.Key.AllMatches) return item.Value;
+                throw new NotSupportedException($"也没有初略匹配，故格式{name}暂不支持");
+            }
+
+            public object ParseItem(MassBase mass, MassBaseFormatReader reader, string type)
+            {
+                try
+                {
+                    return GetConverterByName(type).CovertToObject(mass, reader);
+                }
+                catch (Exception e)
+                {
+                    LogUtil.INSTANCE.PrintError("怎么回事呢：", e);
+                }
+
+                return reader.ReadAllBytes();
+            }
+
+            public string ItemToString(object item)
+            {
+                Type type = item.GetType();
+                if (item == null) return "项目为Null";
+                else if (type == typeof(int[]))
+                {
+                    int[] iArr = (int[])item;
+                    return $"整数数组，长度：{iArr.Length}\n内容：{{{string.Join(",", iArr.Select(i => i.ToString()))}}}";
+                }
+                else if (type == typeof(byte[]))
+                {
+                    var it = (MassBaseFormatReader)(byte[])item;
+                    return $"字节数组，长度：{it.Length}\n内容：{{{it.ReadBytesToHexString((int)it.Length)}}}";
+                }
+                else
+                {
+                    string? str = item.ToString();
+                    return str == null ? "项目无内置转换，且强制转换结果为Null" : str!;
+                }
+            }
+        }
+
+        [AttributeUsage(AttributeTargets.Class)]
+        public class ConverterAttribute : Attribute
+        {
+            public string Name { get; set; }
+            public bool AllMatches { get; set; }
+
+            public ConverterAttribute(string name)
+            {
+                Name = name;
+                AllMatches = true;
+            }
+
+            public ConverterAttribute(string name, bool allMatches)
+            {
+                Name = name;
+                AllMatches = allMatches;
+            }
+        }
+
+        public interface IConverter
+        {
+            object CovertToObject(MassBase mass, MassBaseFormatReader reader);
+            byte[] CovertToBytes(object item);
+        }
+
+        [Converter("java.lang.Integer")]
+        public class IntConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader) => reader.ReadInt();
+        }
+
+        [Converter("java.lang.String")]
+        public class StringConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader) => reader.ReadString();
+        }
+
+        [Converter("[I")]
+        public class IntArrayConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader)
+            {
+                int i = reader.ReadInt();
+                int[] iArr = new int[i];
+                for (int i2 = 0; i2 < i; i2++)
+                {
+                    iArr[i2] = reader.ReadInt();
+                }
+                return iArr;
+            }
+        }
+
+        [Converter("[B")]
+        public class ByteArrayConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader)
+            {
+                return reader.ReadBytes(reader.ReadInt());
+            }
+        }
+
+        [Converter("sengine.graphics2d.FontSprites")]
+        public class FuqiFormatConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader)
+            {
+                mass.Read<int[]>();
+                mass.Read<byte[][]>();
+                reader.ReadFloat();
+                reader.ReadInt();
+                return "成功😄✌";
+            }
+        }
+
+        [Converter("[", false)]
+        public class ObjectArrayConverter : IConverter
+        {
+            public byte[] CovertToBytes(object item)
+            {
+                throw new NotImplementedException();
+            }
+
+            public object CovertToObject(MassBase mass, MassBaseFormatReader reader)
+            {
+                object[] objArr = new object[reader.ReadInt()];
+                mass.Reference(objArr);
+                for (int i = 0; i < objArr.Length; i++) objArr[i] = mass.Read<object>();
+                return objArr;
             }
         }
     }
@@ -322,7 +511,7 @@ namespace Org.CNWeak.Ryo
             public void PrintError(String info, Exception e)
             {
                 Logger(info + " " + e.Message);
-                Logger("堆栈：" + e.StackTrace);
+                Logger("堆栈：\n" + e.StackTrace);
             }
 
             public void PrintInfo(params string[] args)
@@ -363,7 +552,7 @@ namespace Org.CNWeak.Ryo
 
     namespace IO
     {
-        public class InputStreamReader : IDisposable
+        public class MassBaseFormatReader : IDisposable
         {
             private BinaryReader Reader;
             public long RestLength
@@ -372,15 +561,15 @@ namespace Org.CNWeak.Ryo
             }
             public long Length
             {
-                get => Reader.BaseStream.Length;
+                get => Reader.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
             }
             public long Position
             {
-                get => Reader.BaseStream.Position;
+                get => Reader.BaseStream.Position; //不应该，应该是读缓冲区，虽然我没用
             }
-            public byte[] Buffer { get; set; }
+            //public byte[] Buffer { get; set; }
 
-            public InputStreamReader(Stream inputStream)
+            public MassBaseFormatReader(Stream inputStream)
             {
                 Reader = new BinaryReader(inputStream);
             }
@@ -390,11 +579,7 @@ namespace Org.CNWeak.Ryo
                 return Reader.ReadBytes(length);
             }
 
-            public int ReadInt()
-            {
-                int result = BitConverter.ToInt32(Reader.ReadBytes(4).Reverse().ToArray(), 0);
-                return result;
-            }
+            public int ReadInt() => BitConverter.ToInt32(Reader.ReadBytes(4).Reverse().ToArray(), 0);
 
             public string ReadBytesToHexString(int length)
             {
@@ -406,7 +591,7 @@ namespace Org.CNWeak.Ryo
                     sb.Append(string.Format("{0:X2}", bytes[i]));
                     if (i < bytes.Length - 1)
                     {
-                        sb.Append("-");
+                        sb.Append(',');
                     }
                 }
 
@@ -432,21 +617,75 @@ namespace Org.CNWeak.Ryo
             }
 
             public byte[] ReadAllBytes() => Reader.ReadBytes((int)RestLength);
+
+            public float ReadFloat() => BitConverter.ToSingle(ReadBytes(4).Reverse().ToArray(), 0);
+
+            public static implicit operator MassBaseFormatReader(byte[] buffer)
+            {
+                return new MassBaseFormatReader(new MemoryStream(buffer));
+            }
         }
 
-        public class OutputStreamWriter { }
+        public class MassBaseFormatWriter { }
+
+        public class UsefulBuffer
+        {
+            public byte[] Buffer;
+            public int Length { get => Buffer.Length; }
+            public int Limit { set; get; }
+            public int Position { set; get; }
+
+            public UsefulBuffer() => Buffer = Array.Empty<byte>();
+
+            public UsefulBuffer(byte[] buffer) => Buffer = buffer;
+        }
     }
 
     namespace Mass
     {
-        public class MassFile
+        public class MassFile : MassBase
         {
+            // 常量
+            public new const string EXTENDED_NAME = "FileSystem";
+
+            // 成员变量
+            public Dictionary<string, int> MyIdStrMap = new();
+
+            public MassFile(string name) : base(name) { }
+
+            public override void AfterLoadingIndex(MassBaseFormatReader inflatedDataReader)
+            {
+                // LogUtil.INSTANCE.PrintInfo("芝士");
+
+                var idStrMapCount = inflatedDataReader.ReadInt();
+                for (var i = 0; i < idStrMapCount; i++)
+                {
+                    var str = inflatedDataReader.ReadString();
+                    var id = inflatedDataReader.ReadInt();
+                    MyIdStrMap.Add(str, id);
+                }
+            }
+
+            public void Load(FileStream file)
+            {
+                Load(file, EXTENDED_NAME);
+            }
+        }
+
+        public class MassBase
+        {
+            // 常量
+            public const string EXTENDED_NAME = "MASS";
+
+            // 文件名和路径
             public string Name = "";
             public string FullPath = "";
 
-            public InputStreamReader Reader = new(Stream.Null);
-            public OutputStreamWriter Writer = new();
+            // 暂存读写器
+            public MassBaseFormatReader Reader = new(Stream.Null);
+            public MassBaseFormatWriter Writer = new();
 
+            // 相关成员变量
             public int ObjCount = 0;
             public int CurrentObjCount = 0;
             public List<int> DataAdapterIdArray = new();
@@ -455,22 +694,24 @@ namespace Org.CNWeak.Ryo
             public List<int> StickedDataList = new();
             public List<int> StickedMetaDataList = new();
             public byte[] RealItemDataBuffer = Array.Empty<byte>();
-            public byte[] WorkBuffer = Array.Empty<byte>();
-            public Dictionary<string, int> MyIdStrMap = new();
+            public UsefulBuffer WorkBuffer = new UsefulBuffer();
             public int StickedMetaDataItemCount = 0;
             public List<RegableDataAdaption> MyRegableDataAdaptionList = new();
 
+            // 暂存变量
             public bool ReadyToUse = true;
             public bool IsEmpty = true;
             public int SavedStickedDataIntArrayIdMinusOne = -1;
             public int SavedStickedDataIntArrayId = -1;
             public int SavedId = -1;
 
+            // 可注册项
             public class RegableDataAdaption
             {
                 public string DataType { get; set; }
                 public string AdapterType { get; set; }
                 public int Id { get; set; }
+                // TODO:类型适配器
 
                 public RegableDataAdaption(int id, string dataType, string adapterType)
                 {
@@ -480,9 +721,10 @@ namespace Org.CNWeak.Ryo
                 }
             }
 
-            public T? GetItemById<T>(int id)
+            // 根据ID获取项目
+            public object GetItemById(int id)
             {
-                if (!ReadyToUse) throw new Exception("文件未准备好");
+                if (!ReadyToUse || IsEmpty) throw new Exception("文件未准备好或为空");
 
                 bool isItemDeflated = IsItemDeflatedArray[id];
                 int dataAdapterId = DataAdapterIdArray[id];
@@ -490,10 +732,10 @@ namespace Org.CNWeak.Ryo
                 //Class <?> theObjTypeShouldBe = 方法_取已序列化的类(idOfXuLieHuaQi);
                 //接口_序列化器 <?> xuliehuaqi = 方法_取序列化器(idOfXuLieHuaQi);
 
-                byte[] oldWorkBuffer = WorkBuffer;
-                /*byte[] bufferOfInputStream = Reader.Buffer;
+                /*byte[] oldWorkBuffer = Reader.Buffer;
                 int inputReaderPosition = (int)Reader.Position;
                 int inputReaderLimit = (int)Reader.Length;*/
+                UsefulBuffer workBuffer = WorkBuffer;
                 int oldStickedDataIntArrayIdMinusOne = SavedStickedDataIntArrayIdMinusOne;
                 int oldStickedDataIntArrayId = SavedStickedDataIntArrayId;
                 int oldIdSaves = SavedId;
@@ -505,27 +747,27 @@ namespace Org.CNWeak.Ryo
                 SavedStickedDataIntArrayIdMinusOne = id == 0 ? 0 : StickedDataList[id - 1];
                 SavedStickedDataIntArrayId = StickedDataList[id];
 
-                //LogUtil.INSTANCE.PrintInfo("ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", blobLength.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
+                WorkBuffer.Buffer = isItemDeflated ? CompressionUtil.INSTANCE.Inflate(RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray(), 0, blobLength) : RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray();
+                //LogUtil.INSTANCE.PrintInfo("源长度",RealItemDataBuffer.Length.ToString(),"ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", buffer.Length.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
 
-                WorkBuffer = isItemDeflated ? CompressionUtil.INSTANCE.Inflate(RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray(), 0, blobLength) : RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray();
+                //if (typeof(T) == typeof(byte[])) item = (T)(object)WorkBuffer.Buffer;
+                //else
+                //{
+                object item = FormatManager.INSTANCE.ParseItem(this, (MassBaseFormatReader)WorkBuffer.Buffer, MyRegableDataAdaptionList[DataAdapterIdArray[id]].DataType);
+                //}
 
-                if (typeof(T) == typeof(byte[])) return (T)(object)WorkBuffer;
-                else
-                {
-                    //TODO:拨弄构建李建新
-                }
-
-
-                WorkBuffer = oldWorkBuffer;
-                return default;
+                WorkBuffer = workBuffer;
+                return item;
             }
 
-            public MassFile(string name)
+            // 构造
+            public MassBase(string name)
             {
                 Name = name;
                 MassManager.INSTANCE.MassList.Add(this);
             }
 
+            // 重置
             public void Clean()
             {
                 ReadyToUse = false;
@@ -541,7 +783,7 @@ namespace Org.CNWeak.Ryo
                     StickedMetaDataList = new();
                     StickedMetaDataItemCount = 0;
                     RealItemDataBuffer = Array.Empty<byte>();
-                    WorkBuffer = Array.Empty<byte>();
+                    WorkBuffer = new UsefulBuffer();
 
                     SavedStickedDataIntArrayId = -1;
                     SavedStickedDataIntArrayIdMinusOne = -1;
@@ -555,6 +797,7 @@ namespace Org.CNWeak.Ryo
                 }
             }
 
+            // 加载
             public void Load(FileStream file, string format)
             {
                 FullPath = file.Name;
@@ -564,7 +807,7 @@ namespace Org.CNWeak.Ryo
                 ReadyToUse = false;
                 try
                 {
-                    Reader = new InputStreamReader(file);
+                    Reader = new MassBaseFormatReader(file);
 
                     var isCorrectFormat = Reader.CheckHasString(format);
                     if (!isCorrectFormat) return;
@@ -576,7 +819,7 @@ namespace Org.CNWeak.Ryo
 
                     if (indexDataBlob != null && indexDataBlob.Length != 0)
                     {
-                        using var inflatedDataReader = new InputStreamReader(new MemoryStream(indexDataBlob));
+                        using var inflatedDataReader = new MassBaseFormatReader(new MemoryStream(indexDataBlob));
                         ObjCount = inflatedDataReader.ReadInt();
                         CurrentObjCount = ObjCount;
 
@@ -607,13 +850,7 @@ namespace Org.CNWeak.Ryo
                             MyRegableDataAdaptionList.Add(new RegableDataAdaption(id, str1, str2));
                         }
 
-                        var idStrMapCount = inflatedDataReader.ReadInt();
-                        for (var i = 0; i < idStrMapCount; i++)
-                        {
-                            var str = inflatedDataReader.ReadString();
-                            var id = inflatedDataReader.ReadInt();
-                            MyIdStrMap.Add(str, id);
-                        }
+                        AfterLoadingIndex(inflatedDataReader);
                     }
                     RealItemDataBuffer = Reader.ReadAllBytes();
 
@@ -630,6 +867,10 @@ namespace Org.CNWeak.Ryo
                 }
             }
 
+            public virtual void AfterLoadingIndex(MassBaseFormatReader inflatedDataReader)
+            {
+                //LogUtil.INSTANCE.PrintInfo("怎么回事");
+            }
             public string DumpBuffer()
             {
                 if (!ReadyToUse || IsEmpty) return "未准备好或者内容为空";
@@ -650,16 +891,37 @@ namespace Org.CNWeak.Ryo
                 }
                 return info;
             }
+
+            // 读子项
+            public T Read<T>()
+            {
+                if (SavedStickedDataIntArrayIdMinusOne == SavedStickedDataIntArrayId) throw new Exception("噬主了");
+
+                SavedStickedDataIntArrayIdMinusOne++;
+                int metaOfIdMinusOne = StickedMetaDataList[SavedStickedDataIntArrayIdMinusOne];
+                int subitemId = metaOfIdMinusOne >> 2;
+
+                LogUtil.INSTANCE.PrintInfo($"读子项的ID：{subitemId}");
+                if ((metaOfIdMinusOne & 3) == 3) return (T)GetItemById(subitemId);
+                throw new NotSupportedException("三大欲望");
+            }
+
+            // 引用（实际上是暂存）
+            public void Reference(object objArr)
+            {
+                //TODO:实际上是暂存下
+                //throw new NotImplementedException();
+            }
         }
+    }
 
-        public class MassManager
-        {
-            public static MassManager INSTANCE { get { instance ??= new(); return instance; } }
-            private static MassManager? instance;
+    public class MassManager
+    {
+        public static MassManager INSTANCE { get { instance ??= new(); return instance; } }
+        private static MassManager? instance;
 
-            public List<MassFile> MassList = new();
+        public List<MassBase> MassList = new();
 
-            public MassFile? GetMassFileByFileName(string fileName) => MassList.Find((MassFile m) => m.Name.ToLower() == fileName.ToLower());
-        }
+        public MassBase? GetMassFileByFileName(string fileName) => MassList.Find((MassBase m) => m.Name.ToLower() == fileName.ToLower());
     }
 }
