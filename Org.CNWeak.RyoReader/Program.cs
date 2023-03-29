@@ -1,19 +1,22 @@
 ﻿using ICSharpCode.SharpZipLib.Zip.Compression;
-using Me.Earzu.Ryo.Adaptions;
-using Me.Earzu.Ryo.Adaptions.AdapterFactories;
-using Me.Earzu.Ryo.Commands;
-using Me.Earzu.Ryo.Formations;
-using Me.Earzu.Ryo.IO;
-using Me.Earzu.Ryo.Masses;
-using Me.Earzu.Ryo.Utils;
+using Me.EarzuChan.Ryo.Adaptions;
+using Me.EarzuChan.Ryo.Adaptions.AdapterFactories;
+using Me.EarzuChan.Ryo.Commands;
+using Me.EarzuChan.Ryo.Formations;
+using Me.EarzuChan.Ryo.IO;
+using Me.EarzuChan.Ryo.Masses;
+using Me.EarzuChan.Ryo.Utils;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Me.Earzu.Ryo
+namespace Me.EarzuChan.Ryo
 {
     public class ProgramMainBlob
     {
@@ -32,7 +35,7 @@ namespace Me.Earzu.Ryo
                 return;
             }
 
-            Console.WriteLine($"Ryo Console[Version {Assembly.GetExecutingAssembly().GetName().Version}]\nCopyright (C) Earzu Organization. All rights reserved.");
+            Console.WriteLine($"Ryo Console [Version {Assembly.GetExecutingAssembly().GetName().Version}]\nCopyright (C) Earzu Chan. All rights reserved.");
             while (true)
             {
                 Console.Write("\nE:\\Ryo\\User>");
@@ -127,8 +130,15 @@ namespace Me.Earzu.Ryo
                             var parameters = constructor.GetParameters();
                             if (cmdArgs.Length == parameters.Length)
                             {
-                                var command = (ICommand)constructor.Invoke(cmdArgs);
-                                command.Execute();
+                                try
+                                {
+                                    var command = (ICommand)constructor.Invoke(cmdArgs);
+                                    command.Execute();
+                                }
+                                catch (Exception e)
+                                {
+                                    LogUtil.INSTANCE.PrintError("命令执行出错", e);
+                                }
                                 return;
                             }
                         }
@@ -300,11 +310,13 @@ namespace Me.Earzu.Ryo
         {
             public string FileName;
             public int Id;
+
             public GetCommand(string fileName, string id)
             {
                 FileName = fileName;
                 Id = int.Parse(id);
             }
+
             public void Execute()
             {
                 var mass = MassFileManager.INSTANCE.GetMassFileByFileName(FileName);
@@ -316,7 +328,7 @@ namespace Me.Earzu.Ryo
                     /*if (buffer == null || buffer.Length == 0) throw new Exception("请求的对象为空");
                     if (string.IsNullOrWhiteSpace(mass.FullPath)) throw new Exception("保存路径为空");*/
 
-                    LogUtil.INSTANCE.PrintInfo($"数据类型：{typename}\n数据：{FormatManager.INSTANCE.ItemToString(item)}");
+                    LogUtil.INSTANCE.PrintInfo($"数据类型：{typename}\nEZ数据：\n{FormatManager.INSTANCE.OldItemToString(item)}\n数据：\n{FormatManager.INSTANCE.ItemToString(item)}");
 
                     /*using (FileStream fs = new(mass.FullPath + $".{Id}.dump", FileMode.Create, FileAccess.Write))
                     {
@@ -327,6 +339,38 @@ namespace Me.Earzu.Ryo
                 catch (Exception ex)
                 {
                     LogUtil.INSTANCE.PrintError($"不能获取对象", ex);
+                }
+            }
+        }
+
+        [Command("Search", "Search the target item in a file")]
+        public class SearchCommand : ICommand
+        {
+            public string FileName;
+            public string SearchName;
+            public SearchCommand(string fileName, string searchName)
+            {
+                FileName = fileName;
+                SearchName = searchName.ToLower();
+            }
+
+            public void Execute()
+            {
+                var mass = MassFileManager.INSTANCE.GetMassFileByFileName(FileName);
+                try
+                {
+                    if (mass == null) throw new Exception("档案不存在");
+
+                    var map = mass.MyIdStrMap;
+                    LogUtil.INSTANCE.PrintInfo("搜索结果：");
+                    foreach (var item in map)
+                    {
+                        if (item.Key.ToLower().Contains(SearchName)) LogUtil.INSTANCE.PrintInfo($"Id.{item.Value} 名称：{item.Key}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.INSTANCE.PrintError($"不能查找对象", ex);
                 }
             }
         }
@@ -826,6 +870,8 @@ namespace Me.Earzu.Ryo
 
         public interface IAdaptable
         {
+            // TODO:一、我希望能动态构建类；二、如果真没多个Mass构造器，那就改成根据类公开成员的顺序进行输入输出类型的构建
+
             [AttributeUsage(AttributeTargets.Constructor)]
             public class AdaptableConstructor : Attribute { }
 
@@ -847,319 +893,51 @@ namespace Me.Earzu.Ryo
             public static FormatManager INSTANCE { get { instance ??= new(); return instance; } }
             private static FormatManager? instance;
 
-            /*public Dictionary<OldAdapterAttribute, Type> oldAdapters = new();
-
-            public FormatManager() => RegOldAdapterProxies();
-
-            public void RegOldAdapterProxies()
+            public string OldItemToString(object item, string typeName = "无类名")
             {
-                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
-                foreach (var type in types)
-                {
-                    var attribute = type.GetCustomAttribute<OldAdapterAttribute>();
-                    if (attribute != null && typeof(IOldAdapter).IsAssignableFrom(type)) oldAdapters.Add(attribute, type);
-                }
-            }*/
+                // 我希望写出变量名
 
-            /*public IOldAdapter GetConverterByName(string name)
-            {
-                foreach (var item in oldAdapters) if (name == item.Key.Name && item.Key.AllMatches) return (IOldAdapter)Activator.CreateInstance(item.Value)!;
-                LogUtil.INSTANCE.PrintInfo($"没有对于{name}的精确匹配");
-                foreach (var item in oldAdapters) if (name.StartsWith(item.Key.Name) && !item.Key.AllMatches) return (IOldAdapter)Activator.CreateInstance(item.Value, name[1..])!;
-                throw new NotSupportedException($"没有精确匹配也没有初略匹配，故格式{name}暂不支持");
-            }*/
-
-            /*public object ParseItem(Mass mass, RyoReader reader, string type)
-            {
-                try
-                {
-                    return GetConverterByName(type).CovertToObject(mass, reader);
-                }
-                catch (Exception e)
-                {
-                    LogUtil.INSTANCE.PrintError("怎么回事呢：", e);
-                }
-
-                return reader.ReadAllBytes();
-            }*/
-
-            public string ItemToString(object item)
-            {
                 Type type = item.GetType();
                 if (item == null) return "项目为Null";
                 else if (type == typeof(int[]))
                 {
                     int[] iArr = (int[])item;
-                    return $"[整数数组 长度：{iArr.Length} 内容：{{{string.Join(",", iArr.Select(i => i.ToString()))}}}]";
+                    return $"{{\"整数数组:{iArr.Length}\":[{string.Join(',', iArr.Select(i => i.ToString()))}]}}";
                 }
                 else if (type == typeof(byte[]))
                 {
                     var it = (RyoReader)(byte[])item;
-                    return $"[字节数组 长度：{it.Length} 内容：{{{it.ReadBytesToHexString((int)it.Length)}}}]";
+                    return $"{{\"字节数组:{it.Length}\":\"{it.ReadBytesToHexString((int)it.Length)}\"}}";
                 }
                 else if (type.IsArray)
                 {
                     var strList = new List<string>();
                     foreach (var elem in (Array)item)
                     {
-                        strList.Add(ItemToString(elem));
+                        strList.Add(OldItemToString(elem));
                     }
-                    return $"[{type.Name} 长度：{(item as Array)?.Length ?? 0} 内容：{{{string.Join(",", strList)}}}]";
+                    return $"{{\"{type.GetElementType()?.Name}数组:{strList.Count}\":[{string.Join(',', strList)}]}}";
 
                 }
                 else if (typeof(IAdaptable).IsAssignableFrom(type))
                 {
-                    return ItemToString(((IAdaptable)item).GetAdaptedArray());
+                    return OldItemToString(((IAdaptable)item).GetAdaptedArray(), type.Name);
                 }
                 else
                 {
-                    string? str = item.ToString();
-                    return str == null ? "项目无内置转换，且强制转换结果为Null" : str!;
+                    string? str = item.ToString()!.Replace("\n", "\\n").Replace("\"", "\\\"");
+                    return '"' + (str ?? "项目无内置转换，且强制转换结果为Null") + '"';
                 }
             }
+
+            public string ItemToString(object item) => JsonConvert.SerializeObject(item, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto,
+                ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
+                //PreserveReferencesHandling = PreserveReferencesHandling.All,
+                Converters = new JsonConverter[] { new ExpandoObjectConverter() }
+            });//JsonSerializer.Serialize(item, item.GetType());
         }
-
-        /*namespace OldAdapters
-        {
-            [AttributeUsage(AttributeTargets.Class)]
-            public class OldAdapterAttribute : Attribute
-            {
-                public string Name { get; set; }
-                public bool AllMatches { get; set; }
-
-                public OldAdapterAttribute(string name)
-                {
-                    Name = name;
-                    AllMatches = true;
-                }
-
-                public OldAdapterAttribute(string name, bool allMatches)
-                {
-                    Name = name;
-                    AllMatches = allMatches;
-                }
-            }
-
-            public interface IOldAdapter
-            {
-                object CovertToObject(Mass mass, RyoReader reader);
-                byte[] CovertToBytes(object item);
-            }
-
-            [OldAdapter("java.lang.Integer")]
-            public class IntConverter : IOldAdapter
-            {
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader) => reader.ReadInt();
-            }
-
-            [OldAdapter("java.lang.String")]
-            public class StringConverter : IOldAdapter
-            {
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader) => reader.ReadString();
-            }
-
-            [OldAdapter("[I")]
-            public class IntArrayConverter : IOldAdapter
-            {
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader)
-                {
-                    int i = reader.ReadInt();
-                    int[] iArr = new int[i];
-                    for (int i2 = 0; i2 < i; i2++)
-                    {
-                        iArr[i2] = reader.ReadInt();
-                    }
-                    return iArr;
-                }
-            }
-
-            [OldAdapter("[B")]
-            public class ByteArrayConverter : IOldAdapter
-            {
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader)
-                {
-                    return reader.ReadBytes(reader.ReadInt());
-                }
-            }
-
-            [OldAdapter("sengine.graphics2d.FontSprites")]
-            public class FuqiFormatConverter : IOldAdapter
-            {
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader)
-                {
-                    // 不要硬写
-                    var iA = mass.Read<int[]>();
-                    var baa = mass.Read<byte[][]>();
-                    float f = reader.ReadFloat();
-                    int i = reader.ReadInt();
-                    return $"内容如下：\n\n整数数组：\n{FormatManager.INSTANCE.ItemToString(iA)}\n\n比特数组数组：\n{{\n{string.Join(", ", baa.Select(sub => FormatManager.INSTANCE.ItemToString(sub)))}\n}}\n\n浮点值：{f}\n\n整数值：{i}";
-                }
-            }
-
-            [OldAdapter("sengine.graphics2d.texturefile.FIFormat$FragmentedImageData")]
-            public class FragmentalImageConverter : IOldAdapter
-            {
-                // 计算分块数，按长度分割总数一共要多少块（不足的也给完整一块）
-                public static int CalculateBlockCount(int fullLength, int blockLength)
-                {
-                    int quotient = Math.DivRem(blockLength, fullLength, out int remainder);
-                    return (remainder != 0 ? 1 : 0) + quotient;
-                }
-
-
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader)
-                {
-                    // 过程有问题
-                    // LogUtil.INSTANCE.PrintInfo("开始解析图片...");
-
-                    int directLength;// 保留
-
-                    int clipCount = reader.ReadInt();
-                    int sliceCount = reader.ReadInt();
-
-                    // LogUtil.INSTANCE.PrintInfo($"总数：{clipCount} 层级：{sliceCount}");
-
-                    int[] sliceWidths = new int[sliceCount];
-                    int[] sliceHeights = new int[sliceCount];
-                    Pixmap[][] pixmaps = new Pixmap[sliceCount][];
-
-                    for (int i2 = 0; i2 < sliceCount; i2++)
-                    {
-                        try
-                        {
-                            // 每层的宽高
-                            sliceWidths[i2] = reader.ReadInt();
-                            sliceHeights[i2] = reader.ReadInt();
-
-                            //每层的格式
-                            Pixmap.FORMAT format = (Pixmap.FORMAT)reader.ReadPositiveByte();
-                            bool isSupport = format == Pixmap.FORMAT.RGB888 || format == Pixmap.FORMAT.RGB565;
-
-                            int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidths[i2]);
-                            int sliceClipCount = sliceBlockCount * CalculateBlockCount(clipCount, sliceHeights[i2]);
-
-                            // 每层块数
-                            pixmaps[i2] = new Pixmap[sliceClipCount];
-
-                            for (int i3 = 0; i3 < sliceClipCount; i3++)
-                            {
-                                int x = (i3 % sliceBlockCount) * clipCount;
-                                int y = (i3 / sliceBlockCount) * clipCount;
-                                int right = x + clipCount;
-                                int bottom = y + clipCount;
-
-                                if (right > sliceWidths[i2])
-                                {
-                                    right = sliceWidths[i2];
-                                }
-                                if (bottom > sliceHeights[i2])
-                                {
-                                    bottom = sliceHeights[i2];
-                                }
-
-                                if (!isSupport || (directLength = reader.ReadInt()) <= 0)
-                                {
-                                    Pixmap pixmap = new(right - x, bottom - y, format);
-                                    pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
-                                    pixmaps[i2][i3] = pixmap;
-                                }
-                                else
-                                {
-                                    pixmaps[i2][i3] = new(reader.ReadBytes(directLength));// 宽高怎么办
-                                }
-                            }
-                        }
-                        catch (Exception th)
-                        {
-                            //LogUtil.INSTANCE.PrintError("读取失败 将回收内存", th);
-
-                            foreach (Pixmap[] v1 in pixmaps)
-                            {
-                                if (v1 == null) continue;
-
-                                foreach (Pixmap v in v1) v?.Dispose();
-                            }
-                            throw new InvalidDataException("读取块时出现异常", th);
-                        }
-                    }
-                    return new FragmentalImage(clipCount, sliceWidths, sliceHeights, pixmaps);
-                }
-            }
-
-            [OldAdapter("[", false)]
-            public class ObjectArrayConverter : IOldAdapter
-            {
-                string SubObjType = "object";
-
-                public ObjectArrayConverter(string subObjType)
-                {
-                    SubObjType = subObjType;
-
-                    // LogUtil.INSTANCE.PrintInfo($"创建对于{SubObjType}的列表适配器");
-                }
-                public byte[] CovertToBytes(object item)
-                {
-                    throw new NotImplementedException();
-                }
-
-                public object CovertToObject(Mass mass, RyoReader reader)
-                {
-                    object[] objArr = new object[reader.ReadInt()];
-                    // LogUtil.INSTANCE.PrintInfo("对象列表大小：" + objArr.Length);
-                    mass.Reference(objArr);
-                    for (int i = 0; i < objArr.Length; i++) objArr[i] = mass.Read<object>();
-
-                    Type type = typeof(object);
-                    if (objArr.Length > 0 && objArr[0] != null) type = objArr[0].GetType();
-                    // LogUtil.INSTANCE.PrintInfo("类型为" + type);
-                    if (type != typeof(object))
-                    {
-                        Array newArray = Array.CreateInstance(type, objArr.Length);
-
-                        for (int i = 0; i < objArr.Length; i++)
-                        {
-                            object obj = objArr.GetValue(i)!; // 获取objArr中的当前项
-                            object convertedObj = Convert.ChangeType(obj, type); // 将当前项转换为type类型
-                            newArray.SetValue(convertedObj, i); // 将转换后的值赋值给新数组中的对应位置
-                        }
-
-                        return newArray;
-                    }
-
-                    return objArr;
-                }
-            }
-        }*/
 
         public class Pixmap : IDisposable
         {
@@ -1502,14 +1280,15 @@ namespace Me.Earzu.Ryo
             {
                 byte[] bytes = Reader.ReadBytes(length);
 
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
+                StringBuilder sb = new();
+                foreach (byte b in bytes)
                 {
-                    sb.Append(string.Format("{0:X2}", bytes[i]));
-                    if (i < bytes.Length - 1)
-                    {
-                        sb.Append(',');
-                    }
+                    sb.AppendFormat("0x{0:X2},", b);
+                }
+
+                if (sb.Length > 0)
+                {
+                    sb.Length--;
                 }
 
                 return sb.ToString();
