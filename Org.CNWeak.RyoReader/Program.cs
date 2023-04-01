@@ -15,6 +15,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Reflection.PortableExecutable;
+using static System.Net.Mime.MediaTypeNames;
+using System.Collections.Generic;
 
 namespace Me.EarzuChan.Ryo
 {
@@ -227,7 +232,7 @@ namespace Me.EarzuChan.Ryo
             }
             public void Execute()
             {
-                var mass = MassFileManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == FileName.ToLower());
+                var mass = MassManager.INSTANCE.MassList.Find((MassFile m) => m.Name.ToLower() == FileName.ToLower());
                 if (mass != null && mass.ReadyToUse)
                 {
                     LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
@@ -264,7 +269,7 @@ namespace Me.EarzuChan.Ryo
             }
             public void Execute()
             {
-                MassFileManager.INSTANCE.MassList.Remove(MassFileManager.INSTANCE.MassList.Find(a => a.Name == FileName)!);
+                MassManager.INSTANCE.MassList.Remove(MassManager.INSTANCE.MassList.Find(a => a.Name == FileName)!);
             }
         }
 
@@ -278,7 +283,7 @@ namespace Me.EarzuChan.Ryo
             }
             public void Execute()
             {
-                var mass = MassFileManager.INSTANCE.GetMassFileByFileName(FileName);
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
                 if (mass != null && mass.ReadyToUse)
                 {
                     LogUtil.INSTANCE.PrintInfo($"找到文件：{FileName.ToUpper()}");
@@ -319,7 +324,7 @@ namespace Me.EarzuChan.Ryo
 
             public void Execute()
             {
-                var mass = MassFileManager.INSTANCE.GetMassFileByFileName(FileName);
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
                 try
                 {
                     if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
@@ -356,7 +361,7 @@ namespace Me.EarzuChan.Ryo
 
             public void Execute()
             {
-                var mass = MassFileManager.INSTANCE.GetMassFileByFileName(FileName);
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
                 try
                 {
                     if (mass == null) throw new Exception("档案不存在");
@@ -439,15 +444,38 @@ namespace Me.EarzuChan.Ryo
 
                                 if (imageBlob != null && imageBlob.ClipCount != 0)
                                 {
-                                    LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 碎片数：[{imageBlob.ClipCount}] 碎片宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 碎片高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 碎片集层数：{imageBlob.Pixmaps.Length}");
-                                    for (int level = 0; level < imageBlob.Pixmaps.Length; level++)
+                                    LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 碎片数：[{imageBlob.ClipCount}] 碎片宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 碎片高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 碎片集层数：{imageBlob.RyoPixmaps.Length}");
+                                    string pathName = textureFile.FullPath + $".No_{piece}.dumps";
+                                    LogUtil.INSTANCE.PrintInfo("-- 该图片的相关资源将被写出在：" + pathName);
+                                    if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
+
+                                    for (int level = 0; level < imageBlob.RyoPixmaps.Length; level++)
                                     {
-                                        Pixmap[] pixs = imageBlob.Pixmaps[level];
+                                        RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
                                         LogUtil.INSTANCE.PrintInfo($"---- 第{level + 1}层 有{pixs.Length}个");
+
+                                        string levelPathName = pathName + $"\\Lv_{level + 1}";
+                                        if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
                                         for (int no = 0; no < pixs.Length; no++)
                                         {
-                                            Pixmap pix = pixs[no];
+                                            RyoPixmap pix = pixs[no];
                                             LogUtil.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format} 像素数：{pix.GetPixelsCount()}");
+
+                                            string levelFileName = levelPathName + $"\\No_{no + 1}.png";
+
+                                            try
+                                            {
+                                                Bitmap? it = (Bitmap)pix;
+                                                if (it == null) throw new Exception("图片NULL，故写不出");
+
+                                                var streamHere = new FileStream(levelFileName, FileMode.OpenOrCreate);
+                                                it!.Save(streamHere, ImageFormat.Png);
+                                                streamHere.Dispose();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                LogUtil.INSTANCE.PrintError("不能写出图片", ex);
+                                            }
                                         }
                                     }
                                     piece++;
@@ -540,6 +568,9 @@ namespace Me.EarzuChan.Ryo
                 RyoTypes.Add(new() { Name = "sengine.mass.serializers.MapSerializer", BaseType = typeof(BaseArrayTypeAdapterFactory) });
                 RyoTypes.Add(new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
                 RyoTypes.Add(new() { Name = "sengine.mass.serializers.FieldSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
+
+                // 特定类（图片等）
+                RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
 
                 // 注册额外项目（从文件）：TODO
             }
@@ -788,7 +819,7 @@ namespace Me.EarzuChan.Ryo
                         if (oriItemType == null)
                         {
                             if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
-                            LogUtil.INSTANCE.PrintInfo("类型为" + itemType);
+                            LogUtil.INSTANCE.PrintDebugInfo("额外重写匹配 类型为" + itemType);
                             if (itemType != typeof(object))
                             {
                                 Array newArray = Array.CreateInstance(itemType, objArr.Length);
@@ -848,6 +879,195 @@ namespace Me.EarzuChan.Ryo
                     else if (baseType == typeof(byte)) return new ByteArrayAdapter();
                     else if (baseType == typeof(string)) return new StringArrayAdapter();
                     else return new ObjectArrayAdapter();
+                }
+            }
+
+            public class SpecialFormatAdapterFactory : IAdapterFactory
+            {
+                public class FragmentalImageAdapter : IAdapter
+                {
+                    // 计算分块数，按长度分割总数一共要多少块（不足的也给完整一块）
+                    public static int CalculateBlockCount(int fullLength, int blockLength)
+                    {
+                        int quotient = Math.DivRem(blockLength, fullLength, out int remainder);
+                        return (remainder != 0 ? 1 : 0) + quotient;
+                    }
+
+                    public object From(Mass mass, RyoReader reader, RyoType ryoType)
+                    {
+                        int directLength;// 保留
+
+                        int clipCount = reader.ReadInt();
+                        int sliceCount = reader.ReadInt();
+
+                        int[] sliceWidths = new int[sliceCount];
+                        int[] sliceHeights = new int[sliceCount];
+                        RyoPixmap[][] pixmaps = new RyoPixmap[sliceCount][];
+
+                        for (int i2 = 0; i2 < sliceCount; i2++)
+                        {
+                            try
+                            {
+                                // 每层的宽高
+                                int sliceWidth = reader.ReadInt();
+                                sliceWidths[i2] = sliceWidth;
+                                int sliceHeight = reader.ReadInt();
+                                sliceHeights[i2] = sliceHeight;
+
+                                //每层的格式
+                                RyoPixmap.FORMAT format = (RyoPixmap.FORMAT)reader.ReadUnsignedByte();
+                                bool isUnshaped = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+
+                                // 块数
+                                int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidths[i2]);
+                                // 片数
+                                int sliceClipCount = sliceBlockCount * CalculateBlockCount(clipCount, sliceHeights[i2]);
+
+                                // 每层块数
+                                pixmaps[i2] = new RyoPixmap[sliceClipCount];
+
+                                for (int i3 = 0; i3 < sliceClipCount; i3++)
+                                {
+                                    int x = (i3 % sliceBlockCount) * clipCount;
+                                    int y = (i3 / sliceBlockCount) * clipCount;
+                                    int right = x + clipCount;
+                                    int bottom = y + clipCount;
+
+                                    // 处理宽高
+                                    if (right > sliceWidth)
+                                    {
+                                        right = sliceWidth;
+                                    }
+                                    if (bottom > sliceHeight)
+                                    {
+                                        bottom = sliceHeight;
+                                    }
+
+                                    // 归不规则的读
+                                    if (!isUnshaped || (directLength = reader.ReadInt()) <= 0)
+                                    {
+                                        // 规则的不需要指定大小
+                                        RyoPixmap pixmap = new(right - x, bottom - y, format);
+                                        pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
+                                        pixmaps[i2][i3] = pixmap;
+                                    }
+                                    else
+                                    {
+                                        // 需要指定大小
+                                        pixmaps[i2][i3] = new(reader.ReadBytes(directLength)) { Format = format, Height = sliceHeight, Width = sliceWidth };
+                                    }
+                                }
+                            }
+                            catch (Exception th)
+                            {
+                                //LogUtil.INSTANCE.PrintError("读取失败 将回收内存", th);
+
+                                foreach (RyoPixmap[] v1 in pixmaps)
+                                {
+                                    if (v1 == null) continue;
+
+                                    foreach (RyoPixmap v in v1) v?.Dispose();
+                                }
+                                throw new InvalidDataException("读取块时出现异常", th);
+                            }
+                        }
+                        return new FragmentalImage(clipCount, sliceWidths, sliceHeights, pixmaps);
+                    }
+
+                    // 实验性
+                    public void To(object obj, Mass mass, RyoWriter writer)
+                    {
+                        var image = (FragmentalImage)obj;
+
+                        // 不知道是什么
+                        /*if (r12.f2426a > 0 || r12.f2427b > 0)
+                        {
+                            throw new IllegalStateException("Cannot serialize partially loaded image data");
+                        }*/
+
+                        RyoWriter? directClipWritter = null;
+
+                        // 元数据
+                        writer.WriteInt(image.ClipCount);
+                        writer.WriteInt(image.RyoPixmaps.Length);
+
+                        for (int i = 0; i < image.RyoPixmaps.Length; i++)
+                        {
+                            // 每层数据
+                            RyoPixmap[] pixmapArr = image.RyoPixmaps[i];
+                            writer.WriteInt(image.SliceWidths[i]);
+                            writer.WriteInt(image.SliceHeights[i]);
+                            RyoPixmap.FORMAT format = pixmapArr[0].Format;
+
+                            // 写出类型序号
+                            writer.WriteUnsignedByte((byte)format);
+                            bool isUnshaped = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+
+                            // 每块数据
+                            foreach (RyoPixmap pixmap in pixmapArr)
+                            {
+                                // 感觉逻辑有问题
+
+                                // 不规则
+                                if (isUnshaped)
+                                {
+                                    // 图片大于32*32
+                                    if (pixmap.Width * pixmap.Height >= 1024)
+                                    {
+                                        directClipWritter ??= new RyoWriter(new MemoryStream(65536));
+                                        directClipWritter.PositionToZero();
+                                        WriteAsJpegToGivenWriter(pixmap, directClipWritter);
+
+                                        if (directClipWritter.Position > 0)// 写出的有效
+                                        {
+                                            // 直接长度
+                                            writer.WriteInt((int)directClipWritter.Position);
+                                            writer.WriteAnotherWriter(directClipWritter);
+
+                                            // 问题是没退出？
+                                        }
+                                    }
+
+                                    // 写大小-1 -> 当作规则的来读取
+                                    writer.WriteInt(-1);
+                                }
+
+                                // 规则，就不指定大小
+                                var pixels = pixmap.Pixels;
+                                writer.WriteBytes(pixels);
+                            }
+                        }
+
+                    }
+                    
+                    // 实验性
+                    public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
+                    {
+                        try
+                        {
+                            var bmp = (Bitmap)pixmap;
+
+                            var streamHere = new MemoryStream();
+                            bmp!.Save(streamHere, ImageFormat.Jpeg);
+                            anoWriter.WriteBytes(streamHere.ToArray());
+                        }
+                        catch (Exception th)
+                        {
+                            LogUtil.INSTANCE.PrintError("Unable to convert image to JPEG", th);
+                            anoWriter.PositionToZero();
+                        }
+                    }
+                }
+
+                public IAdapter Create(RyoType type)
+                {
+                    //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
+
+                    return type.Name switch
+                    {
+                        "sengine.graphics2d.texturefile.FIFormat" => new FragmentalImageAdapter(),
+                        _ => throw new FormatException(type + "没有合适的适配器"),
+                    };
                 }
             }
         }
@@ -939,7 +1159,7 @@ namespace Me.EarzuChan.Ryo
             });//JsonSerializer.Serialize(item, item.GetType());
         }
 
-        public class Pixmap : IDisposable
+        public class RyoPixmap : IDisposable
         {
             public enum FORMAT
             {
@@ -952,12 +1172,12 @@ namespace Me.EarzuChan.Ryo
                 RGBA8888
             }
 
-            private int Width;
-            private int Height;
+            public int Width;
+            public int Height;
             public byte[] Pixels { get; set; }
             public FORMAT Format = FORMAT.RGB888;
 
-            public Pixmap(int width, int height, FORMAT format)
+            public RyoPixmap(int width, int height, FORMAT format)
             {
                 Width = width;
                 Height = height;
@@ -965,7 +1185,7 @@ namespace Me.EarzuChan.Ryo
                 Pixels = new byte[width * height * GetPixelSize(format)];
             }
 
-            public Pixmap(byte[] buffer) => Pixels = buffer;
+            public RyoPixmap(byte[] buffer) => Pixels = buffer;
 
             public int GetPixel(int x, int y)
             {
@@ -1058,6 +1278,43 @@ namespace Me.EarzuChan.Ryo
             {
                 Pixels = Array.Empty<byte>();
             }
+
+            public static explicit operator Bitmap(RyoPixmap v)
+            {
+                var fm = v.Format switch
+                {
+                    FORMAT.RGB565 => PixelFormat.Format16bppRgb565,
+                    FORMAT.RGBA8888 => PixelFormat.Format32bppArgb,
+                    _ => PixelFormat.Format24bppRgb,
+                };
+                Bitmap bmp = new(v.Width, v.Height, fm);
+                BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, v.Width, v.Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
+
+                IntPtr ptr = bmpData.Scan0;
+                int bytes = Math.Abs(bmpData.Stride) * v.Height;
+
+                var pxs = v.Pixels;
+
+                // 修正位数
+                if (fm == PixelFormat.Format32bppArgb)
+                {
+                    if (pxs.Length % 4 != 0) throw new Exception("RGBA编码有问题呀");
+
+                    var npxs = new byte[pxs.Length];
+                    for (int i = 0; i < pxs.Length; i += 4)
+                    {
+                        npxs[i] = pxs[i + 3];
+                        npxs[i + 1] = pxs[i];
+                        npxs[i + 2] = pxs[i + 1];
+                        npxs[i + 3] = pxs[i + 2];
+                    }
+                    pxs = npxs;
+                }
+
+                Marshal.Copy(v.Pixels, 0, ptr, bytes);
+                bmp.UnlockBits(bmpData);
+                return bmp;
+            }
         }
 
         public class FragmentalImage
@@ -1065,17 +1322,32 @@ namespace Me.EarzuChan.Ryo
             public int ClipCount;
             public int[] SliceWidths;
             public int[] SliceHeights;
-            public Pixmap[][] Pixmaps;
+            public RyoPixmap[][] RyoPixmaps;
 
-            public FragmentalImage(int clipCount, int[] sliceWidths, int[] sliceHeights, Pixmap[][] pixmaps)
+            public FragmentalImage(int clipCount, int[] sliceWidths, int[] sliceHeights, RyoPixmap[][] pixmaps)
             {
                 ClipCount = clipCount;
                 SliceWidths = sliceWidths;
                 SliceHeights = sliceHeights;
-                Pixmaps = pixmaps;
+                RyoPixmaps = pixmaps;
             }
 
-            public static explicit operator object[](FragmentalImage image) => new object[] { image.ClipCount, image.SliceWidths, image.SliceHeights, image.Pixmaps };
+            public static explicit operator object[](FragmentalImage image) => new object[] { image.ClipCount, image.SliceWidths, image.SliceHeights, image.RyoPixmaps };
+
+            public Bitmap[][] DumpItems()
+            {
+                Bitmap[][] bitmaps = new Bitmap[RyoPixmaps.Length][];
+                for (int i = 0; i < RyoPixmaps.Length; i++)
+                {
+                    RyoPixmap[] items = RyoPixmaps[i];
+                    var bmpg = new Bitmap[items.Length];
+                    for (int j = 0; j < items.Length; j++)
+                    {
+                        bmpg[j] = (Bitmap)items[j];
+                    }
+                }
+                return bitmaps;
+            }
         }
 
         [IAdaptable.AdaptableFormat("sengine.graphics2d.FontSprites")]
@@ -1187,6 +1459,7 @@ namespace Me.EarzuChan.Ryo
             public object[] GetAdaptedArray() => new object[] { Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime };
         }
     }
+
     namespace Utils
     {
         public class LogUtil
@@ -1266,7 +1539,7 @@ namespace Me.EarzuChan.Ryo
 
             public RyoReader(Stream inputStream)
             {
-                Reader = new BinaryReader(inputStream);
+                Reader = new(inputStream);
             }
 
             public byte[] ReadBytes(int length)
@@ -1323,7 +1596,38 @@ namespace Me.EarzuChan.Ryo
             public static implicit operator RyoReader(byte[] buffer) => new RyoReader(new MemoryStream(buffer));
         }
 
-        public class RyoWriter { }
+        public class RyoWriter
+        {
+            private BinaryWriter Writer;
+            public long RestLength
+            {
+                get => Length - Position;
+            }
+            public long Length
+            {
+                get => Writer.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
+            }
+            public long Position
+            {
+                get => Writer.BaseStream.Position; //不应该，应该是读缓冲区，虽然我没用
+                set => Writer.BaseStream.Position = value;
+            }
+
+            public RyoWriter(Stream outputStream)
+            {
+                Writer = new(outputStream);
+            }
+
+            public void WriteInt(int intToWrite) => Writer.Write(BitConverter.GetBytes(intToWrite).Reverse().ToArray());
+
+            public void WriteUnsignedByte(byte bt) => Writer.Write(bt);
+
+            public void PositionToZero() => Position = 0;
+
+            public void WriteAnotherWriter(RyoWriter anoWriter) => Writer.Write(new RyoReader(anoWriter.Writer.BaseStream).ReadAllBytes());
+
+            public void WriteBytes(byte[] pixels) => Writer.Write(pixels);
+        }
 
         public class RyoBuffer
         {
@@ -1361,10 +1665,17 @@ namespace Me.EarzuChan.Ryo
 
     namespace Masses
     {
-        public class MassFileManager
+        public class MassManager
         {
-            public static MassFileManager INSTANCE { get { instance ??= new(); return instance; } }
-            private static MassFileManager? instance;
+            public static MassManager INSTANCE { get { instance ??= new(); return instance; } }
+            private static MassManager? instance;
+
+            public MassManager() => PreloadProfiles();
+
+            private void PreloadProfiles()
+            {
+                // 加载本地Format等
+            }
 
             public List<MassFile> MassList = new();
 
@@ -1415,7 +1726,7 @@ namespace Me.EarzuChan.Ryo
 
             public MassFile(string name) : base(name)
             {
-                MassFileManager.INSTANCE.MassList.Add(this);
+                MassManager.INSTANCE.MassList.Add(this);
             }
 
             public override void AfterLoadingIndex(RyoReader inflatedDataReader)
@@ -1448,7 +1759,7 @@ namespace Me.EarzuChan.Ryo
 
             // 暂存读写器
             public RyoReader Reader = new(Stream.Null);
-            public RyoWriter Writer = new();
+            public RyoWriter Writer = new(Stream.Null);
 
             // 相关成员变量
             public int ObjCount = 0;
@@ -1560,7 +1871,7 @@ namespace Me.EarzuChan.Ryo
                 try
                 {
                     Reader = new(Stream.Null);
-                    Writer = new();
+                    Writer = new(Stream.Null);
                     ObjCount = 0;
                     CurrentObjCount = 0;
                     DataAdapterIdArray = new();
