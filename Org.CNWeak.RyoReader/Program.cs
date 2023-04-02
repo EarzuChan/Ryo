@@ -17,9 +17,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Reflection.PortableExecutable;
-using static System.Net.Mime.MediaTypeNames;
-using System.Collections.Generic;
 
 namespace Me.EarzuChan.Ryo
 {
@@ -238,12 +235,12 @@ namespace Me.EarzuChan.Ryo
                     LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
                     LogUtil.INSTANCE.PrintInfo($"碎片数据数：{mass.ObjCount}");
                     for (var i = 0; i < mass.ObjCount; i++) LogUtil.INSTANCE.PrintInfo($"-- Id.{i} 适配项ID：{mass.DataAdapterIdArray[i]} 已压缩：{(mass.IsItemDeflatedArray[i] ? "是" : "否")} 起始索引：{(i == 0 ? 0 : mass.EndPosition[i - 1])} 长度：{mass.EndPosition[i] - (i == 0 ? 0 : mass.EndPosition[i - 1])} 粘连数据：{mass.StickedDataList[i]}");
-                    LogUtil.INSTANCE.PrintInfo($"\n粘连元数据数：{mass.StickedMetaDataItemCount}，以下为粘连元数据");
+                    LogUtil.INSTANCE.PrintInfo($"\n粘连元数据数：{mass.StickedDataList.Last()}，以下为粘连元数据");
                     int currentIndex = 0;
-                    while (currentIndex < mass.StickedMetaDataItemCount)
+                    while (currentIndex < mass.StickedDataList.Last())
                     {
                         List<string> str = new();
-                        for (int i = 0; i < 4 && currentIndex < mass.StickedMetaDataItemCount; i++)
+                        for (int i = 0; i < 4 && currentIndex < mass.StickedDataList.Last(); i++)
                         {
                             str.Add("No." + (currentIndex + 1) + "：" + mass.StickedMetaDataList[currentIndex]);
                             currentIndex++;
@@ -252,7 +249,8 @@ namespace Me.EarzuChan.Ryo
                     }
                     LogUtil.INSTANCE.PrintInfo($"\n数据适配项数：{mass.MyRegableDataAdaptionList.Count}");
                     //foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} 数据类型：{item.DataJavaClz} Ryo数据类型：{item.DataRyoType} 适配器：{item.AdapterJavaClz} Ryo适配器工厂类型：{item.AdapterFactoryRyoType}");
-                    foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} {item.DataRyoType} 适配器：{item.Adapter}");
+                    // TODO:你木琴给你拨弄趋势了，我的字段怎么回事呢
+                    foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} {item.DataRyoType} 原：{item.DataJavaClz} 适配器：{item.Adapter} 原：{item.AdapterFactoryRyoType}");
                     LogUtil.INSTANCE.PrintInfo($"\n正式数据项数：{mass.MyIdStrMap.Count}");
                     foreach (var item in mass.MyIdStrMap) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key}");
                 }
@@ -380,6 +378,42 @@ namespace Me.EarzuChan.Ryo
             }
         }
 
+        [Command("SaveTo", "Saves the file to the path you given")]
+        public class SaveToCommand : ICommand
+        {
+            public string FileName;
+            public string PathName = "NULL";
+
+            public SaveToCommand(string fileName, string pathName)
+            {
+                FileName = fileName;
+                PathName = pathName;
+            }
+
+            public SaveToCommand(string fileName)
+            {
+                FileName = fileName;
+            }
+
+            public void Execute()
+            {
+                var mass = MassManager.INSTANCE.GetMassFileByFileName(FileName);
+                try
+                {
+                    if (mass == null) throw new Exception("档案不存在");
+
+                    if (PathName != "NULL") mass.FullPath = PathName;
+                    mass.Save();
+
+                    LogUtil.INSTANCE.PrintInfo("已保存");
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.INSTANCE.PrintError($"不能写出档案", ex);
+                }
+            }
+        }
+
         [Command("Fuqi", "For dev only", true)]
         public class FuqiCommand : ICommand
         {
@@ -499,9 +533,16 @@ namespace Me.EarzuChan.Ryo
         [Command("TestConv", "For Dev only", true)]
         public class TestConvCommand : ICommand
         {
+            public string? Name { get; set; }
+
+            public TestConvCommand() { }
+            public TestConvCommand(string name) => Name = name;
             public void Execute()
             {
-                string[] types = { "B", "I", "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
+                List<string> types = new() { "B", "I", "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
+
+                if (Name != null) types.Add(Name);
+
                 int i = 1;
                 foreach (var item in types)
                 {
@@ -687,6 +728,8 @@ namespace Me.EarzuChan.Ryo
                         }
                     }
 
+                    string IAdapter.JavaClz => "sengine.mass.serializers.MassSerializableSerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType)
                     {
                         ConstructorInfo? ctor = null;
@@ -750,6 +793,8 @@ namespace Me.EarzuChan.Ryo
             {
                 public class IntAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultSerializers$IntSerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
 
                     public void To(object obj, Mass mass, RyoWriter writer)
@@ -760,6 +805,8 @@ namespace Me.EarzuChan.Ryo
 
                 public class StringAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultSerializers$StringSerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
                     public void To(object obj, Mass mass, RyoWriter writer)
@@ -783,6 +830,8 @@ namespace Me.EarzuChan.Ryo
             {
                 public class IntArrayAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType)
                     {
                         int i = reader.ReadInt();
@@ -802,6 +851,8 @@ namespace Me.EarzuChan.Ryo
 
                 public class ObjectArrayAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType)
                     {
                         // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
@@ -846,6 +897,8 @@ namespace Me.EarzuChan.Ryo
 
                 public class ByteArrayAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
 
                     public void To(object obj, Mass mass, RyoWriter writer)
@@ -856,6 +909,8 @@ namespace Me.EarzuChan.Ryo
 
                 public class StringArrayAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer";
+
                     public object From(Mass mass, RyoReader reader, RyoType ryoType)
                     {
                         int i = reader.ReadInt();
@@ -886,6 +941,8 @@ namespace Me.EarzuChan.Ryo
             {
                 public class FragmentalImageAdapter : IAdapter
                 {
+                    public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
+
                     // 计算分块数，按长度分割总数一共要多少块（不足的也给完整一块）
                     public static int CalculateBlockCount(int fullLength, int blockLength)
                     {
@@ -1039,7 +1096,7 @@ namespace Me.EarzuChan.Ryo
                         }
 
                     }
-                    
+
                     // 实验性
                     public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
                     {
@@ -1075,11 +1132,16 @@ namespace Me.EarzuChan.Ryo
         public interface IAdapter
         {
             object From(Mass mass, RyoReader reader, RyoType ryoType);
+
             void To(object obj, Mass mass, RyoWriter writer);
+
+            string JavaClz { get; }
         }
 
         public class DirectByteArrayAdapter : IAdapter
         {
+            public string JavaClz => "sengine.mass.serializers.FailedSerializer";
+
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadAllBytes();
 
             public void To(object obj, Mass mass, RyoWriter writer)
@@ -1515,6 +1577,24 @@ namespace Me.EarzuChan.Ryo
                     return Array.Empty<byte>();
                 }
             }
+
+            public byte[] Deflate(byte[] indexBytes, int offset, int length)
+            {
+                Deflater deflater = new Deflater();
+                deflater.SetInput(indexBytes, offset, length);
+                deflater.Finish();
+
+                byte[] buffer = new byte[1024];
+                List<byte> outputList = new List<byte>();
+
+                while (!deflater.IsFinished)
+                {
+                    int count = deflater.Deflate(buffer);
+                    outputList.AddRange(buffer.Take(count));
+                }
+
+                return outputList.ToArray();
+            }
         }
     }
 
@@ -1523,29 +1603,20 @@ namespace Me.EarzuChan.Ryo
         public class RyoReader : IDisposable
         {
             private BinaryReader Reader;
-            public long RestLength
-            {
-                get => Length - Position;
-            }
-            public long Length
-            {
-                get => Reader.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
-            }
+
+            public long RestLength => Length - Position;
+
+            public long Length => Reader.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
+
             public long Position
             {
                 get => Reader.BaseStream.Position; //不应该，应该是读缓冲区，虽然我没用
                 set => Reader.BaseStream.Position = value;
             }
 
-            public RyoReader(Stream inputStream)
-            {
-                Reader = new(inputStream);
-            }
+            public RyoReader(Stream inputStream) => Reader = new(inputStream);
 
-            public byte[] ReadBytes(int length)
-            {
-                return Reader.ReadBytes(length);
-            }
+            public byte[] ReadBytes(int length) => Reader.ReadBytes(length);
 
             public int ReadInt() => BitConverter.ToInt32(Reader.ReadBytes(4).Reverse().ToArray(), 0);
 
@@ -1596,27 +1667,27 @@ namespace Me.EarzuChan.Ryo
             public static implicit operator RyoReader(byte[] buffer) => new RyoReader(new MemoryStream(buffer));
         }
 
-        public class RyoWriter
+        public class RyoWriter : IDisposable
         {
+            public void Dispose()
+            {
+                Writer.Flush();
+                Writer.Dispose();
+            }
+
             private BinaryWriter Writer;
-            public long RestLength
-            {
-                get => Length - Position;
-            }
-            public long Length
-            {
-                get => Writer.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
-            }
+
+            public long RestLength => Length - Position;
+
+            public long Length => Writer.BaseStream.Length; //不应该，应该是读缓冲区，虽然我没用
+
             public long Position
             {
                 get => Writer.BaseStream.Position; //不应该，应该是读缓冲区，虽然我没用
                 set => Writer.BaseStream.Position = value;
             }
 
-            public RyoWriter(Stream outputStream)
-            {
-                Writer = new(outputStream);
-            }
+            public RyoWriter(Stream outputStream) => Writer = new(outputStream);
 
             public void WriteInt(int intToWrite) => Writer.Write(BitConverter.GetBytes(intToWrite).Reverse().ToArray());
 
@@ -1627,6 +1698,17 @@ namespace Me.EarzuChan.Ryo
             public void WriteAnotherWriter(RyoWriter anoWriter) => Writer.Write(new RyoReader(anoWriter.Writer.BaseStream).ReadAllBytes());
 
             public void WriteBytes(byte[] pixels) => Writer.Write(pixels);
+
+            public void WrintString(string v)
+            {
+                byte[] vytes = Encoding.UTF8.GetBytes(v);
+                WriteInt(vytes.Length);
+                WriteBytes(vytes);
+            }
+
+            public static implicit operator Stream(RyoWriter writer) => writer.Writer.BaseStream;
+
+            public void WriteFixedString(string format) => WriteBytes(Encoding.UTF8.GetBytes(format));
         }
 
         public class RyoBuffer
@@ -1684,17 +1766,17 @@ namespace Me.EarzuChan.Ryo
 
         public class TextureFile : Mass
         {
-            // 常量
-            public new const string EXTENDED_NAME = "TextureFile";
-
             // 成员
             public int[][] ImageIDsArray = Array.Empty<int[]>();
 
-            public TextureFile(string name) : base(name) { }
+            public TextureFile(string name) : base(name)
+            {
+                ExtendedName = "TextureFile";
+            }
 
             public void Load(FileStream file)
             {
-                Load(file, EXTENDED_NAME);
+                Load(file, ExtendedName);
             }
 
             public override void AfterLoadingIndex(RyoReader inflatedDataReader)
@@ -1718,14 +1800,12 @@ namespace Me.EarzuChan.Ryo
 
         public class MassFile : Mass
         {
-            // 常量
-            public new const string EXTENDED_NAME = "FileSystem";
-
             // 成员变量
             public Dictionary<string, int> MyIdStrMap = new();
 
             public MassFile(string name) : base(name)
             {
+                ExtendedName = "FileSystem";
                 MassManager.INSTANCE.MassList.Add(this);
             }
 
@@ -1742,16 +1822,27 @@ namespace Me.EarzuChan.Ryo
                 }
             }
 
+            public override void AfterSavingIndex(RyoWriter writer)
+            {
+                writer.WriteInt(MyIdStrMap.Count);
+                //var keys = MyIdStrMap.Keys;
+                foreach (var i in MyIdStrMap)
+                {
+                    writer.WrintString(i.Key);
+                    writer.WriteInt(i.Value);
+                }
+            }
+
             public void Load(FileStream file)
             {
-                Load(file, EXTENDED_NAME);
+                Load(file, ExtendedName);
             }
         }
 
         public class Mass
         {
             // 常量
-            public const string EXTENDED_NAME = "MASS";
+            public string ExtendedName = "MASS";
 
             // 文件名和路径
             public string Name = "";
@@ -1771,7 +1862,7 @@ namespace Me.EarzuChan.Ryo
             public List<int> StickedMetaDataList = new();
             public byte[] RealItemDataBuffer = Array.Empty<byte>();
             public RyoBuffer WorkBuffer = new RyoBuffer();
-            public int StickedMetaDataItemCount = 0;
+            //public int StickedMetaDataItemCount = 0;
             public List<RegableDataAdaption> MyRegableDataAdaptionList = new();
 
             // 暂存变量
@@ -1780,6 +1871,9 @@ namespace Me.EarzuChan.Ryo
             public int SavedStickedDataIntArrayIdMinusOne = -1;
             public int SavedStickedDataIntArrayId = -1;
             public int SavedId = -1;
+
+            // 碎片块
+            public List<byte[]> BlobList = new();
 
             // 可注册项
             public class RegableDataAdaption
@@ -1797,6 +1891,7 @@ namespace Me.EarzuChan.Ryo
 
                     DataJavaClz = dataType;
                     DataRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(dataType);
+                    //if (id == 1) DataJavaClz += "操你妈";
 
                     AdapterJavaClz = adapterType;
                     AdapterFactoryRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(adapterType);
@@ -1821,40 +1916,37 @@ namespace Me.EarzuChan.Ryo
             // 根据ID获取项目
             public T GetItemById<T>(int id)
             {
+                // 检查
                 if (!ReadyToUse || IsEmpty) throw new Exception("文件未准备好或为空");
 
-                bool isItemDeflated = IsItemDeflatedArray[id];
+                // 获取适配项
                 var dataAdaption = MyRegableDataAdaptionList[DataAdapterIdArray[id]];
 
-                //Class <?> theObjTypeShouldBe = 方法_取已序列化的类(idOfXuLieHuaQi);
-                //接口_序列化器 <?> xuliehuaqi = 方法_取序列化器(idOfXuLieHuaQi);
-
-                /*byte[] oldWorkBuffer = Reader.Buffer;
-                int inputReaderPosition = (int)Reader.Position;
-                int inputReaderLimit = (int)Reader.Length;*/
+                // 获取各方面数据
                 RyoBuffer workBuffer = WorkBuffer;
                 int oldStickedDataIntArrayIdMinusOne = SavedStickedDataIntArrayIdMinusOne;
                 int oldStickedDataIntArrayId = SavedStickedDataIntArrayId;
                 int oldIdSaves = SavedId;
 
-                int blobStartPosition = id == 0 ? 0 : EndPosition[id - 1];
-                int blobLength = EndPosition[id] - blobStartPosition;
-
+                // 处理暂存数据
                 SavedId = id;
                 SavedStickedDataIntArrayIdMinusOne = id == 0 ? 0 : StickedDataList[id - 1];
                 SavedStickedDataIntArrayId = StickedDataList[id];
 
-                WorkBuffer.Buffer = isItemDeflated ? CompressionUtil.INSTANCE.Inflate(RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray(), 0, blobLength) : RealItemDataBuffer.Skip(blobStartPosition).Take(blobLength).ToArray();
+                // 获取Blob
+                WorkBuffer.Buffer = BlobList[id];
 
-                LogUtil.INSTANCE.PrintDebugInfo("源长度", RealItemDataBuffer.Length.ToString(), "ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", workBuffer.Length.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
+                // LogUtil.INSTANCE.PrintDebugInfo("源长度", RealItemDataBuffer.Length.ToString(), "ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", workBuffer.Length.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
 
-                // T item = (T)FormatManager.INSTANCE.ParseItem(this, (RyoReader)WorkBuffer.Buffer, MyRegableDataAdaptionList[DataAdapterIdArray[id]].DataJavaClz);
+                // 从Blob建立对象
                 T item = (T)dataAdaption.Adapter.From(this, (RyoReader)WorkBuffer.Buffer, dataAdaption.DataRyoType);
 
+                // 还回数据
                 WorkBuffer = workBuffer;
                 SavedId = oldIdSaves;
                 SavedStickedDataIntArrayId = oldStickedDataIntArrayId;
                 SavedStickedDataIntArrayIdMinusOne = oldStickedDataIntArrayIdMinusOne;
+
                 return item;
             }
 
@@ -1878,7 +1970,7 @@ namespace Me.EarzuChan.Ryo
                     EndPosition = new();
                     StickedDataList = new();
                     StickedMetaDataList = new();
-                    StickedMetaDataItemCount = 0;
+                    //StickedMetaDataItemCount = 0;
                     RealItemDataBuffer = Array.Empty<byte>();
                     WorkBuffer = new RyoBuffer();
 
@@ -1887,10 +1979,12 @@ namespace Me.EarzuChan.Ryo
                     SavedId = -1;
                     IsEmpty = true;
                     ReadyToUse = true;
+
+                    BlobList = new();
                 }
                 catch (Exception e)
                 {
-                    LogUtil.INSTANCE.PrintError("加载Mass失败", e);
+                    LogUtil.INSTANCE.PrintError("清除Mass失败", e);
                 }
             }
 
@@ -1933,9 +2027,9 @@ namespace Me.EarzuChan.Ryo
                         for (var i = 0; i < ObjCount; i++)
                             StickedDataList.Add(inflatedDataReader.ReadInt());
 
-                        StickedMetaDataItemCount = StickedDataList.Last();
+                        //StickedMetaDataItemCount = StickedDataList.Last();
 
-                        for (var i = 0; i < StickedMetaDataItemCount; i++)
+                        for (var i = 0; i < StickedDataList.Last(); i++)
                             StickedMetaDataList.Add(inflatedDataReader.ReadInt());
 
                         var regCount = inflatedDataReader.ReadInt();
@@ -1951,6 +2045,16 @@ namespace Me.EarzuChan.Ryo
                     }
                     RealItemDataBuffer = Reader.ReadAllBytes();
 
+                    var blobsReader = new RyoReader(new MemoryStream(RealItemDataBuffer));
+                    for (var i = 0; i < ObjCount; i++)
+                    {
+                        int blobStart = i == 0 ? 0 : EndPosition[i - 1];
+                        int blobLength = EndPosition[i] - blobStart;
+                        byte[] blob = blobsReader.ReadBytes(blobLength);
+                        if (IsItemDeflatedArray[i]) blob = CompressionUtil.INSTANCE.Inflate(blob, 0, blobLength);
+                        BlobList.Add(blob);
+                    }
+
                     ReadyToUse = true;
                     IsEmpty = false;
                 }
@@ -1964,11 +2068,85 @@ namespace Me.EarzuChan.Ryo
                 }
             }
 
-            public virtual void AfterLoadingIndex(RyoReader inflatedDataReader)
+            // 保存
+            public void Save(FileStream file, string format)
             {
-                //LogUtil.INSTANCE.PrintInfo("怎么回事");
+                var fileWriter = new RyoWriter(file);
+                fileWriter.WriteFixedString(format);
+
+                // 先创建索引 再压缩并写入值
+                var indexWriter = new RyoWriter(new MemoryStream());
+                indexWriter.WriteInt(ObjCount);
+                for (int i = 0; i < ObjCount; i++)
+                { // 写序列化ID
+                    // TODO:项目压缩问题
+                    indexWriter.WriteInt(DataAdapterIdArray[i] << 1);//(IsItemDeflatedArray[i] == true ? 1 : 0));
+                }
+                for (int i2 = 0; i2 < ObjCount; i2++)
+                { // 写结束乐队
+                    indexWriter.WriteInt(EndPosition[i2]);
+                }
+                for (int i3 = 0; i3 < ObjCount; i3++)
+                { // 写粘连科技
+                    indexWriter.WriteInt(StickedDataList[i3]);
+                }
+                for (int i4 = 0; i4 < StickedDataList.Last(); i4++)
+                { // 写元数据
+                    indexWriter.WriteInt(StickedMetaDataList[i4]);
+                }
+                if (MyRegableDataAdaptionList == null || MyRegableDataAdaptionList.Count == 0)
+                { // 写出待注册
+                    indexWriter.WriteInt(0);
+                }
+                else
+                {
+                    indexWriter.WriteInt(MyRegableDataAdaptionList.Count);
+                    for (int i7 = 0; i7 < MyRegableDataAdaptionList.Count; i7++)
+                    {
+                        indexWriter.WriteInt(i7);
+                        indexWriter.WrintString(MyRegableDataAdaptionList[i7].DataJavaClz);//AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType));
+                        indexWriter.WrintString(MyRegableDataAdaptionList[i7].Adapter.JavaClz);
+
+                        // 有问题。。。LogUtil.INSTANCE.PrintInfo("ID：" + i7, "类名：" + AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType), "序列化器类名：" + MyRegableDataAdaptionList[i7].Adapter.JavaClz);
+                    }
+                }
+
+                // 后处理
+                AfterSavingIndex(indexWriter);
+
+                indexWriter.PositionToZero();
+                // 写入大小且压缩操作
+                byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
+                byte[] yasuoedBytes = CompressionUtil.INSTANCE.Deflate(indexBytes, 0, indexBytes.Length);
+                // LogUtil.INSTANCE.PrintInfo("大小：" + indexBytes.Length, "压缩：" + yasuoedBytes.Length);
+                if (indexBytes.Length / yasuoedBytes.Length >= 1.2F)
+                {
+                    fileWriter.WriteInt((yasuoedBytes.Length << 1) | 1);
+                    fileWriter.WriteBytes(yasuoedBytes);
+                }
+                else
+                {
+                    fileWriter.WriteInt(indexBytes.Length << 1);
+                    fileWriter.WriteBytes(indexBytes);
+                }
+
+                // 写真正项目
+                if (BlobList != null || BlobList!.Count != 0) foreach (var blob in BlobList) fileWriter.WriteBytes(blob);
+
+                indexWriter.Dispose();
+                fileWriter.Dispose();
+                file.Dispose();
             }
 
+            public void Save() => Save(new FileStream(FullPath, FileMode.OpenOrCreate), ExtendedName);
+
+            public void Save(FileStream file) => Save(file, ExtendedName);
+
+            public virtual void AfterLoadingIndex(RyoReader inflatedDataReader) { }
+
+            public virtual void AfterSavingIndex(RyoWriter inflatedDataReader) { }
+
+            // 应该弃用
             public string DumpBuffer()
             {
                 if (!ReadyToUse || IsEmpty) return "未准备好或者内容为空";
@@ -1993,14 +2171,23 @@ namespace Me.EarzuChan.Ryo
             // 读子项
             public T Read<T>()
             {
+                // 子项不能等于父项
                 if (SavedStickedDataIntArrayIdMinusOne == SavedStickedDataIntArrayId) throw new Exception("噬主了");
 
+                // 获取元素据
                 int metaOfIdMinusOne = StickedMetaDataList[SavedStickedDataIntArrayIdMinusOne];
-                SavedStickedDataIntArrayIdMinusOne++;
-                LogUtil.INSTANCE.PrintDebugInfo("新粘连ID：" + SavedStickedDataIntArrayIdMinusOne);
-                int subitemId = metaOfIdMinusOne >> 2;
 
+                // 原来的增加
+                SavedStickedDataIntArrayIdMinusOne++;
+
+                // 打印增加后的
+                LogUtil.INSTANCE.PrintDebugInfo("新粘连ID：" + SavedStickedDataIntArrayIdMinusOne);
+
+                // 获取元数据的真意
+                int subitemId = metaOfIdMinusOne >> 2;
                 LogUtil.INSTANCE.PrintDebugInfo($"读子项的ID：{subitemId}");
+
+                // 必须满足要求
                 if ((metaOfIdMinusOne & 3) == 3) return GetItemById<T>(subitemId);
                 throw new NotSupportedException("三大欲望");
             }
