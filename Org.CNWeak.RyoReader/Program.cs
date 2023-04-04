@@ -17,6 +17,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.ComponentModel.DataAnnotations;
 
 namespace Me.EarzuChan.Ryo
 {
@@ -250,9 +251,18 @@ namespace Me.EarzuChan.Ryo
                     LogUtil.INSTANCE.PrintInfo($"\n数据适配项数：{mass.MyRegableDataAdaptionList.Count}");
                     //foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} 数据类型：{item.DataJavaClz} Ryo数据类型：{item.DataRyoType} 适配器：{item.AdapterJavaClz} Ryo适配器工厂类型：{item.AdapterFactoryRyoType}");
                     // TODO:你木琴给你拨弄趋势了，我的字段怎么回事呢
-                    foreach (var item in mass.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} {item.DataRyoType} 原：{item.DataJavaClz} 适配器：{item.Adapter} 原：{item.AdapterFactoryRyoType}");
+                    for (int i1 = 0; i1 < mass.MyRegableDataAdaptionList.Count; i1++)
+                    {
+                        Mass.RegableDataAdaption item = mass.MyRegableDataAdaptionList[i1];
+                        var dataRyoType = mass.DataRyoTypes[i1];
+                        var adapter = mass.Adapters[i1];
+                        LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} {dataRyoType} 哈希：{item.GetHashCode()} 适配器：{adapter} 哈希：{item.GetHashCode()}");
+                    }
+
                     LogUtil.INSTANCE.PrintInfo($"\n正式数据项数：{mass.MyIdStrMap.Count}");
                     foreach (var item in mass.MyIdStrMap) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Value} Name：{item.Key}");
+
+                    LogUtil.INSTANCE.PrintInfo("总对象：" + mass.ObjCount, "块：" + mass.BlobList.Count);
                 }
             }
         }
@@ -326,7 +336,7 @@ namespace Me.EarzuChan.Ryo
                 try
                 {
                     if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
-                    var typename = mass.MyRegableDataAdaptionList[mass.DataAdapterIdArray[Id]].DataRyoType;
+                    var typename = mass.DataRyoTypes[mass.DataAdapterIdArray[Id]];
                     var item = mass.GetItemById<object>(Id);
                     /*if (buffer == null || buffer.Length == 0) throw new Exception("请求的对象为空");
                     if (string.IsNullOrWhiteSpace(mass.FullPath)) throw new Exception("保存路径为空");*/
@@ -1864,6 +1874,9 @@ namespace Me.EarzuChan.Ryo
             public RyoBuffer WorkBuffer = new RyoBuffer();
             //public int StickedMetaDataItemCount = 0;
             public List<RegableDataAdaption> MyRegableDataAdaptionList = new();
+            public List<RyoType> DataRyoTypes = new();
+            public List<RyoType> AdapterFactoryRyoTypes = new();
+            public List<IAdapter> Adapters = new();
 
             // 暂存变量
             public bool ReadyToUse = true;
@@ -1879,10 +1892,10 @@ namespace Me.EarzuChan.Ryo
             public class RegableDataAdaption
             {
                 public string DataJavaClz { get; set; }
-                public RyoType DataRyoType { get; set; }
+                //public RyoType DataRyoType { get; set; }
                 public string AdapterJavaClz { get; set; }
-                public RyoType AdapterFactoryRyoType { get; set; }
-                public IAdapter Adapter { get; set; }
+                //public RyoType AdapterFactoryRyoType { get; set; }
+                //public IAdapter Adapter { get; set; }
                 public int Id { get; set; }
 
                 public RegableDataAdaption(int id, string dataType, string adapterType)
@@ -1890,27 +1903,41 @@ namespace Me.EarzuChan.Ryo
                     Id = id;
 
                     DataJavaClz = dataType;
-                    DataRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(dataType);
-                    //if (id == 1) DataJavaClz += "操你妈";
-
                     AdapterJavaClz = adapterType;
-                    AdapterFactoryRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(adapterType);
-
-                    // 通过工厂创建
-                    try
-                    {
-                        if (typeof(IAdapterFactory).IsAssignableFrom(AdapterFactoryRyoType.BaseType))
-                        {
-                            Adapter = ((IAdapterFactory)Activator.CreateInstance(AdapterFactoryRyoType.BaseType)!).Create(DataRyoType);
-                        }
-                        else throw new FormatException($"{AdapterFactoryRyoType}不是一个适配器工厂类");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogUtil.INSTANCE.PrintError($"注册适配项（ID.{id}）时出现问题", ex, false);
-                        Adapter = new DirectByteArrayAdapter();
-                    }
+                    // LogUtil.INSTANCE.PrintInfo("Ryo：" + DataRyoType, "哈希：" + DataRyoType.GetHashCode());
                 }
+            }
+
+            public RegableDataAdaption RegItem(int id, string str1, string str2)
+            {
+                var adaption = new RegableDataAdaption(id, str1, str2);
+
+                var dataRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(str1);
+
+                var adapterFactoryRyoType = AdaptionManager.INSTANCE.GetTypeByJavaClz(str2);
+
+                IAdapter adapter;
+
+                // 通过工厂创建
+                try
+                {
+                    if (typeof(IAdapterFactory).IsAssignableFrom(adapterFactoryRyoType.BaseType))
+                    {
+                        adapter = ((IAdapterFactory)Activator.CreateInstance(adapterFactoryRyoType.BaseType)!).Create(dataRyoType);
+                    }
+                    else throw new FormatException($"{adapterFactoryRyoType}不是一个适配器工厂类");
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.INSTANCE.PrintError($"注册适配项（ID.{id}）时出现问题", ex, false);
+                    adapter = new DirectByteArrayAdapter();
+                }
+
+                Adapters.Add(adapter);
+                DataRyoTypes.Add(dataRyoType);
+                AdapterFactoryRyoTypes.Add(adapterFactoryRyoType);
+
+                return adaption;
             }
 
             // 根据ID获取项目
@@ -1920,7 +1947,8 @@ namespace Me.EarzuChan.Ryo
                 if (!ReadyToUse || IsEmpty) throw new Exception("文件未准备好或为空");
 
                 // 获取适配项
-                var dataAdaption = MyRegableDataAdaptionList[DataAdapterIdArray[id]];
+                var dataRyoType = DataRyoTypes[DataAdapterIdArray[id]];
+                var adapter=Adapters[DataAdapterIdArray[id]];
 
                 // 获取各方面数据
                 RyoBuffer workBuffer = WorkBuffer;
@@ -1939,7 +1967,7 @@ namespace Me.EarzuChan.Ryo
                 // LogUtil.INSTANCE.PrintDebugInfo("源长度", RealItemDataBuffer.Length.ToString(), "ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", workBuffer.Length.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
 
                 // 从Blob建立对象
-                T item = (T)dataAdaption.Adapter.From(this, (RyoReader)WorkBuffer.Buffer, dataAdaption.DataRyoType);
+                T item = (T)adapter.From(this, (RyoReader)WorkBuffer.Buffer, dataRyoType);
 
                 // 还回数据
                 WorkBuffer = workBuffer;
@@ -2033,12 +2061,14 @@ namespace Me.EarzuChan.Ryo
                             StickedMetaDataList.Add(inflatedDataReader.ReadInt());
 
                         var regCount = inflatedDataReader.ReadInt();
+                        //lock (MyRegableDataAdaptionList)
                         for (var i = 0; i < regCount; i++)
                         {
                             var id = inflatedDataReader.ReadInt();
                             var str1 = inflatedDataReader.ReadString();
                             var str2 = inflatedDataReader.ReadString();
-                            MyRegableDataAdaptionList.Add(new RegableDataAdaption(id, str1, str2));
+                            MyRegableDataAdaptionList.Add(RegItem(id, str1, str2));
+                            //LogUtil.INSTANCE.PrintInfo("拨弄：" + MyRegableDataAdaptionList[i].DataRyoType);
                         }
 
                         AfterLoadingIndex(inflatedDataReader);
@@ -2082,9 +2112,11 @@ namespace Me.EarzuChan.Ryo
                     // TODO:项目压缩问题
                     indexWriter.WriteInt(DataAdapterIdArray[i] << 1);//(IsItemDeflatedArray[i] == true ? 1 : 0));
                 }
+                int savedLength = 0;
                 for (int i2 = 0; i2 < ObjCount; i2++)
                 { // 写结束乐队
-                    indexWriter.WriteInt(EndPosition[i2]);
+                    savedLength += BlobList[i2].Length;
+                    indexWriter.WriteInt(savedLength);
                 }
                 for (int i3 = 0; i3 < ObjCount; i3++)
                 { // 写粘连科技
@@ -2105,7 +2137,7 @@ namespace Me.EarzuChan.Ryo
                     {
                         indexWriter.WriteInt(i7);
                         indexWriter.WrintString(MyRegableDataAdaptionList[i7].DataJavaClz);//AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType));
-                        indexWriter.WrintString(MyRegableDataAdaptionList[i7].Adapter.JavaClz);
+                        indexWriter.WrintString(Adapters[i7].JavaClz);
 
                         // 有问题。。。LogUtil.INSTANCE.PrintInfo("ID：" + i7, "类名：" + AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType), "序列化器类名：" + MyRegableDataAdaptionList[i7].Adapter.JavaClz);
                     }
