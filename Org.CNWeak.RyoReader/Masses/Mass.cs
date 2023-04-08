@@ -470,12 +470,17 @@ namespace Me.EarzuChan.Ryo.Masses
 
         public readonly List<int> StickyMetaDatas = new();
 
+        // 修正Adaptions命名空间，让工厂或者别的什么玩意能寻找适配器。先遍历表，没有就获取然后加新。反正返回适配项ID
+        public int FindAdaptionIdForRyoType(RyoType ryoType) { throw new NotImplementedException(); }
+
         public int Add(object obj)
         {
             int id = ItemBlobs.Count;
 
-            RyoType dataRyoType = AdaptionManager.INSTANCE.GetTypeByCsClz(obj.GetType());
+            RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
             // 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
+            // 我感觉这个要Bind？在表中找不到就添加？？？
+            // 或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
 
             throw new NotImplementedException("暂未完成");
 

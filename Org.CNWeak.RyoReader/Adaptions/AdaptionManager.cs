@@ -15,10 +15,14 @@ namespace Me.EarzuChan.Ryo.Adaptions
     {
         public string? ShortName; // Java短名
         public string? Name; // Java名
-        public bool IsCustom = false; // 自定义类
+        public bool IsAdaptableCustom = false; // 可适配类
         public bool IsArray = false; // 是列表
-        public bool ArrayWithL = false; // 列表用L
         public Type? BaseType; // C#基类
+
+        // 属性
+        public bool IsJvmBaseType => ShortName != null; // JVM基本类型
+        public bool IsUnidentifiedType => BaseType == null; // 未识别
+        public bool HasSubarray => (Name != null && Name.StartsWith('['));
 
         /*public RyoType GetSubitemRyoType()
          {
@@ -30,7 +34,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
         public override string ToString()
         {
             // return $"[RyoType信息：{AdaptionManager.INSTANCE.GetJavaClzByType(this)}，Java短名：{ShortName}，Java名：{Name}，自定义：{IsCustom}，是列表：{IsArray}，C#类：{BaseType}]";
-            return $"[RyoType：Java：{Name}，自定：{IsCustom}，列表：{IsArray}，C#：{BaseType}]";
+            return $"[RyoType：Java：{Name}，短名：{(ShortName == null ? "无" : ShortName)}，可适配自定：{IsAdaptableCustom}，列表：{IsArray}，C#：{BaseType}]";
         }
     }
 
@@ -40,9 +44,9 @@ namespace Me.EarzuChan.Ryo.Adaptions
         private static AdaptionManager? instance;
         public HashSet<RyoType> RyoTypes = new();
 
-        public AdaptionManager() => RegDefaultTypeJavaClzTable();
+        public AdaptionManager() => RegDefaultRyoTypeJavaClzTable();
 
-        public void RegDefaultTypeJavaClzTable()
+        public void RegDefaultRyoTypeJavaClzTable()
         {
             // 注册基本类型
             RyoTypes.Add(new() { ShortName = "Z", Name = "java.lang.Boolean", BaseType = typeof(bool) });
@@ -70,62 +74,83 @@ namespace Me.EarzuChan.Ryo.Adaptions
             // 注册额外项目（从文件）：TODO
         }
 
-        public RyoType GetRyoTypeByJavaClz(string clzName)
+        // GetRyoByJava
+        public RyoType? GetRyoTypeByJavaClz(string clzName)
         {
+            // 是否是列表
             bool isArray = clzName.StartsWith('[');
-            if (isArray) clzName = clzName[1..];
 
-            bool arrayWithL = false;
-            if (isArray & clzName.StartsWith("L") && clzName.EndsWith(";"))
+            // 先拨弄短名
+            string? shortName = isArray ? clzName[1..] : null;
+            if (clzName.StartsWith("[[")) clzName = clzName[1..]; // 是那个嵌套
+            // LogUtil.INSTANCE.PrintInfo("isArray：" + isArray, "shortName：" + shortName, "clzName：" + clzName);
+
+            // 是否是基本类型
+            if (isArray && shortName.StartsWith('L') && clzName.EndsWith(';'))
             {
-                //isCustom = true;
-                arrayWithL = true;
-                clzName = clzName[1..^1];
+                clzName = clzName[2..^1];
+                shortName = null;
             }
 
-            RyoType? type = null;
-            // 匹配基类
-            foreach (var item in RyoTypes.Where(item => item.ShortName == clzName || clzName.StartsWith(item.Name!)))
+            // 初始化
+            RyoType? ryoType = null;
+
+            // 匹配注册的类
+            foreach (var item in RyoTypes.Where(item => shortName != null ? item.ShortName == shortName : clzName.StartsWith(item.Name!)))
             {
-                type = item;
+                ryoType = item;
                 break;
             }
 
             // 没有就创建新的
-            type ??= new() { IsCustom = true, Name = clzName, ArrayWithL = arrayWithL };
-            type.IsArray = isArray;
-
-            return type;
-        }
-
-        public string GetJavaClzByRyoType(RyoType type)
-        {
-            string clzName = type.IsArray ? "[" : "";
-
-            // 其实我觉得没短名就有L
-            if (type.IsCustom) clzName += type.ArrayWithL ? "L" + type.Name + ";" : type.Name; //自定义
-            else // 非自定义
+            if (ryoType == null)
             {
-                foreach (var item in RyoTypes) // 遍历
+                // 是可适配自定义
+                Type? baseType = null;
+                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+                foreach (var item in types)
                 {
-                    if (type.BaseType == item.BaseType) // 相等
+                    var attribute = item.GetCustomAttribute<IAdaptable.AdaptableFormat>();
+                    if (attribute != null && typeof(IAdaptable).IsAssignableFrom(item))
                     {
-                        if (item.ShortName != null && type.IsArray) clzName += item.ShortName; // 是列表且有短名
-                        else
+                        if (attribute.FormatName == clzName)
                         {
-                            if (type.IsArray) clzName += "L";
-                            clzName += item.Name;
-                            if (type.IsArray) clzName += ";";
+                            baseType = item;
+                            break;
                         }
-                        break;
                     }
                 }
+                bool isAdaptableCustom = baseType != null;
+
+                // if (!isAdaptableCustom) throw new InvalidDataException($"给定的类名“{clzName}”不合法：" );
+
+                // 不是可适配自定义就没有BaseType
+                ryoType = new() { IsAdaptableCustom = isAdaptableCustom, Name = clzName, BaseType = baseType };
+
+                // 还套数组怎么办？不关它事，用一个属性怎么样？
+                // if (clzName.StartsWith('[')) ryoType.HasSubitem = true;
+
+                //尝试直接forName否？不吧
             }
+            ryoType.IsArray = isArray;
+
+            return ryoType;
+        }
+
+        // GetJavaByRyo
+        public string GetJavaClzByRyoType(RyoType ryoType)
+        {
+            string clzName = ryoType.IsArray ? "[" : "";
+
+            // LogUtil.INSTANCE.PrintInfo("数组：" + ryoType.IsArray, "有子项数组：" + ryoType.HasSubarray, "名称：" + ryoType.Name);
+            //因为Ryo已经含有JavaClz相关，所以：
+            clzName += ryoType.IsArray ? ryoType.ShortName == null ? !ryoType.HasSubarray ? "L" + ryoType.Name + ";" : ryoType.Name : ryoType.ShortName : ryoType.Name;
 
             return clzName;
         }
 
-        // 改造为GetCsClzByRyoType
+        // 故意无法直转（[[B）怎么办？
+        // GetCsByRyo
         public Type? GetCsClzByRyoType(RyoType ryoType)
         {
             // if (!ryoType.IsCustom) throw new FormatException("非自定义格式" + ryoType);
@@ -133,31 +158,63 @@ namespace Me.EarzuChan.Ryo.Adaptions
             //LogUtil.INSTANCE.PrintInfo("Parsing Format：" + ryoType);
 
             // 匹配一手自定义
-            Type? formatType = null;
-            var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
-            foreach (var item in types)
+            Type? baseType = ryoType.BaseType;
+
+            if (baseType == null && ryoType.IsAdaptableCustom)
             {
-                var attribute = item.GetCustomAttribute<IAdaptable.AdaptableFormat>();
-                if (attribute != null && typeof(IAdaptable).IsAssignableFrom(item))
+                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+                foreach (var item in types)
                 {
-                    if (attribute.FormatName == ryoType.Name)
+                    var attribute = item.GetCustomAttribute<IAdaptable.AdaptableFormat>();
+                    if (attribute != null && typeof(IAdaptable).IsAssignableFrom(item))
                     {
-                        formatType = item;
-                        break;
+                        if (attribute.FormatName == ryoType.Name)
+                        {
+                            baseType = item;
+                            break;
+                        }
                     }
                 }
             }
-
-            formatType ??= ryoType.BaseType;
-            formatType ??= Type.GetType(ryoType.Name!); // JAVA不友好
-            // formatType ??= typeof(object);
+            // baseType ??= Type.GetType(ryoType.Name!); JAVA不友好
+            //formatType ??= typeof(object);
             // if (formatType == null) throw new InvalidCastException(ryoType + "不可转换为有效C#类");
 
-            if (ryoType.IsArray) formatType = formatType?.MakeArrayType();
+            if (ryoType.IsArray) baseType = baseType?.MakeArrayType();
 
-            return formatType;
+            return baseType;
         }
 
+        // GetRyoByCs
+        public RyoType GetRyoTypeByCsClz(Type type)
+        {
+            // 列表相关
+            bool isArray = type.IsArray;
+            if (isArray) type = type.GetElementType()!;
+
+            // 初始化
+            RyoType? ryoType = null;
+
+            // 匹配基本类型
+            foreach (var item in RyoTypes.Where(item => item.BaseType == type))
+            {
+                ryoType = item;
+                break;
+            }
+
+            // 如果为可适配自定义，那么就有attr_format_name，就不用if
+            var attr = type.GetCustomAttribute<IAdaptable.AdaptableFormat>();
+            var clzName = attr?.FormatName;
+            //clzName ??= type.Name; // Java不友好
+
+            // 没有就创建新的
+            ryoType ??= new() { IsAdaptableCustom = clzName != null, Name = clzName, BaseType = type };
+            ryoType.IsArray = isArray;
+
+            return ryoType;
+        }
+
+        // CreateAdapter（时机）
         public IAdapter CreateAdapter(RyoType adapterFactoryRyoType, RyoType dataRyoType)
         {
             if (typeof(IAdapterFactory).IsAssignableFrom(adapterFactoryRyoType.BaseType))
@@ -167,32 +224,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             else throw new InvalidCastException($"{adapterFactoryRyoType}不是一个适配器工厂类");
         }
 
-        public RyoType GetTypeByCsClz(Type type)
-        {
-            bool isArray = type.IsArray;
-            if (isArray) type = type.GetElementType()!;
-
-            RyoType? ryoType = null;
-            // 匹配基类
-            foreach (var item in RyoTypes.Where(item => item.BaseType == type))
-            {
-                ryoType = item;
-                break;
-            }
-
-            // 匹配类名
-            var attr = type.GetCustomAttribute<IAdaptable.AdaptableFormat>();
-            var clzName = attr?.FormatName;
-            clzName ??= type.Name; // Java不友好
-
-            // 没有就创建新的
-            ryoType ??= new() { IsCustom = true, Name = clzName, BaseType = type, ArrayWithL = true };
-            ryoType.IsArray = isArray;
-
-            LogUtil.INSTANCE.PrintInfo("转换结果：" + ryoType);
-
-            return ryoType;
-        }
+        // 根据RyoType匹配适配器RyoType在哪里？
     }
 
     public interface IAdapter

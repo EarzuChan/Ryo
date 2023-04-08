@@ -16,6 +16,8 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
     public interface IAdapterFactory
     {
         IAdapter Create(RyoType type);
+
+        //string? FindAdapterForRyoType
     }
 
     public class CustomFormatAdapterFactory : IAdapterFactory
@@ -83,7 +85,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public IAdapter Create(RyoType type)
         {
-            if (!type.IsCustom) throw new FormatException("非自定义格式" + type);
+            if (!type.IsAdaptableCustom) throw new FormatException("非自定义格式" + type);
 
             var formatType = AdaptionManager.INSTANCE.GetCsClzByRyoType(type);
 

@@ -321,7 +321,7 @@ namespace Me.EarzuChan.Ryo.Commands
         public TestConvCommand(string name) => Name = name;
         public void Execute()
         {
-            List<string> types = new() { "B", "I", "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
+            List<string> types = new() {  "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
 
             if (Name != null) types.Add(Name);
 
@@ -330,42 +330,31 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 var ryo = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(item);
                 var re = AdaptionManager.INSTANCE.GetJavaClzByRyoType(ryo);
-                LogUtil.INSTANCE.PrintInfo($"No.{i}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
+                LogUtil.INSTANCE.PrintInfo($"No.{i}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
                 i++;
             }
         }
     }
 
-    [Command("TestAdd", "For Dev only", true)]
-    public class TestAddCommand : ICommand
+    [Command("TestConv2", "For Dev only", true)]
+    public class TestConv2Command : ICommand
     {
-        public string MassName;
+        // public string MassName;
         public ArrayList Items = new() { "测试", 114514, 1.0F, new UserMessage("太美丽", true), new int[] { 0 } };
 
-        public TestAddCommand(string massName)
+        /*public TestConv2Command(string massName)
         {
             MassName = massName;
-        }
+        }*/
 
         public void Execute()
         {
-            var mass = MassManager.INSTANCE.GetMassFile(MassName);
-            try
+            for (int i = 0; i < Items.Count; i++)
             {
-                if (mass == null) throw new InvalidDataException("档案不存在");
-
-                foreach (var item in Items)
-                {
-                    try
-                    {
-                        mass.Add(item);
-                    }
-                    catch (Exception) { }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogUtil.INSTANCE.PrintError($"不能尝试添加", ex);
+                var item = Items[i]!.GetType();
+                var ryo = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(item);
+                var re = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryo);
+                LogUtil.INSTANCE.PrintInfo($"No.{i+1}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
             }
         }
     }
