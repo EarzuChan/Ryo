@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
-    public class TextureFile : Mass
+    public class OldTextureFile : OldMass
     {
         // 成员
         public int[][] ImageIDsArray = Array.Empty<int[]>();
 
-        public TextureFile(string name) : base(name)
+        public OldTextureFile(string name) : base(name)
         {
             ExtendedName = "TextureFile";
         }
@@ -41,15 +41,15 @@ namespace Me.EarzuChan.Ryo.Masses
         }
     }
 
-    public class MassFile : Mass
+    public class OldMassFile : OldMass
     {
         // 成员变量
         public Dictionary<string, int> MyIdStrMap = new();
 
-        public MassFile(string name) : base(name)
+        public OldMassFile(string name) : base(name)
         {
             ExtendedName = "FileSystem";
-            MassManager.INSTANCE.MassList.Add(this);
+            OldMassManager.INSTANCE.MassList.Add(this);
         }
 
         public override void AfterLoadingIndex(RyoReader inflatedDataReader)
@@ -79,6 +79,34 @@ namespace Me.EarzuChan.Ryo.Masses
         public void Load(FileStream file)
         {
             Load(file, ExtendedName);
+        }
+    }
+
+    public class MassFile : Mass
+    {
+        public readonly Dictionary<string, int> IdStrPairs = new();
+
+        public MassFile() => ExtendedName = "FileSystem";
+
+        protected override void AfterLoadingIndex(RyoReader inflatedDataReader)
+        {
+            var idStrPairCount = inflatedDataReader.ReadInt();
+            for (var i = 0; i < idStrPairCount; i++)
+            {
+                var str = inflatedDataReader.ReadString();
+                var id = inflatedDataReader.ReadInt();
+                IdStrPairs.Add(str, id);
+            }
+        }
+
+        protected override void AfterSavingIndex(RyoWriter writer)
+        {
+            writer.WriteInt(IdStrPairs.Count);
+            foreach (var i in IdStrPairs)
+            {
+                writer.WrintString(i.Key);
+                writer.WriteInt(i.Value);
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions.AdapterFactories;
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Masses;
+using Me.EarzuChan.Ryo.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,12 +20,12 @@ namespace Me.EarzuChan.Ryo.Adaptions
         public bool ArrayWithL = false; // 列表用L
         public Type? BaseType; // C#基类
 
-        public RyoType GetSubitemRyoType()
-        {
-            if (!IsArray) throw new NotSupportedException(this + "不是列表");
-            var am = AdaptionManager.INSTANCE;
-            return am.GetTypeByJavaClz(am.GetJavaClzByType(this)[1..]);
-        }
+        /*public RyoType GetSubitemRyoType()
+         {
+             if (!IsArray) throw new NotSupportedException(this + "不是列表");
+             var am = AdaptionManager.INSTANCE;
+             return am.GetTypeByJavaClz(am.GetJavaClzByType(this)[1..]);
+         }*/
 
         public override string ToString()
         {
@@ -69,11 +70,8 @@ namespace Me.EarzuChan.Ryo.Adaptions
             // 注册额外项目（从文件）：TODO
         }
 
-        public RyoType GetTypeByJavaClz(string clzName)
+        public RyoType GetRyoTypeByJavaClz(string clzName)
         {
-            /*bool isFullArray = clzName.StartsWith("[L");
-            if (isFullArray) clzName = clzName[2..];*/
-
             bool isArray = clzName.StartsWith('[');
             if (isArray) clzName = clzName[1..];
 
@@ -100,10 +98,11 @@ namespace Me.EarzuChan.Ryo.Adaptions
             return type;
         }
 
-        public string GetJavaClzByType(RyoType type)
+        public string GetJavaClzByRyoType(RyoType type)
         {
             string clzName = type.IsArray ? "[" : "";
 
+            // 其实我觉得没短名就有L
             if (type.IsCustom) clzName += type.ArrayWithL ? "L" + type.Name + ";" : type.Name; //自定义
             else // 非自定义
             {
@@ -126,12 +125,14 @@ namespace Me.EarzuChan.Ryo.Adaptions
             return clzName;
         }
 
-        public Type? TryParseCustomFormatType(RyoType ryoType)
+        // 改造为GetCsClzByRyoType
+        public Type? GetCsClzByRyoType(RyoType ryoType)
         {
-            if (!ryoType.IsCustom) throw new FormatException("非自定义格式" + ryoType);
+            // if (!ryoType.IsCustom) throw new FormatException("非自定义格式" + ryoType);
 
             //LogUtil.INSTANCE.PrintInfo("Parsing Format：" + ryoType);
 
+            // 匹配一手自定义
             Type? formatType = null;
             var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
             foreach (var item in types)
@@ -147,8 +148,50 @@ namespace Me.EarzuChan.Ryo.Adaptions
                 }
             }
 
+            formatType ??= ryoType.BaseType;
+            formatType ??= Type.GetType(ryoType.Name!); // JAVA不友好
+            // formatType ??= typeof(object);
+            // if (formatType == null) throw new InvalidCastException(ryoType + "不可转换为有效C#类");
+
             if (ryoType.IsArray) formatType = formatType?.MakeArrayType();
+
             return formatType;
+        }
+
+        public IAdapter CreateAdapter(RyoType adapterFactoryRyoType, RyoType dataRyoType)
+        {
+            if (typeof(IAdapterFactory).IsAssignableFrom(adapterFactoryRyoType.BaseType))
+            {
+                return ((IAdapterFactory)Activator.CreateInstance(adapterFactoryRyoType.BaseType)!).Create(dataRyoType);
+            }
+            else throw new InvalidCastException($"{adapterFactoryRyoType}不是一个适配器工厂类");
+        }
+
+        public RyoType GetTypeByCsClz(Type type)
+        {
+            bool isArray = type.IsArray;
+            if (isArray) type = type.GetElementType()!;
+
+            RyoType? ryoType = null;
+            // 匹配基类
+            foreach (var item in RyoTypes.Where(item => item.BaseType == type))
+            {
+                ryoType = item;
+                break;
+            }
+
+            // 匹配类名
+            var attr = type.GetCustomAttribute<IAdaptable.AdaptableFormat>();
+            var clzName = attr?.FormatName;
+            clzName ??= type.Name; // Java不友好
+
+            // 没有就创建新的
+            ryoType ??= new() { IsCustom = true, Name = clzName, BaseType = type, ArrayWithL = true };
+            ryoType.IsArray = isArray;
+
+            LogUtil.INSTANCE.PrintInfo("转换结果：" + ryoType);
+
+            return ryoType;
         }
     }
 

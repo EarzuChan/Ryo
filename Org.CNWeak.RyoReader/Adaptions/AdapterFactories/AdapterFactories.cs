@@ -83,7 +83,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public IAdapter Create(RyoType type)
         {
-            var formatType = AdaptionManager.INSTANCE.TryParseCustomFormatType(type);
+            if (!type.IsCustom) throw new FormatException("非自定义格式" + type);
+
+            var formatType = AdaptionManager.INSTANCE.GetCsClzByRyoType(type);
 
             if (formatType == null) throw new NotSupportedException("暂不支持该自定义类型" + type);
             // TODO:未来给普通类做的字段适配器
@@ -169,13 +171,13 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             {
                 // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
-                var oriItemType = AdaptionManager.INSTANCE.TryParseCustomFormatType(ryoType)?.GetElementType();
+                var oriItemType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType)?.GetElementType();
                 Type itemType = oriItemType ?? typeof(object);
 
                 Array objArr = Array.CreateInstance(itemType, reader.ReadInt());
                 // LogUtil.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
 
-                mass.Reference(objArr);
+                //mass.Reference(objArr);
 
                 for (int i = 0; i < objArr.Length; i++) objArr.SetValue(mass.Read<object>(), i);
 
