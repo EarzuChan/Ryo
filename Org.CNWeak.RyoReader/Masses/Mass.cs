@@ -301,7 +301,7 @@ namespace Me.EarzuChan.Ryo.Masses
                 {
                     indexWriter.WriteInt(i7);
                     indexWriter.WrintString(MyRegableDataAdaptionList[i7].DataJavaClz);//AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType));
-                    indexWriter.WrintString(Adapters[i7].JavaClz);
+                    // indexWriter.WrintString(Adapters[i7].JavaClz);
 
                     // 有问题。。。LogUtil.INSTANCE.PrintInfo("ID：" + i7, "类名：" + AdaptionManager.INSTANCE.GetJavaClzByType(MyRegableDataAdaptionList[i7].DataRyoType), "序列化器类名：" + MyRegableDataAdaptionList[i7].Adapter.JavaClz);
                 }
@@ -450,15 +450,15 @@ namespace Me.EarzuChan.Ryo.Masses
 
         public class ItemAdaption
         {
-            public int AdaptionId;
+            //public int AdaptionId;
 
             public string DataJavaClz;
 
             public string AdapterJavaClz;
 
-            public ItemAdaption(int adaptionId, string dataJavaClz, string adapterFactoryJavaClz)
+            public ItemAdaption(string dataJavaClz, string adapterFactoryJavaClz)
             {
-                AdaptionId = adaptionId;
+                //AdaptionId = adaptionId;
                 DataJavaClz = dataJavaClz;
                 AdapterJavaClz = adapterFactoryJavaClz;
             }
@@ -471,7 +471,21 @@ namespace Me.EarzuChan.Ryo.Masses
         public readonly List<int> StickyMetaDatas = new();
 
         // 修正Adaptions命名空间，让工厂或者别的什么玩意能寻找适配器。先遍历表，没有就获取然后加新。反正返回适配项ID
-        public int FindAdaptionIdForRyoType(RyoType ryoType) { throw new NotImplementedException(); }
+        public int FindAdaptionIdForDataRyoType(RyoType ryoType)
+        {
+            // 查找一手好活
+            var javaClz = AdaptionManager.INSTANCE.GetJavaClzByRyoType(ryoType)!;
+            var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
+            if (result != null) return ItemAdaptions.IndexOf(result);
+
+            var adapterRyoType = AdaptionManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException(ryoType + "没有可用的适配器");
+
+            var adapterJavaClz = AdaptionManager.INSTANCE.GetJavaClzByRyoType(adapterRyoType)!;
+            var itemAdaption = new ItemAdaption(javaClz, adapterJavaClz);
+            ItemAdaptions.Add(itemAdaption);
+
+            return ItemAdaptions.IndexOf(itemAdaption);
+        }
 
         public int Add(object obj)
         {
@@ -617,10 +631,10 @@ namespace Me.EarzuChan.Ryo.Masses
                 int regCount = inflatedDataReader.ReadInt();
                 for (var i = 0; i < regCount; i++)
                 {
-                    var id = inflatedDataReader.ReadInt();
+                    inflatedDataReader.ReadInt();
                     var str1 = inflatedDataReader.ReadString();
                     var str2 = inflatedDataReader.ReadString();
-                    ItemAdaptions.Add(new ItemAdaption(id, str1, str2));
+                    ItemAdaptions.Add(new ItemAdaption(str1, str2));
                 }
 
                 AfterLoadingIndex(inflatedDataReader);
@@ -676,7 +690,7 @@ namespace Me.EarzuChan.Ryo.Masses
                     // 添加、Put、Del完项目 项目块和适配项要刷新
 
                     var itemAdaption = ItemAdaptions[i7];
-                    indexWriter.WriteInt(itemAdaption.AdaptionId);
+                    indexWriter.WriteInt(i7);
                     indexWriter.WrintString(itemAdaption.DataJavaClz);
                     indexWriter.WrintString(itemAdaption.AdapterJavaClz);
                 }

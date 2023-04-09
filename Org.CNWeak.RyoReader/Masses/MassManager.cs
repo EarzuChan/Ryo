@@ -100,7 +100,7 @@ namespace Me.EarzuChan.Ryo.Masses
             for (int i = 0; i < itemAdaptionsCount; i++)
             {
                 var item = mass.ItemAdaptions[i];
-                info.AppendLine($"-- Id.{item.AdaptionId} {item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+                info.AppendLine($"-- Id.{i} {item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
             }
 
             info.AppendLine($"\n正式数据项数：{mass.IdStrPairs.Count}");

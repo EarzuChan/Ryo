@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -40,6 +41,8 @@ namespace Me.EarzuChan.Ryo.Adaptions
 
     public class AdaptionManager
     {
+        // public static readonly IntRyoType=
+
         public static AdaptionManager INSTANCE { get { instance ??= new(); return instance; } }
         private static AdaptionManager? instance;
         public HashSet<RyoType> RyoTypes = new();
@@ -68,14 +71,14 @@ namespace Me.EarzuChan.Ryo.Adaptions
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.FieldSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
 
-            // 特定类（图片等）
-            RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
+            // 特定类（图片等）未修复
+            // RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
 
             // 注册额外项目（从文件）：TODO
         }
 
         // GetRyoByJava
-        public RyoType? GetRyoTypeByJavaClz(string clzName)
+        public RyoType GetRyoTypeByJavaClz(string clzName)
         {
             // 是否是列表
             bool isArray = clzName.StartsWith('[');
@@ -138,8 +141,10 @@ namespace Me.EarzuChan.Ryo.Adaptions
         }
 
         // GetJavaByRyo
-        public string GetJavaClzByRyoType(RyoType ryoType)
+        public string? GetJavaClzByRyoType(RyoType ryoType)
         {
+            if (ryoType.ShortName == null && ryoType.Name == null) return null;
+
             string clzName = ryoType.IsArray ? "[" : "";
 
             // LogUtil.INSTANCE.PrintInfo("数组：" + ryoType.IsArray, "有子项数组：" + ryoType.HasSubarray, "名称：" + ryoType.Name);
@@ -160,6 +165,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             // 匹配一手自定义
             Type? baseType = ryoType.BaseType;
 
+            // 额外野食
             if (baseType == null && ryoType.IsAdaptableCustom)
             {
                 var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
@@ -217,11 +223,33 @@ namespace Me.EarzuChan.Ryo.Adaptions
         // CreateAdapter（时机）
         public IAdapter CreateAdapter(RyoType adapterFactoryRyoType, RyoType dataRyoType)
         {
-            if (typeof(IAdapterFactory).IsAssignableFrom(adapterFactoryRyoType.BaseType))
+            var factoryType = GetCsClzByRyoType(adapterFactoryRyoType);
+
+            if (typeof(IAdapterFactory).IsAssignableFrom(factoryType))
             {
-                return ((IAdapterFactory)Activator.CreateInstance(adapterFactoryRyoType.BaseType)!).Create(dataRyoType);
+                return ((IAdapterFactory)Activator.CreateInstance(factoryType)!).Create(dataRyoType);
             }
             else throw new InvalidCastException($"{adapterFactoryRyoType}不是一个适配器工厂类");
+        }
+
+        public RyoType? FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+        {
+            RyoType? result = null;
+            var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+            foreach (var item in types)
+            {
+                if (typeof(IAdapterFactory).IsAssignableFrom(item))
+                {
+                    try
+                    {
+                        result = ((IAdapterFactory)Activator.CreateInstance(item)!).FindAdapterRyoTypeForDataRyoType(ryoType);
+                    }
+                    catch (Exception) { }
+
+                    if (result != null) break;
+                }
+            }
+            return result;
         }
 
         // 根据RyoType匹配适配器RyoType在哪里？
@@ -233,7 +261,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
 
         void To(object obj, Mass mass, RyoWriter writer);
 
-        string JavaClz { get; }
+        // string JavaClz { get; }
     }
 
     public class DirectByteArrayAdapter : IAdapter

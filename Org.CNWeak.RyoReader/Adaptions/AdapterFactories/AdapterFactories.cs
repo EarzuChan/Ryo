@@ -10,12 +10,15 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static Me.EarzuChan.Ryo.Adaptions.AdapterFactories.BaseArrayTypeAdapterFactory;
 
 namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 {
     public interface IAdapterFactory
     {
         IAdapter Create(RyoType type);
+
+        RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType);
 
         //string? FindAdapterForRyoType
     }
@@ -42,7 +45,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 }
             }
 
-            string IAdapter.JavaClz => "sengine.mass.serializers.MassSerializableSerializer";
+            // string IAdapter.JavaClz => "sengine.mass.serializers.MassSerializableSerializer";
 
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
@@ -85,11 +88,10 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public IAdapter Create(RyoType type)
         {
-            if (!type.IsAdaptableCustom) throw new FormatException("非自定义格式" + type);
+            if (!type.IsAdaptableCustom) throw new FormatException("非可适配自定义类型：" + type);
 
-            var formatType = AdaptionManager.INSTANCE.GetCsClzByRyoType(type);
+            var formatType = AdaptionManager.INSTANCE.GetCsClzByRyoType(type) ?? throw new NotSupportedException("不支持解析不了的自定义类型：" + type);
 
-            if (formatType == null) throw new NotSupportedException("暂不支持该自定义类型" + type);
             // TODO:未来给普通类做的字段适配器
 
             try
@@ -100,17 +102,26 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             }
             catch (Exception ex)
             {
-                throw new Exception("为类型" + type + "创建适配器时出错，因为" + ex.Message);
+                throw new InvalidDataException("为类型" + type + "创建适配器时出错，因为" + ex.Message);
             }
+        }
+
+        public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+        {
+            if (ryoType.IsAdaptableCustom) return new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) };
+            else throw new InvalidDataException("类型不属于可适配自定义类型：" + ryoType);
         }
     }
 
     public class BaseTypeAdapterFactory : IAdapterFactory
     {
+        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
+            { new (){ ShortName = "I", Name = "java.lang.Integer", BaseType = typeof(int) },new() {  Name = "sengine.mass.serializers.DefaultSerializers$IntSerializer", BaseType = typeof(IntAdapter) } },
+            { new (){ Name = "java.lang.String", BaseType = typeof(string) },new() {  Name = "sengine.mass.serializers.DefaultSerializers$StringSerializer", BaseType = typeof(StringAdapter) } },
+        };
+
         public class IntAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultSerializers$IntSerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
 
             public void To(object obj, Mass mass, RyoWriter writer)
@@ -121,8 +132,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public class StringAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultSerializers$StringSerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
             public void To(object obj, Mass mass, RyoWriter writer)
@@ -131,23 +140,36 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             }
         }
 
-        public IAdapter Create(RyoType type)
+        public IAdapter Create(RyoType ryoType)
         {
             // 需要内联吗？
-            Type? baseType = type.BaseType;
+            // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
 
-            if (baseType == typeof(int)) return new IntAdapter();
-            else if (baseType == typeof(string)) return new StringAdapter();
-            else throw new NotSupportedException("暂不支持" + type);
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+
+            throw new NotSupportedException("类型不属于基本类型或暂不支持：" + ryoType);
+        }
+
+        public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+        {
+            // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
+
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return item.Value;
+
+            throw new InvalidDataException("不属于基本类型或暂不支持：" + ryoType);
         }
     }
 
     public class BaseArrayTypeAdapterFactory : IAdapterFactory
     {
+        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
+            { new() { ShortName = "I",Name="java.lang.Integer" ,BaseType = typeof(int), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer", BaseType = typeof(IntArrayAdapter) } },
+            { new() { ShortName = "B", Name="java.lang.Byte" ,BaseType = typeof(byte), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer", BaseType = typeof(ByteArrayAdapter) } },
+            { new() {  Name = "java.lang.String",BaseType=typeof(string), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer", BaseType = typeof(StringArrayAdapter) } },
+        };
+
         public class IntArrayAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
                 int i = reader.ReadInt();
@@ -167,8 +189,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public class ObjectArrayAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
                 // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
@@ -213,8 +233,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public class ByteArrayAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
 
             public void To(object obj, Mass mass, RyoWriter writer)
@@ -225,8 +243,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public class StringArrayAdapter : IAdapter
         {
-            public string JavaClz => "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer";
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
                 int i = reader.ReadInt();
@@ -241,20 +257,31 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             }
         }
 
-        public IAdapter Create(RyoType type)
+        public IAdapter Create(RyoType ryoType)
         {
-            if (!type.IsArray) throw new FormatException(type + "不是列表");
-            Type? baseType = type.BaseType;
+            if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
 
-            if (baseType == typeof(int)) return new IntArrayAdapter();
-            else if (baseType == typeof(byte)) return new ByteArrayAdapter();
-            else if (baseType == typeof(string)) return new StringArrayAdapter();
-            else return new ObjectArrayAdapter();
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            return new ObjectArrayAdapter();
+        }
+
+        public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+        {
+            if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
+
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return item.Value;
+
+            return new() { Name = "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer", BaseType = typeof(ObjectArrayAdapter) };
         }
     }
 
-    public class SpecialFormatAdapterFactory : IAdapterFactory
+    // 待修正
+    /*public class SpecialFormatAdapterFactory : IAdapterFactory
     {
+        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
+            { new() { Name="sengine.graphics2d.texturefile.FIFormat" ,IsAdaptableCustom=true,BaseType = typeof(FragmentalImage)}, new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) } },
+        };
+
         public class FragmentalImageAdapter : IAdapter
         {
             public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
@@ -353,10 +380,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 var image = (FragmentalImage)obj;
 
                 // 不知道是什么
-                /*if (r12.f2426a > 0 || r12.f2427b > 0)
+                */
+    /*if (r12.f2426a > 0 || r12.f2427b > 0)
                 {
                     throw new IllegalStateException("Cannot serialize partially loaded image data");
                 }*/
+    /*
 
                 RyoWriter? directClipWritter = null;
 
@@ -442,5 +471,5 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 _ => throw new FormatException(type + "没有合适的适配器"),
             };
         }
-    }
+    }*/
 }
