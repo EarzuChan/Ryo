@@ -68,7 +68,7 @@ namespace Me.EarzuChan.Ryo.IO
 
         public sbyte ReadSignedByte() => Reader.ReadSByte();
 
-        public bool ReadBoolean() => ReadSignedByte() != 0;
+        public bool ReadBoolean() => ReadUnsignedByte() != 0;
 
         public static implicit operator RyoReader(byte[] buffer) => new RyoReader(new MemoryStream(buffer));
     }

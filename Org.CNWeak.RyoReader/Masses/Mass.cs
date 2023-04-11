@@ -609,7 +609,42 @@ namespace Me.EarzuChan.Ryo.Masses
         // 子项怎么办
         public void Set(int id, object obj)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (obj == null) throw new NullReferenceException("对象为Null");
+
+                //int id = ItemBlobs.Count;
+
+                RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
+                // 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
+                // 我感觉这个要Bind？在表中找不到就添加？？？
+                // 或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
+                var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
+                var adaption = ItemAdaptions[adaptionId];
+
+                // 以后要不要暂存Ryo和Adapter？太浪费
+                // 会抛出就会
+                var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+
+                int stickyId = ItemBlobs[id].StickyId;
+                // 这里导致覆盖原数据时，Sticky索引在Write中不能正确拨弄，给我点拨一二。
+                // TODO！！！
+
+                var writer = new RyoWriter(new MemoryStream());
+                adapter.To(obj, this, writer);
+                writer.PositionToZero();
+
+                var itemBlob = new ItemBlob(adaptionId, stickyId, new RyoReader(writer).ReadAllBytes());
+
+                ItemBlobs[id] = itemBlob;
+                // 写写手写到对应Blob和压缩（待办）
+                // 记得解析原文的对于粘连数据干了什么？我觉得是大小，因为没读（写）不刷新，写元数据自然是最新
+
+                // throw new NotImplementedException("暂未完成");
+
+                //return id;
+            }
+            catch (Exception ex) { throw new Exception("不能设置对象，因为" + ex.Message, ex); }
         }
 
         public void Load(FileStream fileStream)
@@ -747,5 +782,32 @@ namespace Me.EarzuChan.Ryo.Masses
         protected virtual void AfterLoadingIndex(RyoReader reader) { }
 
         protected virtual void AfterSavingIndex(RyoWriter writer) { }
+
+        public void Write<T>(T obj)
+        {
+            int newStickyMetaData;
+
+            if (obj == null) newStickyMetaData = 0;
+            else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmBaseType)
+            {
+                throw new NotImplementedException();
+                // 序列化基本类型，然后写注册ID+2给4
+                // 那边业没实现这个
+                /*Class <?> cls = obj.getClass();
+                接口_序列化器 <?> xlhq = 方法_取序列化器(cls);
+                newStickyMetaData = (方法_取已序列化类的ID(cls) << 2) | 2;
+                try
+                { // 直接写入父项捏
+                    xlhq.方法_写(this, this.读者_输出_暂存拨弄缓冲区, obj); // 直接写入父项捏
+                }
+                catch (Throwable th)
+                {
+                    throw new 错误类_马斯("Cannot serialize inlined object: " + obj + ", type: " + cls, th);
+                }*/
+            }
+            else newStickyMetaData = (Add(obj) << 2) | 3; // Switch3
+
+            StickyMetaDatas.Add(newStickyMetaData);
+        }
     }
 }

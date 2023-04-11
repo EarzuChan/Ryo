@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
+using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Commands
 {
@@ -40,6 +41,7 @@ namespace Me.EarzuChan.Ryo.Commands
         {
             FileName = fileName;
         }
+
         public void Execute()
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
@@ -384,7 +386,7 @@ namespace Me.EarzuChan.Ryo.Commands
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
             {
-                if (mass == null) throw new InvalidDataException("档案不存在");
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
 
                 if (ItemName != null)
                 {
@@ -398,6 +400,38 @@ namespace Me.EarzuChan.Ryo.Commands
 
                     LogUtil.INSTANCE.PrintInfo("添加成功，ID：" + id);
                 }
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("RpSm", "Replace a SenderMessage in a file.", true)]
+    public class RpSmCommand : ICommand
+    {
+        public string FileName;
+        public int Id;
+        public string Msg;
+
+        public RpSmCommand(string fileName, string id, string msg)
+        {
+            FileName = fileName;
+            Id = int.Parse(id);
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var msg = mass.Get<SenderMessage>(Id);
+                msg.Message = Msg;
+                mass.Set(Id, msg);
             }
             catch (Exception ex)
             {

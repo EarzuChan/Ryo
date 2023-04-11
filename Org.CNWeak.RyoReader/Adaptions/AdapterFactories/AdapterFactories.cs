@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Adaptions.AdapterFactories.BaseArrayTypeAdapterFactory;
+using System.Reflection.PortableExecutable;
 
 namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 {
@@ -23,6 +24,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         //string? FindAdapterForRyoType
     }
 
+    // 说明：真的智将来的，根据写出的多少个参数（Out方法的输出长度可以内部判断）来对于多长的构造器！高！师爷！
     public class CustomFormatAdapterFactory : IAdapterFactory
     {
         public class CustomFormatAdapter : IAdapter
@@ -51,10 +53,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             {
                 ConstructorInfo? ctor = null;
                 List<Type>? paramTypes = null;
+
+                // 瞄准构造器且匹配参数
                 if (Ctors.Count > 1)
                 {
-                    int ctorId = reader.ReadUnsignedByte();
-                    ctor = Ctors[reader.ReadUnsignedByte()];
+                    int ctorId = reader.ReadSignedByte();
+                    ctor = Ctors[reader.ReadSignedByte()];
                     paramTypes = CtorParams[ctorId];
                 }
                 else
@@ -63,12 +67,13 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     paramTypes = CtorParams[0];
                 }
 
+                // 一个一个参数来读取
                 object[] args = new object[paramTypes.Count];
                 for (int i = 0; i < paramTypes.Count; i++)
                 {
                     Type item = paramTypes[i];
 
-                    LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
+                    //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
                     // TODO:读参数方法
                     if (item == typeof(int)) args[i] = reader.ReadInt();
                     else if (item == typeof(string)) args[i] = reader.ReadString();
@@ -77,12 +82,52 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     else args[i] = mass.Read<object>();
                 }
 
+                // 使用构造器构造
                 return ctor.Invoke(args);
             }
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                throw new NotImplementedException();
+                object[] args = ((IAdaptable)obj).GetAdaptedArray() ?? throw new NullReferenceException("给我Null我怎么写入？");
+
+                int i = 0;
+                while (i < Ctors.Count)
+                {
+                    if (CtorParams[i].Count == args.Length) break;
+                    i++;
+                }
+
+                if (i == Ctors.Count) throw new InvalidCastException("没有符合参数数的构造器");
+
+                if (Ctors.Count > 1) writer.WriteSignedByte((sbyte)i);
+
+                var paramTypes = CtorParams[i];
+
+                /*LogUtil.INSTANCE.PrintInfo("参数数：" + paramTypes.Count);
+                foreach (Type tp in paramTypes) LogUtil.INSTANCE.PrintInfo("参数类型：" + tp);*/
+
+                for (int i2 = 0; i2 < args.Length; i2++)
+                {
+                    Type item = paramTypes[i2];
+
+                    //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
+                    // TODO:读参数方法
+                    object ob = args[i2];
+                    try
+                    {
+                        //LogUtil.INSTANCE.PrintInfo($"写参数{i2 + 1}，预测类型：{item}，实际：{ob.GetType()}，值：{ob}");
+
+                        if (item == typeof(int)) writer.WriteInt((int)ob);
+                        else if (item == typeof(string)) writer.WrintString((string)ob);
+                        else if (item == typeof(float)) writer.WriteFloat((float)ob);
+                        else if (item == typeof(bool)) writer.WriteBoolean((bool)ob);
+                        else mass.Write<object>(ob);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidCastException($"写入第{i2 + 1}号参数时错误，是因为" + ex.Message, ex);
+                    }
+                }
             }
         }
 
@@ -131,10 +176,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
-            public void To(object obj, Mass mass, RyoWriter writer)
-            {
-                throw new NotImplementedException();
-            }
+            public void To(object obj, Mass mass, RyoWriter writer) => writer.WrintString((string)obj);
         }
 
         public IAdapter Create(RyoType ryoType)

@@ -48,5 +48,11 @@ namespace Me.EarzuChan.Ryo.IO
         public static implicit operator Stream(RyoWriter writer) => writer.Writer.BaseStream;
 
         public void WriteFixedString(string format) => WriteBytes(Encoding.UTF8.GetBytes(format));
+
+        public void WriteSignedByte(sbyte i) => Writer.Write(i);
+
+        public void WriteFloat(float ob) => Writer.Write(BitConverter.GetBytes(ob).Reverse().ToArray());
+
+        public void WriteBoolean(bool ob) => WriteSignedByte((sbyte)(ob ? 1 : 0));
     }
 }
