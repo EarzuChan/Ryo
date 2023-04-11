@@ -115,19 +115,16 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
     public class BaseTypeAdapterFactory : IAdapterFactory
     {
-        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
-            { new (){ ShortName = "I", Name = "java.lang.Integer", BaseType = typeof(int) },new() {  Name = "sengine.mass.serializers.DefaultSerializers$IntSerializer", BaseType = typeof(IntAdapter) } },
-            { new (){ Name = "java.lang.String", BaseType = typeof(string) },new() {  Name = "sengine.mass.serializers.DefaultSerializers$StringSerializer", BaseType = typeof(StringAdapter) } },
+        public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new() {
+            { typeof(int) ,new() {  Name = "sengine.mass.serializers.DefaultSerializers$IntSerializer", BaseType = typeof(IntAdapter) } },
+            { typeof(string) ,new() {  Name = "sengine.mass.serializers.DefaultSerializers$StringSerializer", BaseType = typeof(StringAdapter) } },
         };
 
         public class IntAdapter : IAdapter
         {
             public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
 
-            public void To(object obj, Mass mass, RyoWriter writer)
-            {
-                throw new NotImplementedException();
-            }
+            public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteInt((int)obj);
         }
 
         public class StringAdapter : IAdapter
@@ -144,28 +141,30 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             // 需要内联吗？
             // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-
-            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
-
+            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsUnidentifiedType)
+            {
+                foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            }
             throw new NotSupportedException("类型不属于基本类型或暂不支持：" + ryoType);
         }
 
         public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
         {
             // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-
-            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return item.Value;
-
+            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsUnidentifiedType)
+            {
+                foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return item.Value;
+            }
             throw new InvalidDataException("不属于基本类型或暂不支持：" + ryoType);
         }
     }
 
     public class BaseArrayTypeAdapterFactory : IAdapterFactory
     {
-        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
-            { new() { ShortName = "I",Name="java.lang.Integer" ,BaseType = typeof(int), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer", BaseType = typeof(IntArrayAdapter) } },
-            { new() { ShortName = "B", Name="java.lang.Byte" ,BaseType = typeof(byte), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer", BaseType = typeof(ByteArrayAdapter) } },
-            { new() {  Name = "java.lang.String",BaseType=typeof(string), IsArray = true }, new() { Name = "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer", BaseType = typeof(StringArrayAdapter) } },
+        public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new() {
+            { typeof(int), new() { Name = "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer", BaseType = typeof(IntArrayAdapter) } },
+            { typeof(byte), new() { Name = "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer", BaseType = typeof(ByteArrayAdapter) } },
+            { typeof(string), new() { Name = "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer", BaseType = typeof(StringArrayAdapter) } },
         };
 
         public class IntArrayAdapter : IAdapter
@@ -261,7 +260,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
 
-            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
             return new ObjectArrayAdapter();
         }
 
@@ -269,7 +268,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
 
-            foreach (var item in DataAdapterRyoTypePairs) if (ryoType == item.Key) return item.Value;
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return item.Value;
 
             return new() { Name = "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer", BaseType = typeof(ObjectArrayAdapter) };
         }

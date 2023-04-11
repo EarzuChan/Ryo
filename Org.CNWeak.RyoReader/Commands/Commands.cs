@@ -47,7 +47,7 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n\n" + MassManager.INSTANCE.GetInfo(mass));
             }
-            else LogUtil.INSTANCE.PrintInfo("不能显示信息，文件名不正确");
+            else throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
         }
     }
 
@@ -149,7 +149,7 @@ namespace Me.EarzuChan.Ryo.Commands
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
             {
-                if (mass == null) throw new Exception("档案不存在");
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
 
                 var map = mass.IdStrPairs;
                 LogUtil.INSTANCE.PrintInfo("搜索结果：");
@@ -182,7 +182,7 @@ namespace Me.EarzuChan.Ryo.Commands
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
             {
-                if (mass == null) throw new InvalidDataException("档案不存在");
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
 
                 using var fileStream = new FileStream(PathName, FileMode.OpenOrCreate);
                 mass.Save(fileStream);
@@ -321,7 +321,7 @@ namespace Me.EarzuChan.Ryo.Commands
         public TestConvCommand(string name) => Name = name;
         public void Execute()
         {
-            List<string> types = new() {  "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
+            List<string> types = new() { "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
 
             if (Name != null) types.Add(Name);
 
@@ -354,7 +354,54 @@ namespace Me.EarzuChan.Ryo.Commands
                 var item = Items[i]!.GetType();
                 var ryo = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(item);
                 var re = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryo);
-                LogUtil.INSTANCE.PrintInfo($"No.{i+1}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
+                LogUtil.INSTANCE.PrintInfo($"No.{i + 1}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
+            }
+        }
+    }
+
+    [Command("TestAdd", "Add a Int item to a file, for Dev only.", true)]
+    public class TestAddCommand : ICommand
+    {
+        public string FileName;
+        public string? ItemName = null;
+        public int Value;
+
+        public TestAddCommand(string fileName, string value)
+        {
+            FileName = fileName;
+            Value = int.Parse(value);
+        }
+
+        public TestAddCommand(string fileName, string itemName, string value)
+        {
+            FileName = fileName;
+            ItemName = itemName;
+            Value = int.Parse(value);
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new InvalidDataException("档案不存在");
+
+                if (ItemName != null)
+                {
+                    mass.Add(ItemName, Value);
+
+                    LogUtil.INSTANCE.PrintInfo("添加成功，名称：" + ItemName);
+                }
+                else
+                {
+                    var id = mass.Add(Value);
+
+                    LogUtil.INSTANCE.PrintInfo("添加成功，ID：" + id);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
             }
         }
     }

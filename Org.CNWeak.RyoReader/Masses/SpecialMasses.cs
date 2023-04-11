@@ -108,5 +108,9 @@ namespace Me.EarzuChan.Ryo.Masses
                 writer.WriteInt(i.Value);
             }
         }
+
+        public void Add(string token, object obj) => IdStrPairs.Add(token, Add(obj));
+
+        // 看明白了，原版是抛弃原有，添加同名即替换而不删除原来的块，指向新块，所以原来的Put可以不Put
     }
 }

@@ -478,7 +478,7 @@ namespace Me.EarzuChan.Ryo.Masses
             var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
             if (result != null) return ItemAdaptions.IndexOf(result);
 
-            var adapterRyoType = AdaptionManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException(ryoType + "没有可用的适配器");
+            var adapterRyoType = AdaptionManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException("类型没有可用的适配器：" + ryoType);
 
             var adapterJavaClz = AdaptionManager.INSTANCE.GetJavaClzByRyoType(adapterRyoType)!;
             var itemAdaption = new ItemAdaption(javaClz, adapterJavaClz);
@@ -487,18 +487,43 @@ namespace Me.EarzuChan.Ryo.Masses
             return ItemAdaptions.IndexOf(itemAdaption);
         }
 
+        // TODO:实现带名字的添加很简单，添加ID于文本的Item就行了
         public int Add(object obj)
         {
-            int id = ItemBlobs.Count;
+            try
+            {
+                if (obj == null) throw new NullReferenceException("对象为Null");
 
-            RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
-            // 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
-            // 我感觉这个要Bind？在表中找不到就添加？？？
-            // 或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
+                int id = ItemBlobs.Count;
 
-            throw new NotImplementedException("暂未完成");
+                RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
+                // 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
+                // 我感觉这个要Bind？在表中找不到就添加？？？
+                // 或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
+                var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
+                var adaption = ItemAdaptions[adaptionId];
 
-            return id;
+                // 以后要不要暂存Ryo和Adapter？太浪费
+                // 会抛出就会
+                var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+
+                int stickyId = StickyMetaDatas.Count;
+
+                var writer = new RyoWriter(new MemoryStream());
+                adapter.To(obj, this, writer);
+                writer.PositionToZero();
+
+                var itemBlob = new ItemBlob(adaptionId, stickyId, new RyoReader(writer).ReadAllBytes());
+
+                ItemBlobs.Add(itemBlob);
+                // 写写手写到对应Blob和压缩（待办）
+                // 记得解析原文的对于粘连数据干了什么？我觉得是大小，因为没读（写）不刷新，写元数据自然是最新
+
+                // throw new NotImplementedException("暂未完成");
+
+                return id;
+            }
+            catch (Exception ex) { throw new Exception("不能添加对象，因为" + ex.Message, ex); }
         }
 
         public T Get<T>(int id)
@@ -514,6 +539,7 @@ namespace Me.EarzuChan.Ryo.Masses
             IAdapter adapter;
             try
             {
+                // LogUtil.INSTANCE.PrintInfo("修正：" + dataRyoType);
                 adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.AdapterJavaClz), dataRyoType);
             }
             catch (Exception ex)
