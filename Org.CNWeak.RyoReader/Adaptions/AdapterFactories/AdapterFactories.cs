@@ -36,7 +36,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             {
                 Ctors = constructorInfos;
 
-                if (Ctors == null || Ctors.Count == 0) throw new NullReferenceException("构造器不满足条件");
+                if (Ctors == null || Ctors.Count == 0) throw new NullReferenceException("构造器不满足条件，为Null或没有、没有、没有");
 
                 // 遍历参数
                 foreach (var c in Ctors)
@@ -147,13 +147,13 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             }
             catch (Exception ex)
             {
-                throw new InvalidDataException("为类型" + type + "创建适配器时出错，因为" + ex.Message);
+                throw new InvalidDataException("在为类型" + type + "创建适配器时出错，因为" + ex.Message);
             }
         }
 
         public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
         {
-            if (ryoType.IsAdaptableCustom) return new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) };
+            if (ryoType.IsAdaptableCustom && !ryoType.IsArray) return new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) };
             else throw new InvalidDataException("类型不属于可适配自定义类型：" + ryoType);
         }
     }
@@ -224,7 +224,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                throw new NotImplementedException();
+                int[] intArr = (int[])obj;
+                writer.WriteInt(intArr.Length);
+                foreach (var item in intArr) writer.WriteInt(item);
             }
         }
 
@@ -237,13 +239,16 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 var oriItemType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType)?.GetElementType();
                 Type itemType = oriItemType ?? typeof(object);
 
+                // 读个数
                 Array objArr = Array.CreateInstance(itemType, reader.ReadInt());
                 // LogUtil.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
 
                 //mass.Reference(objArr);
 
+                // 读子项
                 for (int i = 0; i < objArr.Length; i++) objArr.SetValue(mass.Read<object>(), i);
 
+                // 额外匹配类型
                 if (oriItemType == null)
                 {
                     if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
@@ -268,7 +273,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                throw new NotImplementedException();
+                var objType = obj.GetType();
+                if (!objType.IsArray) throw new InvalidDataException("什么！这不是数组，这是" + objType);
+                //Type eleType = objType.GetElementType()!;
+                Array objArr = (Array)obj;
+                writer.WriteInt(objArr.Length);
+                foreach (var item in objArr) mass.Write(item);
             }
         }
 
@@ -278,7 +288,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                throw new NotImplementedException();
+                byte[] objArr = (byte[])obj;
+                writer.WriteInt(objArr.Length);
+                writer.WriteBytes(objArr);
             }
         }
 
@@ -294,7 +306,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                throw new NotImplementedException();
+                string[] strArr = (string[])obj;
+                writer.WriteInt(strArr.Length);
+                foreach (var item in strArr) writer.WrintString(item);
             }
         }
 

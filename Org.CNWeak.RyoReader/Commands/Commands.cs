@@ -361,7 +361,7 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("TestAdd", "Add a Int item to a file, for Dev only.", true)]
+    [Command("TestAdd", "Add a Int item to a file, for Dev only", true)]
     public class TestAddCommand : ICommand
     {
         public string FileName;
@@ -408,7 +408,7 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("RpSm", "Replace a SenderMessage in a file.", true)]
+    [Command("RpSm", "Replace a SenderMessage in a file", true)]
     public class RpSmCommand : ICommand
     {
         public string FileName;
@@ -432,6 +432,106 @@ namespace Me.EarzuChan.Ryo.Commands
                 var msg = mass.Get<SenderMessage>(Id);
                 msg.Message = Msg;
                 mass.Set(Id, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("RpCs", "Replace a Conversastions in a file", true)]
+    public class RpCsCommand : ICommand
+    {
+        public string FileName;
+        public int Id;
+        public string Msg;
+
+        public RpCsCommand(string fileName, string id, string msg)
+        {
+            FileName = fileName;
+            Id = int.Parse(id);
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var msg = mass.Get<Conversations>(Id);
+                foreach (var item in msg.ConversationArray)
+                {
+                    foreach (var sbit in item.SenderMessagers) sbit.Message += msg + "，太美丽！";
+                    foreach (var sbit in item.UserMessages) sbit.Message += msg + "，只有为你感激。";
+                }
+                mass.Set(Id, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("AddCs", "Add a Conversastions in a file", true)]
+    public class AddCsCommand : ICommand
+    {
+        public string FileName;
+        public string Msg;
+
+        public AddCsCommand(string fileName, string msg)
+        {
+            FileName = fileName;
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var umsg = new UserMessage(Msg + "，太美丽！", false);
+                var smsg = new SenderMessage(Msg + "，只有为你感激。", "原神", "1919/8/10", "11:45", 1, 1, "太美丽", 1);
+                string[] strArr = { Msg };
+                UserMessage[] umsgArr = { umsg };
+                SenderMessage[] smsgArr = { smsg };
+                Conversation[] msgs = { new Conversation(strArr, Msg, umsgArr, true, smsgArr, strArr, strArr, Msg) };
+                var msg = new Conversations(Msg, msgs);
+                mass.Add(Msg, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("AddOt", "For Dev only", true)]
+    public class AddOtCommand : ICommand
+    {
+        public string FileName;
+        public string Msg;
+
+        public AddOtCommand(string fileName, string msg)
+        {
+            FileName = fileName;
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var msg = new YsbNmslOuter(Msg, new YsbNmslInner(Msg));
+                mass.Add(Msg, msg);
             }
             catch (Exception ex)
             {

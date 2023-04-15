@@ -270,10 +270,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
 
         public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadAllBytes();
 
-        public void To(object obj, Mass mass, RyoWriter writer)
-        {
-            throw new NotImplementedException();
-        }
+        public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteBytes((byte[])obj);
     }
 
     public interface IAdaptable

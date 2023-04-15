@@ -30,45 +30,45 @@ namespace Me.EarzuChan.Ryo.Formations
     [IAdaptable.AdaptableFormat("game31.DialogueTree$DialogueTreeDescriptor")]
     public class Conversations : IAdaptable
     {
-        private string DialogueNameSpace;
-        private Conversation[] 数组_对话;
+        public string DialogueNameSpace;
+        public List<Conversation> ConversationArray;
 
         [IAdaptable.AdaptableConstructor]
         public Conversations(string str, Conversation[] r2)
         {
             DialogueNameSpace = str;
-            数组_对话 = r2;
+            ConversationArray = r2.ToList();
         }
 
-        public object[] GetAdaptedArray() => new object[] { DialogueNameSpace, 数组_对话 };
+        public object[] GetAdaptedArray() => new object[] { DialogueNameSpace, ConversationArray.ToArray() };
     }
 
     [IAdaptable.AdaptableFormat("game31.DialogueTree$Conversation")]
     public class Conversation : IAdaptable
     {
-        private string[] Tags;
-        private string Status;
-        private UserMessage[] UserMessages;
-        private bool StateOfDiswatch;
-        private SenderMessage[] SenderMessagers;
-        private string[] TagsToUnlock;
-        private string[] TagsToLock;
-        private string Trigger;
+        public List<string> Tags;
+        public string Status;
+        public List<UserMessage> UserMessages;
+        public bool StateOfDiswatch;
+        public List<SenderMessage> SenderMessagers;
+        public List<string> TagsToUnlock;
+        public List<string> TagsToLock;
+        public string Trigger;
 
         [IAdaptable.AdaptableConstructor]
         public Conversation(string[] tags, string status, UserMessage[] userMessages, bool stateOfDiswatch, SenderMessage[] senderMessagers, string[] tagsToUnlock, string[] tagsToLock, string trigger)
         {
-            Tags = tags;
+            Tags = tags.ToList();
             Status = status;
-            UserMessages = userMessages;
+            UserMessages = userMessages.ToList();
             StateOfDiswatch = stateOfDiswatch;
-            SenderMessagers = senderMessagers;
-            TagsToUnlock = tagsToUnlock;
-            TagsToLock = tagsToLock;
+            SenderMessagers = senderMessagers.ToList();
+            TagsToUnlock = tagsToUnlock.ToList();
+            TagsToLock = tagsToLock.ToList();
             Trigger = trigger;
         }
 
-        public object[] GetAdaptedArray() => new object[] { Tags, Status, UserMessages, StateOfDiswatch, SenderMessagers, TagsToUnlock, TagsToLock, Trigger };
+        public object[] GetAdaptedArray() => new object[] { Tags.ToArray(), Status, UserMessages.ToArray(), StateOfDiswatch, SenderMessagers.ToArray(), TagsToUnlock.ToArray(), TagsToLock.ToArray(), Trigger };
 
     }
 
@@ -114,5 +114,32 @@ namespace Me.EarzuChan.Ryo.Formations
         }
 
         public object[] GetAdaptedArray() => new object[] { Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime };
+    }
+
+    [IAdaptable.AdaptableFormat("ysb.nmsl.Outer")]
+    public class YsbNmslOuter : IAdaptable
+    {
+        public string Origin;
+        public YsbNmslInner Inner;
+
+        [IAdaptable.AdaptableConstructor]
+        public YsbNmslOuter(string origin, YsbNmslInner inner)
+        {
+            Origin = origin;
+            Inner = inner;
+        }
+
+        public object[] GetAdaptedArray() => new object[] { Origin, Inner };
+    }
+
+    [IAdaptable.AdaptableFormat("ysb.nmsl.Inner")]
+    public class YsbNmslInner : IAdaptable
+    {
+        public string Origin;
+
+        [IAdaptable.AdaptableConstructor]
+        public YsbNmslInner(string origin) => Origin = origin;
+
+        public object[] GetAdaptedArray() => new object[] { Origin };
     }
 }
