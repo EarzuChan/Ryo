@@ -88,6 +88,11 @@ namespace Me.EarzuChan.Ryo.Masses
 
         public MassFile() => ExtendedName = "FileSystem";
 
+        public enum ADDTYPE
+        {
+            Add, Replace
+        }
+
         protected override void AfterLoadingIndex(RyoReader inflatedDataReader)
         {
             var idStrPairCount = inflatedDataReader.ReadInt();
@@ -109,7 +114,17 @@ namespace Me.EarzuChan.Ryo.Masses
             }
         }
 
-        public void Add(string token, object obj) => IdStrPairs.Add(token, Add(obj));
+        public ADDTYPE Add(string token, object obj)
+        {
+            int objId = Add(obj);
+            if (IdStrPairs.ContainsKey(token))
+            {
+                IdStrPairs[token] = objId;
+                return ADDTYPE.Replace;
+            }
+            IdStrPairs.Add(token, objId);
+            return ADDTYPE.Add;
+        }
 
         // 看明白了，原版是抛弃原有，添加同名即替换而不删除原来的块，指向新块，所以原来的Put可以不Put
     }

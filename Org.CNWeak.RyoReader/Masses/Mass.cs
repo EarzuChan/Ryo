@@ -511,6 +511,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
                 int stickyId = StickyMetaDatas.Count;
                 ItemBlobs.Add(new ItemBlob(adaptionId, stickyId, Array.Empty<byte>()));
+                SavedId = id;
 
                 var writer = new RyoWriter(new MemoryStream());
                 adapter.To(obj, this, writer);
@@ -787,6 +788,7 @@ namespace Me.EarzuChan.Ryo.Masses
         {
             LogUtil.INSTANCE.PrintInfo("覆写：" + IsPutting, "对象：" + obj);
 
+            // 暂不写覆盖
             if (IsPutting)
             {
                 // throw new NotImplementedException();
@@ -812,7 +814,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
                 int newStickyMetaData;
 
-                if (obj == null) newStickyMetaData = 0;//Ret?
+                if (obj == null) newStickyMetaData = 0; //Ret?
                 else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmBaseType)
                 {
                     throw new NotImplementedException();
@@ -832,12 +834,14 @@ namespace Me.EarzuChan.Ryo.Masses
                 }
                 else
                 {
+                    ItemBlobs[SavedId].StickyId++;
+
                     int newItemId = Add(obj);
                     newStickyMetaData = (newItemId << 2) | 3;
 
                     StickyMetaDatas.Add(newStickyMetaData);
 
-                    ItemBlobs[newItemId].StickyId++;
+                    //ItemBlobs[newItemId].StickyId++;
                 } // Switch3
             }
         }

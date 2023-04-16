@@ -61,10 +61,8 @@ namespace Me.EarzuChan.Ryo.Commands
         {
             FileName = fileName;
         }
-        public void Execute()
-        {
-            OldMassManager.INSTANCE.MassList.Remove(OldMassManager.INSTANCE.MassList.Find(a => a.Name == FileName)!);
-        }
+        public void Execute() => MassManager.INSTANCE.UnloadMassFile(FileName);
+
     }
 
     /*[Command("Dump", "Dump the objects blob of a file")]
@@ -531,6 +529,64 @@ namespace Me.EarzuChan.Ryo.Commands
                 if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
 
                 var msg = new YsbNmslOuter(Msg, new YsbNmslInner(Msg));
+                mass.Add(Msg, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("AddHo", "For Dev only", true)]
+    public class AddHoCommand : ICommand
+    {
+        public string FileName;
+        public string Msg;
+
+        public AddHoCommand(string fileName, string msg)
+        {
+            FileName = fileName;
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var msg = new YsbNmslHugeOuter(Msg, new YsbNmslInner(Msg), new YsbNmslInner[] { new YsbNmslInner("叶仕斌" + Msg) });
+                mass.Add(Msg, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("AddIn", "For Dev only", true)]
+    public class AddInCommand : ICommand
+    {
+        public string FileName;
+        public string Msg;
+
+        public AddInCommand(string fileName, string msg)
+        {
+            FileName = fileName;
+            Msg = msg;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                var msg = new YsbNmslInner(Msg);
                 mass.Add(Msg, msg);
             }
             catch (Exception ex)

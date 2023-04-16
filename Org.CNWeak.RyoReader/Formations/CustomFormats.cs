@@ -116,7 +116,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime };
     }
 
-    [IAdaptable.AdaptableFormat("ysb.nmsl.Outer")]
+    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.Outer")]
     public class YsbNmslOuter : IAdaptable
     {
         public string Origin;
@@ -132,7 +132,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { Origin, Inner };
     }
 
-    [IAdaptable.AdaptableFormat("ysb.nmsl.Inner")]
+    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.Inner")]
     public class YsbNmslInner : IAdaptable
     {
         public string Origin;
@@ -141,5 +141,23 @@ namespace Me.EarzuChan.Ryo.Formations
         public YsbNmslInner(string origin) => Origin = origin;
 
         public object[] GetAdaptedArray() => new object[] { Origin };
+    }
+
+    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.HugeOuter")]
+    public class YsbNmslHugeOuter : IAdaptable
+    {
+        public string Origin;
+        public YsbNmslInner Inner;
+        public YsbNmslInner[] Inners;
+
+        [IAdaptable.AdaptableConstructor]
+        public YsbNmslHugeOuter(string origin, YsbNmslInner inner, YsbNmslInner[] inners)
+        {
+            Origin = origin;
+            Inner = inner;
+            Inners = inners;
+        }
+
+        public object[] GetAdaptedArray() => new object[] { Origin, Inner, Inners };
     }
 }
