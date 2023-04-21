@@ -53,6 +53,29 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
+    [Command("New", "Create a new empty file")]
+    public class NewCommand : ICommand
+    {
+        public string FileName;
+        public NewCommand(string fileName)
+        {
+            FileName = fileName;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            if (mass == null)
+            {
+                var newMass = new MassFile();
+                MassManager.INSTANCE.AddMassFile(newMass, FileName);
+
+                LogUtil.INSTANCE.PrintInfo("文件：" + FileName + " 添加成功");
+            }
+            else throw new Exception("存在已加载的同名文件，请换一个名字");
+        }
+    }
+
     [Command("Unload", "Unload a file by its name")]
     public class UnloadCommand : ICommand
     {

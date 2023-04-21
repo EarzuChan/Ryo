@@ -1,5 +1,6 @@
 ﻿using Me.EarzuChan.Ryo.Utils;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Me.EarzuChan.Ryo.Commands
@@ -49,7 +50,7 @@ namespace Me.EarzuChan.Ryo.Commands
         public void ParseCommandLine(string input)
         {
             // 解析命令行参数
-            string pattern = @"([^""]\S*|"".+?"")\s*";
+            /*string pattern = @"([^""]\S*|"".+?"")\s*";
             MatchCollection matches = Regex.Matches(input, pattern);
             string[] cmdArgs = new string[matches.Count];
             for (int i = 0; i < matches.Count; i++)
@@ -59,8 +60,50 @@ namespace Me.EarzuChan.Ryo.Commands
                 {
                     cmdArgs[i] = cmdArgs[i][1..^1];
                 }
+            }*/
+            ParseCommand(ParseCommandLineArguments(input));
+        }
+
+        public string[] ParseCommandLineArguments(string commandLine)
+        {
+            // LogUtil.INSTANCE.PrintInfo("接受的字符串：" + commandLine);
+
+            List<string> arguments = new List<string>();
+
+            StringBuilder currentArgument = new StringBuilder();
+            bool insideQuote = false;
+
+            for (int i = 0; i < commandLine.Length; i++)
+            {
+                char c = commandLine[i];
+
+                //LogUtil.INSTANCE.PrintInfo("当前字符：" + c);
+
+                if (c == '"')
+                {
+                    insideQuote = !insideQuote;
+                }
+                else if (c == ' ' && !insideQuote)
+                {
+                    if (currentArgument.Length > 0)
+                    {
+                        arguments.Add(currentArgument.ToString());
+                        currentArgument.Clear();
+                    }
+                }
+                else
+                {
+                    currentArgument.Append(c);
+                }
             }
-            ParseCommand(cmdArgs);
+
+
+            if (currentArgument.Length > 0)
+            {
+                arguments.Add(currentArgument.ToString());
+            }
+
+            return arguments.ToArray();
         }
 
         public void ParseCommand(params string[] args)

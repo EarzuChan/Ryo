@@ -106,6 +106,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 /*LogUtil.INSTANCE.PrintInfo("参数数：" + paramTypes.Count);
                 foreach (Type tp in paramTypes) LogUtil.INSTANCE.PrintInfo("参数类型：" + tp);*/
 
+                //mass.ItemBlobs[mass.SavedId].StickyId++;
                 for (int i2 = 0; i2 < args.Length; i2++)
                 {
                     Type item = paramTypes[i2];
@@ -121,7 +122,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                         else if (item == typeof(string)) writer.WrintString((string)ob);
                         else if (item == typeof(float)) writer.WriteFloat((float)ob);
                         else if (item == typeof(bool)) writer.WriteBoolean((bool)ob);
-                        else mass.Write<object>(ob);
+                        else                            mass.Write<object>(ob);
                     }
                     catch (Exception ex)
                     {
@@ -278,7 +279,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 //Type eleType = objType.GetElementType()!;
                 Array objArr = (Array)obj;
                 writer.WriteInt(objArr.Length);
-                foreach (var item in objArr) mass.Write(item);
+
+                // mass.ItemBlobs[mass.SavedId].StickyId++;
+                foreach (var item in objArr)                    mass.Write(item);
             }
         }
 

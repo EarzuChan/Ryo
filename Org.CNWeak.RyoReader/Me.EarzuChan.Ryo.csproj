@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <FileVersion></FileVersion>
-    <AssemblyVersion>0.1.1.1</AssemblyVersion>
+    <AssemblyVersion>0.1.9.1</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

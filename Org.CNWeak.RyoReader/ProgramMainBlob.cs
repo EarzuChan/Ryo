@@ -1,6 +1,7 @@
 ﻿using Me.EarzuChan.Ryo.Commands;
 using Me.EarzuChan.Ryo.Utils;
 using System.Reflection;
+using System.Text;
 
 namespace Me.EarzuChan.Ryo
 {
@@ -8,11 +9,13 @@ namespace Me.EarzuChan.Ryo
     {
         static void Main(string[] args)
         {
-            LogUtil.INSTANCE.SetLogger(str => Console.WriteLine(str));
+            Console.InputEncoding = Encoding.Unicode;
 
+            LogUtil.INSTANCE.SetLogger(str => Console.WriteLine(str));
 #if DEBUG
             CommandManager.INSTANCE.IsDev = true;
 #endif
+
             //LogUtil.INSTANCE.PrintInfo($"当前Dev状态：{CommandManager.INSTANCE.IsDev}");
             if (args.Length > 0)
             {

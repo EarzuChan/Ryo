@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
 using System.Reflection.PortableExecutable;
+using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
@@ -432,19 +433,20 @@ namespace Me.EarzuChan.Ryo.Masses
         private int SavedItemBlobMinusOneStickyId;
         private int SavedItemBlobStickyId;
         private bool IsPutting;
+        private Dictionary<int, object>? SavedItems = null;
 
         public class ItemBlob
         {
             public int AdaptionId;
 
-            public int StickyId;
+            public int StickyIndex;
 
             public byte[] Data;
 
             public ItemBlob(int adaptionId, int stickyId, byte[] data)
             {
                 AdaptionId = adaptionId;
-                StickyId = stickyId;
+                StickyIndex = stickyId;
                 Data = data;
             }
         }
@@ -493,36 +495,56 @@ namespace Me.EarzuChan.Ryo.Masses
         {
             try
             {
-                if (obj == null) throw new NullReferenceException("对象为Null");
+                if (obj == null) throw new NullReferenceException("对象为Null，我测你们妈");
 
                 int id = ItemBlobs.Count;
+                // LogUtil.INSTANCE.PrintInfo("当前ID：" + id);
 
-                RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
-                // 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
-                // 我感觉这个要Bind？在表中找不到就添加？？？
-                // 或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
-                LogUtil.INSTANCE.PrintInfo("对象的数据Ryo：" + dataRyoType, "对象ID：" + id);
-                var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
-                var adaption = ItemAdaptions[adaptionId];
+                // if (id > 10) Environment.Exit(1919810);
 
-                // 以后要不要暂存Ryo和Adapter？太浪费
-                // 会抛出就会
-                var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+                ItemBlobs.Add(new ItemBlob(114514, 1919810, Array.Empty<byte>()));// 占位耳
 
-                int stickyId = StickyMetaDatas.Count;
-                ItemBlobs.Add(new ItemBlob(adaptionId, stickyId, Array.Empty<byte>()));
-                SavedId = id;
+                // 代表正在序列化，托管给原主
+                if (SavedItems != null)
+                {
+                    SavedItems.Add(id, obj);
+                    // LogUtil.INSTANCE.PrintInfo($"直接返回：{id}");
+                    return id;
+                }
+                SavedItems = new() { { id, obj } };
 
-                var writer = new RyoWriter(new MemoryStream());
-                adapter.To(obj, this, writer);
-                writer.PositionToZero();
+                int nowId = id;
+                while (nowId < id + SavedItems.Count)
+                {
+                    /* 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
+                    我感觉这个要Bind？在表中找不到就添加？？？
+                    或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
+                    以后要不要暂存Ryo和Adapter？太浪费
+                    会抛出就会*/
 
-                ItemBlobs[id].Data = new RyoReader(writer).ReadAllBytes();
+                    object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
+                    // LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配前_循环第：{nowId}");
 
-                // 写写手写到对应Blob和压缩（待办）
-                // 记得解析原文的对于粘连数据干了什么？我觉得是大小，因为没读（写）不刷新，写元数据自然是最新
+                    RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(nowObj.GetType());
+                    var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
+                    var adaption = ItemAdaptions[adaptionId];
 
-                // throw new NotImplementedException("暂未完成");
+                    var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+
+                    var writer = new RyoWriter(new MemoryStream());
+                    adapter.To(nowObj, this, writer);
+                    writer.PositionToZero();
+
+                    ItemBlobs[nowId] = new ItemBlob(adaptionId, StickyMetaDatas.Count, new RyoReader(writer).ReadAllBytes());
+                    //LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配后_循环第：{nowId} 粘连索引：{StickyMetaDatas.Count}");
+
+                    nowId++;
+                    /*LogUtil.INSTANCE.PrintInfo("No." + id + "老索引：" + oldSticky, "总StickyIndex：" + (oldSticky + oldStickyAdd + SavedItemBlobStickyId));
+                    ItemBlobs[id].StickyIndex = ;
+                    ItemBlobs[id].Data = ;*/
+                }
+
+                SavedItems = null;
 
                 return id;
             }
@@ -559,8 +581,8 @@ namespace Me.EarzuChan.Ryo.Masses
 
             // 处理暂存数据
             SavedId = id;
-            SavedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyId;
-            SavedItemBlobStickyId = itemBlob.StickyId;
+            SavedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyIndex;
+            SavedItemBlobStickyId = itemBlob.StickyIndex;
             LogUtil.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
 
             // 获取Blob
@@ -589,6 +611,7 @@ namespace Me.EarzuChan.Ryo.Masses
             int metaOfIdMinusOne = StickyMetaDatas[SavedItemBlobMinusOneStickyId];
 
             // 原来的增加
+            // 导致适配器再读可正确读好吧
             SavedItemBlobMinusOneStickyId++;
 
             // 打印增加后的
@@ -612,6 +635,8 @@ namespace Me.EarzuChan.Ryo.Masses
         // 子项怎么办
         public void Set(int id, object obj)
         {
+            throw new NotSupportedException("暂不支持！");
+
             try
             {
                 if (obj == null) throw new NullReferenceException("对象为Null");
@@ -626,7 +651,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
                 var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
 
-                int stickyId = ItemBlobs[id].StickyId;
+                int stickyId = ItemBlobs[id].StickyIndex;
                 SavedItemBlobStickyId = stickyId;
 
                 var writer = new RyoWriter(new MemoryStream());
@@ -737,7 +762,7 @@ namespace Me.EarzuChan.Ryo.Masses
             }
 
             // 写粘连科技
-            for (int i = 0; i < objCount; i++) indexWriter.WriteInt(ItemBlobs[i].StickyId);
+            for (int i = 0; i < objCount; i++) indexWriter.WriteInt(ItemBlobs[i].StickyIndex);
 
             // 元数据
             for (int i4 = 0; i4 < StickyMetaDatas.Count; i4++) indexWriter.WriteInt(StickyMetaDatas[i4]);
@@ -786,7 +811,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
         public void Write<T>(T obj)
         {
-            LogUtil.INSTANCE.PrintInfo("覆写：" + IsPutting, "对象：" + obj);
+            // LogUtil.INSTANCE.PrintInfo("覆写：" + IsPutting, "对象：" + obj);
 
             // 暂不写覆盖
             if (IsPutting)
@@ -811,7 +836,6 @@ namespace Me.EarzuChan.Ryo.Masses
             }
             else
             {
-
                 int newStickyMetaData;
 
                 if (obj == null) newStickyMetaData = 0; //Ret?
@@ -834,15 +858,10 @@ namespace Me.EarzuChan.Ryo.Masses
                 }
                 else
                 {
-                    ItemBlobs[SavedId].StickyId++;
-
-                    int newItemId = Add(obj);
-                    newStickyMetaData = (newItemId << 2) | 3;
-
-                    StickyMetaDatas.Add(newStickyMetaData);
-
+                    newStickyMetaData = (Add(obj) << 2) | 3;
                     //ItemBlobs[newItemId].StickyId++;
                 } // Switch3
+                StickyMetaDatas.Add(newStickyMetaData);
             }
         }
     }

@@ -77,7 +77,7 @@ namespace Me.EarzuChan.Ryo.Masses
             for (var i = 0; i < itemBlobCount; i++)
             {
                 var itemBlob = mass.ItemBlobs[i];
-                info.AppendLine($"-- Id.{i} 适配项ID：{itemBlob.AdaptionId} 长度：{itemBlob.Data.Length} 粘连ID：{itemBlob.StickyId}");
+                info.AppendLine($"-- Id.{i} 适配项ID：{itemBlob.AdaptionId} 长度：{itemBlob.Data.Length} 粘连索引：{itemBlob.StickyIndex}");
             }
 
             int stickyMetaDataCount = mass.StickyMetaDatas.Count;
@@ -89,7 +89,9 @@ namespace Me.EarzuChan.Ryo.Masses
                 StringBuilder str = new();
                 for (int i = 0; i < 4 && currentIndex < stickyMetaDataCount; i++)
                 {
-                    str.Append("No." + (currentIndex + 1) + "：" + mass.StickyMetaDatas[currentIndex] + " ");
+                    int refTo = mass.StickyMetaDatas[currentIndex] >> 2;
+                    int metaMode = mass.StickyMetaDatas[currentIndex] & 3;
+                    str.Append($"No.{currentIndex}：{refTo} Mode：{metaMode}  ");
                     currentIndex++;
                 }
                 info.AppendLine(str.ToString());
@@ -107,6 +109,11 @@ namespace Me.EarzuChan.Ryo.Masses
             foreach (var item in mass.IdStrPairs) info.AppendLine($"-- Id.{item.Value} Name：{item.Key}");
 
             return info.ToString();
+        }
+
+        public void AddMassFile(MassFile newMass, string fileName)
+        {
+            MassFiles.Add(fileName, newMass);
         }
     }
 }
