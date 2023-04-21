@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions;
+using Me.EarzuChan.Ryo.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,10 +35,10 @@ namespace Me.EarzuChan.Ryo.Formations
         public List<Conversation> ConversationArray;
 
         [IAdaptable.AdaptableConstructor]
-        public Conversations(string str, Conversation[] r2)
+        public Conversations(string nsps, Conversation[] cons)
         {
-            DialogueNameSpace = str;
-            ConversationArray = r2.ToList();
+            DialogueNameSpace = nsps;
+            ConversationArray = cons.ToList();
         }
 
         public object[] GetAdaptedArray() => new object[] { DialogueNameSpace, ConversationArray.ToArray() };

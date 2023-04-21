@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Me.EarzuChan.Ryo.Commands
 {
@@ -611,6 +612,40 @@ namespace Me.EarzuChan.Ryo.Commands
 
                 var msg = new YsbNmslInner(Msg);
                 mass.Add(Msg, msg);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError($"添加失败", ex);
+            }
+        }
+    }
+
+    [Command("PsCs", "Parse a Conversations by a json text into a file")]
+    public class PsCsCommand : ICommand
+    {
+        public string FileName;
+        public string MsgPath;
+        public string ItemName;
+
+        public PsCsCommand(string fileName, string msgPath, string itemName)
+        {
+            FileName = fileName;
+            MsgPath = msgPath;// .Replace("\\\"","\"");
+            ItemName = itemName;
+        }
+
+        public void Execute()
+        {
+            var mass = MassManager.INSTANCE.GetMassFile(FileName);
+            try
+            {
+                if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
+
+                string msgText = File.ReadAllText(MsgPath);
+
+                var msg = JsonConvert.DeserializeObject<Conversations>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+
+                mass.Add(ItemName, msg);
             }
             catch (Exception ex)
             {

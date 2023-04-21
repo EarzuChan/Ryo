@@ -76,10 +76,11 @@ namespace Me.EarzuChan.Ryo.Commands
             for (int i = 0; i < commandLine.Length; i++)
             {
                 char c = commandLine[i];
+                bool hasBefore = i != 0;
 
                 //LogUtil.INSTANCE.PrintInfo("当前字符：" + c);
 
-                if (c == '"')
+                if (c == '"' && (!hasBefore || commandLine[i - 1] != '\\'))
                 {
                     insideQuote = !insideQuote;
                 }
