@@ -122,7 +122,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                         else if (item == typeof(string)) writer.WrintString((string)ob);
                         else if (item == typeof(float)) writer.WriteFloat((float)ob);
                         else if (item == typeof(bool)) writer.WriteBoolean((bool)ob);
-                        else                            mass.Write<object>(ob);
+                        else mass.Write<object>(ob);
                     }
                     catch (Exception ex)
                     {
@@ -281,7 +281,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 writer.WriteInt(objArr.Length);
 
                 // mass.ItemBlobs[mass.SavedId].StickyId++;
-                foreach (var item in objArr)                    mass.Write(item);
+                foreach (var item in objArr) mass.Write(item);
             }
         }
 
@@ -334,15 +334,15 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
     }
 
     // 待修正
-    /*public class SpecialFormatAdapterFactory : IAdapterFactory
+    public class SpecialFormatAdapterFactory : IAdapterFactory
     {
-        public static readonly Dictionary<RyoType, RyoType> DataAdapterRyoTypePairs = new() {
-            { new() { Name="sengine.graphics2d.texturefile.FIFormat" ,IsAdaptableCustom=true,BaseType = typeof(FragmentalImage)}, new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) } },
+        public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new() {
+            {typeof(FragmentalImage), new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(FragmentalImageAdapter) } },
         };
 
         public class FragmentalImageAdapter : IAdapter
         {
-            public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
+            // public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
 
             // 计算分块数，按长度分割总数一共要多少块（不足的也给完整一块）
             public static int CalculateBlockCount(int fullLength, int blockLength)
@@ -353,7 +353,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
-                int directLength;// 保留
+                int compressedLength;// 保留
 
                 int clipCount = reader.ReadInt();
                 int sliceCount = reader.ReadInt();
@@ -374,12 +374,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                         //每层的格式
                         RyoPixmap.FORMAT format = (RyoPixmap.FORMAT)reader.ReadUnsignedByte();
-                        bool isUnshaped = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                        bool compressionAllowed = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
 
                         // 块数
-                        int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidths[i2]);
+                        int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidth);
                         // 片数
-                        int sliceClipCount = sliceBlockCount * CalculateBlockCount(clipCount, sliceHeights[i2]);
+                        int sliceClipCount = sliceBlockCount * CalculateBlockCount(clipCount, sliceHeight);
 
                         // 每层块数
                         pixmaps[i2] = new RyoPixmap[sliceClipCount];
@@ -392,27 +392,27 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                             int bottom = y + clipCount;
 
                             // 处理宽高
-                            if (right > sliceWidth)
-                            {
-                                right = sliceWidth;
-                            }
-                            if (bottom > sliceHeight)
-                            {
-                                bottom = sliceHeight;
-                            }
+                            if (right > sliceWidth) right = sliceWidth;
+
+                            if (bottom > sliceHeight) bottom = sliceHeight;
 
                             // 归不规则的读
-                            if (!isUnshaped || (directLength = reader.ReadInt()) <= 0)
+                            if (!compressionAllowed || (compressedLength = reader.ReadInt()) <= 0)
                             {
-                                // 规则的不需要指定大小
+                                // 需要指定大小
                                 RyoPixmap pixmap = new(right - x, bottom - y, format);
                                 pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
                                 pixmaps[i2][i3] = pixmap;
                             }
                             else
                             {
-                                // 需要指定大小
-                                pixmaps[i2][i3] = new(reader.ReadBytes(directLength)) { Format = format, Height = sliceHeight, Width = sliceWidth };
+                                // 不需要指定大小
+                                //LogUtil.INSTANCE.PrintInfo($"IMG/ pixmaps[{i2}][{i3}]已压缩 格式：{format} 大小：{compressedLength} 已转储");
+
+                                var buffer = reader.ReadBytes(compressedLength);
+                                //File.WriteAllBytes($"E:\\PM[{i2}][{i3}]_{format}.Dump", buffer);
+
+                                pixmaps[i2][i3] = new(buffer);// { IsJPG = true };
                             }
                         }
                     }
@@ -436,15 +436,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             public void To(object obj, Mass mass, RyoWriter writer)
             {
                 var image = (FragmentalImage)obj;
-
-                // 不知道是什么
-                */
-    /*if (r12.f2426a > 0 || r12.f2427b > 0)
-                {
-                    throw new IllegalStateException("Cannot serialize partially loaded image data");
-                }*/
-    /*
-
                 RyoWriter? directClipWritter = null;
 
                 // 元数据
@@ -508,6 +499,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     var bmp = (Bitmap)pixmap;
 
                     var streamHere = new MemoryStream();
+
                     bmp!.Save(streamHere, ImageFormat.Jpeg);
                     anoWriter.WriteBytes(streamHere.ToArray());
                 }
@@ -523,11 +515,16 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-            return type.Name switch
-            {
-                "sengine.graphics2d.texturefile.FIFormat" => new FragmentalImageAdapter(),
-                _ => throw new FormatException(type + "没有合适的适配器"),
-            };
+            foreach (var item in DataAdapterRyoTypePairs) if (type.Name == item.Value.Name) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+
+            throw new FormatException(type + "没有合适的特殊类型适配器");
         }
-    }*/
+
+        public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+        {
+            foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return item.Value;
+
+            throw new FormatException(ryoType + "没有合适的特殊类型适配器");
+        }
+    }
 }

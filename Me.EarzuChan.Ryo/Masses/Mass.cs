@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
-    public class OldMass
+    /*public class OldMass
     {
         // 常量
         public string ExtendedName = "MASS";
@@ -108,7 +108,7 @@ namespace Me.EarzuChan.Ryo.Masses
         public T GetItemById<T>(int id)
         {
             throw new NotImplementedException();
-            /*// 检查
+            *//*// 检查
             if (!ReadyToUse || IsEmpty) throw new Exception("文件未准备好或为空");
 
             // 获取适配项
@@ -140,7 +140,7 @@ namespace Me.EarzuChan.Ryo.Masses
             SavedStickedDataIntArrayId = oldStickedDataIntArrayId;
             SavedStickedDataIntArrayIdMinusOne = oldStickedDataIntArrayIdMinusOne;
 
-            return item;*/
+            return item;*//*
         }
 
         // 构造
@@ -395,7 +395,7 @@ namespace Me.EarzuChan.Ryo.Masses
             //TODO:实际上是暂存下
             //throw new NotImplementedException();
         }
-    }
+    }*/
 
     public interface IMass
     {

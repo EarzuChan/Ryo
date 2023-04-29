@@ -5,6 +5,10 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo", "Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj", "{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.MaterialForYou", "Me.EarzuChan.MaterialForYou\Me.EarzuChan.MaterialForYou.csproj", "{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.WPFFrontEnd", "Me.EarzuChan.Ryo.WPFFrontEnd\Me.EarzuChan.Ryo.WPFFrontEnd.csproj", "{0DD82FB1-3B0E-4319-911A-28CC9DB14373}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8866E2A7-7B49-4157-B5AF-8A3BE85E8560}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DD82FB1-3B0E-4319-911A-28CC9DB14373}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DD82FB1-3B0E-4319-911A-28CC9DB14373}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DD82FB1-3B0E-4319-911A-28CC9DB14373}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DD82FB1-3B0E-4319-911A-28CC9DB14373}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -72,7 +72,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.FieldSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
 
             // 特定类（图片等）未修复
-            // RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
+            RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
 
             // 注册额外项目（从文件）：TODO
         }

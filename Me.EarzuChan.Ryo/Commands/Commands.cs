@@ -89,26 +89,6 @@ namespace Me.EarzuChan.Ryo.Commands
 
     }
 
-    /*[Command("Dump", "Dump the objects blob of a file")]
-    public class DumpCommand : ICommand
-    {
-        public string FileName;
-        public DumpCommand(string str)
-        {
-            FileName = str;
-        }
-        public void Execute()
-        {
-            var mass = OldMassManager.INSTANCE.GetMassFileByFileName(FileName);
-            if (mass != null && mass.ReadyToUse)
-            {
-                LogUtil.INSTANCE.PrintInfo($"找到文件：{FileName.ToUpper()}");
-                LogUtil.INSTANCE.PrintInfo(mass.DumpBuffer());
-            }
-            else LogUtil.INSTANCE.PrintInfo($"找不到文件：{FileName.ToUpper()}，请查看拼写是否正确，文件是否已正确加载？");
-        }
-    }*/
-
     [Command("Help", "Get the help infomations of this application")]
     public class HelpCommand : ICommand
     {
@@ -229,7 +209,7 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    /*[Command("Seek", "Seek the images from a texture file.", true)]
+    [Command("Seek", "Seek the images from a texture file.", true)]
     public class SeekCommand : ICommand
     {
         public string FileName;
@@ -248,85 +228,77 @@ namespace Me.EarzuChan.Ryo.Commands
 
                 var fileName = Path.GetFileNameWithoutExtension(stream.Name);
 
-                var textureFile = new OldTextureFile(fileName);
+                var textureFile = new TextureFile();
 
                 textureFile.Load(stream);
 
-                if (textureFile.ReadyToUse)
+                LogUtil.INSTANCE.PrintInfo($"名称：{fileName.ToUpper()}\n\n纹样信息如下：\n");
+
+                LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
+                LogUtil.INSTANCE.PrintInfo($"图片碎片数：{textureFile.ItemBlobs.Count}");
+                /*for (var i = 0; i < textureFile.ObjCount; i++) LogUtil.INSTANCE.PrintInfo($"-- Id.{i} 适配项ID：{textureFile.DataAdapterIdArray[i]} 已压缩：{(textureFile.IsItemDeflatedArray[i] ? "是" : "否")} 起始索引：{(i == 0 ? 0 : textureFile.EndPosition[i - 1])} 长度：{textureFile.EndPosition[i] - (i == 0 ? 0 : textureFile.EndPosition[i - 1])}");*/
+
+                LogUtil.INSTANCE.PrintInfo($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
+                foreach (var item in textureFile.ItemAdaptions) LogUtil.INSTANCE.PrintInfo($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+
+                LogUtil.INSTANCE.PrintInfo($"\n真正图片数：{textureFile.ImageIDsArray.Count}");
+                for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) LogUtil.INSTANCE.PrintInfo($"-- No.{i + 1} 图片的各种格式对应的ID：[{FormatManager.INSTANCE.ItemToString(textureFile.ImageIDsArray[i])}]");
+
+                //LogUtil.INSTANCE.PrintInfo("将写出DUMP数据");
+                if (textureFile.ImageIDsArray.Count == 0) return;
+
+                LogUtil.INSTANCE.PrintInfo("\n解析各项图片：");
+
+                int piece = 1;
+                for (int i = 0; i < textureFile.ImageIDsArray.Count; i++)
                 {
-                    LogUtil.INSTANCE.PrintInfo($"名称：{fileName.ToUpper()}\n\n纹样信息如下：\n");
+                    int[] items = textureFile.ImageIDsArray[i].ToArray();
 
-                    LogUtil.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
-                    LogUtil.INSTANCE.PrintInfo($"图片碎片数：{textureFile.ObjCount}");
-                    for (var i = 0; i < textureFile.ObjCount; i++) LogUtil.INSTANCE.PrintInfo($"-- Id.{i} 适配项ID：{textureFile.DataAdapterIdArray[i]} 已压缩：{(textureFile.IsItemDeflatedArray[i] ? "是" : "否")} 起始索引：{(i == 0 ? 0 : textureFile.EndPosition[i - 1])} 长度：{textureFile.EndPosition[i] - (i == 0 ? 0 : textureFile.EndPosition[i - 1])}");
-
-                    LogUtil.INSTANCE.PrintInfo($"\n图片模式适配项数：{textureFile.MyRegableDataAdaptionList.Count}");
-                    foreach (var item in textureFile.MyRegableDataAdaptionList) LogUtil.INSTANCE.PrintInfo($"-- Id.{item.Id} 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
-
-                    LogUtil.INSTANCE.PrintInfo($"\n真正图片数：{textureFile.ImageIDsArray.Length}");
-                    for (var i = 0; i < textureFile.ImageIDsArray.Length; i++) LogUtil.INSTANCE.PrintInfo($"-- No.{i + 1} 图片的各种格式对应的ID：[{FormatManager.INSTANCE.ItemToString(textureFile.ImageIDsArray[i])}]");
-
-                    //LogUtil.INSTANCE.PrintInfo("将写出DUMP数据");
-                    if (textureFile.ImageIDsArray.Length == 0) return;
-
-                    LogUtil.INSTANCE.PrintInfo("\n解析各项图片：");
-
-                    int piece = 1;
-                    for (int i = 0; i < textureFile.ImageIDsArray.Length; i++)
+                    foreach (int id in items)
                     {
-                        int[] items = textureFile.ImageIDsArray[i];
+                        var imageBlob = textureFile.Get<FragmentalImage>(id);
 
-                        foreach (int id in items)
+                        //LogUtil.INSTANCE.PrintInfo($"\n总片数：{imageBlob.ClipCount}，总层数：{imageBlob.SliceWidths.Length}，解析各项图片：");
+
+                        if (imageBlob != null && imageBlob.ClipCount != 0)
                         {
-                            var imageBlob = textureFile.GetItemById<FragmentalImage>(id);
+                            LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 碎片数：[{imageBlob.ClipCount}] 碎片宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 碎片高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 碎片集层数：{imageBlob.RyoPixmaps.Length}");
+                            string pathName = FileName + $".No_{piece}.dumps";
+                            LogUtil.INSTANCE.PrintInfo("-- 该图片的相关资源将被写出在：" + pathName);
+                            if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
 
-                            //LogUtil.INSTANCE.PrintInfo($"\n总片数：{imageBlob.ClipCount}，总层数：{imageBlob.SliceWidths.Length}，解析各项图片：");
-
-                            if (imageBlob != null && imageBlob.ClipCount != 0)
+                            for (int level = 0; level < imageBlob.RyoPixmaps.Length; level++)
                             {
-                                LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 碎片数：[{imageBlob.ClipCount}] 碎片宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 碎片高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 碎片集层数：{imageBlob.RyoPixmaps.Length}");
-                                string pathName = textureFile.FullPath + $".No_{piece}.dumps";
-                                LogUtil.INSTANCE.PrintInfo("-- 该图片的相关资源将被写出在：" + pathName);
-                                if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
+                                RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
+                                LogUtil.INSTANCE.PrintInfo($"---- 第{level + 1}层 有{pixs.Length}个");
 
-                                for (int level = 0; level < imageBlob.RyoPixmaps.Length; level++)
+                                string levelPathName = pathName + $"\\Lv_{level + 1}";
+                                if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
+                                for (int no = 0; no < pixs.Length; no++)
                                 {
-                                    RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
-                                    LogUtil.INSTANCE.PrintInfo($"---- 第{level + 1}层 有{pixs.Length}个");
+                                    RyoPixmap pix = pixs[no];
+                                    LogUtil.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format} 像素数：{pix.GetPixelsCount()}");
 
-                                    string levelPathName = pathName + $"\\Lv_{level + 1}";
-                                    if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
-                                    for (int no = 0; no < pixs.Length; no++)
+                                    string levelFileName = levelPathName + $"\\No_{no + 1}.png";
+
+                                    try
                                     {
-                                        RyoPixmap pix = pixs[no];
-                                        LogUtil.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format} 像素数：{pix.GetPixelsCount()}");
+                                        Bitmap? it = (Bitmap)pix;
+                                        if (it == null) throw new Exception("图片NULL，故写不出");
 
-                                        string levelFileName = levelPathName + $"\\No_{no + 1}.png";
-
-                                        try
-                                        {
-                                            Bitmap? it = (Bitmap)pix;
-                                            if (it == null) throw new Exception("图片NULL，故写不出");
-
-                                            var streamHere = new FileStream(levelFileName, FileMode.OpenOrCreate);
-                                            it!.Save(streamHere, ImageFormat.Png);
-                                            streamHere.Dispose();
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            LogUtil.INSTANCE.PrintError("不能写出图片", ex);
-                                        }
+                                        var streamHere = new FileStream(levelFileName, FileMode.OpenOrCreate);
+                                        it!.Save(streamHere, ImageFormat.Png);
+                                        streamHere.Dispose();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogUtil.INSTANCE.PrintError("不能写出图片", ex);
                                     }
                                 }
-                                piece++;
                             }
+                            piece++;
                         }
                     }
-                }
-                else
-                {
-                    LogUtil.INSTANCE.PrintInfo("查看失败，文件无效，请检查您指定的文件是否存在、正确、未损坏。");
-                    //CommandManager.INSTANCE.ParseCommand("Unload", fileName);
                 }
             }
             catch (Exception e)
@@ -334,7 +306,7 @@ namespace Me.EarzuChan.Ryo.Commands
                 LogUtil.INSTANCE.PrintError("载入文件失败", e);
             }
         }
-    }*/
+    }
 
     [Command("TestConv", "For Dev only", true)]
     public class TestConvCommand : ICommand

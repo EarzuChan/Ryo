@@ -26,6 +26,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public int Height;
         public byte[] Pixels { get; set; }
         public FORMAT Format = FORMAT.RGB888;
+        public bool IsJPG;
 
         public RyoPixmap(int width, int height, FORMAT format)
         {
@@ -35,10 +36,16 @@ namespace Me.EarzuChan.Ryo.Formations
             Pixels = new byte[width * height * GetPixelSize(format)];
         }
 
-        public RyoPixmap(byte[] buffer) => Pixels = buffer;
+        public RyoPixmap(byte[] buffer)
+        {
+            Pixels = buffer;
+            IsJPG = true;
+        }
 
         public int GetPixel(int x, int y)
         {
+            if (IsJPG) throw new NotSupportedException("JPG不支持该操作");
+
             int pixelSize = GetPixelSize(Format);
             int index = (x + y * Width) * pixelSize;
             int pixel = 0;
@@ -75,6 +82,8 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public void SetPixel(int x, int y, int pixel)
         {
+            if (IsJPG) throw new NotSupportedException("JPG不支持该操作");
+
             int pixelSize = GetPixelSize(Format);
             int index = (x + y * Width) * pixelSize;
 
@@ -104,7 +113,11 @@ namespace Me.EarzuChan.Ryo.Formations
             }
         }
 
-        public int GetPixelsCount() => Pixels.Length / GetPixelSize(Format);
+        public int GetPixelsCount()
+        {
+            if (IsJPG) return 1919810;//throw new NotSupportedException("JPG不支持该操作");
+            else return Pixels.Length / GetPixelSize(Format);
+        }
 
         public static int GetPixelSize(FORMAT format)
         {
@@ -124,45 +137,50 @@ namespace Me.EarzuChan.Ryo.Formations
             return 0;
         }
 
-        public void Dispose()
-        {
-            Pixels = Array.Empty<byte>();
-        }
+        public void Dispose() => Pixels = Array.Empty<byte>();
 
         public static explicit operator Bitmap(RyoPixmap v)
         {
-            var fm = v.Format switch
+            Bitmap bmp;
+            if (v.IsJPG)
             {
-                FORMAT.RGB565 => PixelFormat.Format16bppRgb565,
-                FORMAT.RGBA8888 => PixelFormat.Format32bppArgb,
-                _ => PixelFormat.Format24bppRgb,
-            };
-            Bitmap bmp = new(v.Width, v.Height, fm);
-            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, v.Width, v.Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
-
-            IntPtr ptr = bmpData.Scan0;
-            int bytes = Math.Abs(bmpData.Stride) * v.Height;
-
-            var pxs = v.Pixels;
-
-            // 修正位数
-            if (fm == PixelFormat.Format32bppArgb)
-            {
-                if (pxs.Length % 4 != 0) throw new Exception("RGBA编码有问题呀");
-
-                var npxs = new byte[pxs.Length];
-                for (int i = 0; i < pxs.Length; i += 4)
-                {
-                    npxs[i] = pxs[i + 3];
-                    npxs[i + 1] = pxs[i];
-                    npxs[i + 2] = pxs[i + 1];
-                    npxs[i + 3] = pxs[i + 2];
-                }
-                pxs = npxs;
+                bmp = new(new MemoryStream(v.Pixels));
             }
+            else
+            {
+                var fm = v.Format switch
+                {
+                    FORMAT.RGB565 => PixelFormat.Format16bppRgb565,
+                    FORMAT.RGBA8888 => PixelFormat.Format32bppArgb,
+                    _ => PixelFormat.Format24bppRgb,
+                };
+                bmp = new(v.Width, v.Height, fm);
+                BitmapData bmpData = bmp.LockBits(new System.Drawing.Rectangle(0, 0, v.Width, v.Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
 
-            Marshal.Copy(v.Pixels, 0, ptr, bytes);
-            bmp.UnlockBits(bmpData);
+                IntPtr ptr = bmpData.Scan0;
+                int bytes = Math.Abs(bmpData.Stride) * v.Height;
+
+                var pxs = v.Pixels;
+
+                // 修正位数
+                if (fm == PixelFormat.Format32bppArgb)
+                {
+                    if (pxs.Length % 4 != 0) throw new Exception("RGBA编码有问题呀");
+
+                    var npxs = new byte[pxs.Length];
+                    for (int i = 0; i < pxs.Length; i += 4)
+                    {
+                        npxs[i] = pxs[i + 3];
+                        npxs[i + 1] = pxs[i];
+                        npxs[i + 2] = pxs[i + 1];
+                        npxs[i + 3] = pxs[i + 2];
+                    }
+                    pxs = npxs;
+                }
+
+                Marshal.Copy(v.Pixels, 0, ptr, bytes);
+                bmp.UnlockBits(bmpData);
+            }
             return bmp;
         }
     }

@@ -8,7 +8,7 @@ using static Me.EarzuChan.Ryo.Masses.Mass;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
-    public class OldMassManager
+    /*public class OldMassManager
     {
         public static OldMassManager INSTANCE { get { instance ??= new(); return instance; } }
         private static OldMassManager? instance;
@@ -23,7 +23,7 @@ namespace Me.EarzuChan.Ryo.Masses
         public List<OldMassFile> MassList = new();
 
         public OldMassFile? GetMassFileByFileName(string fileName) => MassList.Find((OldMassFile m) => m.Name.ToLower() == fileName.ToLower());
-    }
+    }*/
 
     public class MassManager
     {

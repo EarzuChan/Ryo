@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
-    public class OldTextureFile : OldMass
+    /*public class OldTextureFile : OldMass
     {
         // 成员
         public int[][] ImageIDsArray = Array.Empty<int[]>();
@@ -80,7 +80,7 @@ namespace Me.EarzuChan.Ryo.Masses
         {
             Load(file, ExtendedName);
         }
-    }
+    }*/
 
     public class MassFile : Mass
     {
@@ -127,5 +127,33 @@ namespace Me.EarzuChan.Ryo.Masses
         }
 
         // 看明白了，原版是抛弃原有，添加同名即替换而不删除原来的块，指向新块，所以原来的Put可以不Put
+    }
+
+    public class TextureFile : Mass
+    {
+        // 成员
+        public readonly List<List<int>> ImageIDsArray = new();
+
+        public TextureFile() : base() => ExtendedName = "TextureFile";
+
+        protected override void AfterLoadingIndex(RyoReader reader)
+        {
+            // 从读者类输入流中读取对象个数信息，并构建表
+            int imageCount = reader.ReadInt();
+            //ImageIDsArray = new int[inflatedDataReader.ReadInt()][];
+
+            // 构建表
+            for (int i = 0; i < imageCount; i++)
+            {
+                // ImageIDsArray[i] = new int[reader.ReadInt()];
+                var subList = new List<int>();
+                int clipCount = reader.ReadInt();
+
+                // 读取每个对象的个数信息
+                for (int j = 0; j < clipCount; j++) subList.Add(reader.ReadInt());
+
+                ImageIDsArray.Add(subList);
+            }
+        }
     }
 }
