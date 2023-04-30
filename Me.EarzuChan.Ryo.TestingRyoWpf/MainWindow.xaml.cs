@@ -30,7 +30,7 @@ namespace RyoWpf
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             var button = (Button)sender;
-            var position = Mouse.GetPosition(canvas);
+            var position = Mouse.GetPosition(button);
 
             var ellipse = new Ellipse
             {
@@ -43,6 +43,20 @@ namespace RyoWpf
 
             var aniSize = Math.Max(button.ActualWidth, button.ActualHeight) * 3;
 
+            /*var oriCanvas = FindVisualChild<Canvas>(button);
+            Trace.WriteLine("芝士Canvas：" + oriCanvas);*/
+
+            var border = FindVisualChild<Border>(button);
+            if (border.Child.GetType() != typeof(Grid))
+            {
+                Trace.WriteLine("需要初始化画布：" + border.Child.GetType());
+                var oldChild = border.Child;
+                var newGrid = new Grid();
+                border.Child = newGrid;
+                newGrid.Children.Add(oldChild);
+                newGrid.Children.Add(new Canvas());
+            }
+            var canvas = (Canvas)(((Grid)border.Child).Children[1]);
             canvas.Children.Add(ellipse);
 
             var storyboard = new Storyboard();
@@ -97,6 +111,34 @@ namespace RyoWpf
             // Trace.WriteLine($"左：{ellipse.Width} 上：{ellipse.Height}");
             Canvas.SetLeft(ellipse, position.X);
             Canvas.SetTop(ellipse, position.Y);
+        }
+
+        public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            Trace.WriteLine("开找" + typeof(T));
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+                if (child is null) continue;
+                else if (child is T t)
+                {
+                    Trace.WriteLine("找到位于：" + i);
+                    return t;
+                }
+                else
+                {
+                    Trace.WriteLine(i + "为" + child.GetType());
+                    T childOfChild = FindVisualChild<T>(child);
+                    if (childOfChild != null)
+                    {
+                        return childOfChild;
+                    }
+                }
+            }
+
+            Trace.WriteLine("没找到：" + typeof(T));
+            return null;
         }
     }
 }

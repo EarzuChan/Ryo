@@ -1,6 +1,8 @@
 ﻿using Me.EarzuChan.MaterialForYou;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,6 +30,9 @@ namespace Me.EarzuChan.Ryo.WPFFrontEnd
             InitializeComponent();
 
             uiManager = new UIManager();
+
+            var color = uiManager.StyleProfile.ColorProfile.Primary;
+            Trace.WriteLine($"Primary：#{color.R:X2}{color.G:X2}{color.B:X2}");
 
             // AB.Click
         }

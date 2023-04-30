@@ -1,9 +1,16 @@
-﻿using System;
+﻿using Me.EarzuChan.Ryo.Utils;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Tiff;
+using SixLabors.ImageSharp.PixelFormats;
+using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
-using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,7 +33,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public int Height;
         public byte[] Pixels { get; set; }
         public FORMAT Format = FORMAT.RGB888;
-        public bool IsJPG;
+        public bool IsJPG = false;
 
         public RyoPixmap(int width, int height, FORMAT format)
         {
@@ -36,13 +43,44 @@ namespace Me.EarzuChan.Ryo.Formations
             Pixels = new byte[width * height * GetPixelSize(format)];
         }
 
+        public RyoPixmap(Image image)
+        {
+            Width = image.Width;
+            Height = image.Height;
+
+            // 32->RGBA8888 24->RGB888->JPG
+            // LogUtil.INSTANCE.PrintInfo("BPP：" + image.PixelType.BitsPerPixel, "格式：" + image.PixelType);
+
+            // Needly Overdose
+            IImageEncoder encoder;
+            switch (image.PixelType.BitsPerPixel)
+            {
+                case 24:
+                    encoder = new JpegEncoder();
+                    IsJPG = true;
+                    Format = FORMAT.RGB888;
+                    break;
+                case 32:
+                    encoder = new PngEncoder();
+                    Format = FORMAT.RGBA8888;
+                    break;
+                default:
+                    throw new NotSupportedException("这这格式不能：" + image.PixelType.BitsPerPixel);
+            }
+
+            var imageDataBlob = image.Frames.RootFrame.PixelBuffer
+            using MemoryStream memoryStream = new();
+            image.Save(memoryStream, encoder);
+            Pixels = memoryStream.ToArray();
+        }
+
         public RyoPixmap(byte[] buffer)
         {
             Pixels = buffer;
             IsJPG = true;
         }
 
-        public int GetPixel(int x, int y)
+        /*public int GetPixel(int x, int y)
         {
             if (IsJPG) throw new NotSupportedException("JPG不支持该操作");
 
@@ -111,13 +149,13 @@ namespace Me.EarzuChan.Ryo.Formations
                     Pixels[index] = (byte)(pixel & 0xff);
                     break;
             }
-        }
+        }*/
 
-        public int GetPixelsCount()
+        /*public int GetPixelsCount()
         {
             if (IsJPG) return 1919810;//throw new NotSupportedException("JPG不支持该操作");
             else return Pixels.Length / GetPixelSize(Format);
-        }
+        }*/
 
         public static int GetPixelSize(FORMAT format)
         {
@@ -139,7 +177,7 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public void Dispose() => Pixels = Array.Empty<byte>();
 
-        public static explicit operator Bitmap(RyoPixmap v)
+        /*public static explicit operator Bitmap(RyoPixmap v)
         {
             Bitmap bmp;
             if (v.IsJPG)
@@ -182,6 +220,18 @@ namespace Me.EarzuChan.Ryo.Formations
                 bmp.UnlockBits(bmpData);
             }
             return bmp;
+        }*/
+
+        public Image ToImage()
+        {
+            if (IsJPG) return Image.Load(Pixels);
+            else return Format switch
+            {
+                FORMAT.RGBA8888 => Image.LoadPixelData<Rgba32>(Pixels, Width, Height),
+                FORMAT.RGB565 => throw new NotSupportedException("暂不支持RGB565，需要作者颐指气使寻找解决方案"),// return Image.LoadPixelData<Rgb>(Pixels,)
+                FORMAT.RGB888 => Image.LoadPixelData<Rgb24>(Pixels, Width, Height),
+                _ => throw new NotSupportedException("肥肠爆芡，暂不支持" + Format),
+            };
         }
     }
 
@@ -202,16 +252,16 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public static explicit operator object[](FragmentalImage image) => new object[] { image.ClipCount, image.SliceWidths, image.SliceHeights, image.RyoPixmaps };
 
-        public Bitmap[][] DumpItems()
+        public Image[][] DumpItems()
         {
-            Bitmap[][] bitmaps = new Bitmap[RyoPixmaps.Length][];
+            Image[][] bitmaps = new Image[RyoPixmaps.Length][];
             for (int i = 0; i < RyoPixmaps.Length; i++)
             {
                 RyoPixmap[] items = RyoPixmaps[i];
-                var bmpg = new Bitmap[items.Length];
+                var bmpg = new Image[items.Length];
                 for (int j = 0; j < items.Length; j++)
                 {
-                    bmpg[j] = (Bitmap)items[j];
+                    bmpg[j] = items[j].ToImage();
                 }
             }
             return bitmaps;

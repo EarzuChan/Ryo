@@ -155,5 +155,16 @@ namespace Me.EarzuChan.Ryo.Masses
                 ImageIDsArray.Add(subList);
             }
         }
+
+        protected override void AfterSavingIndex(RyoWriter writer)
+        {
+            writer.WriteInt(ImageIDsArray.Count);
+            foreach (List<int> sublist in ImageIDsArray)
+            {
+                writer.WriteInt(sublist.Count);
+                foreach (int item in sublist) writer.WriteInt(item);
+            }
+
+        }
     }
 }

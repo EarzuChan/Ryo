@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using SixLabors.ImageSharp.Formats;
 
 namespace Me.EarzuChan.Ryo.Commands
 {
@@ -209,12 +210,12 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Seek", "Seek the images from a texture file.", true)]
-    public class SeekCommand : ICommand
+    [Command("Uptx", "Unpack the images from a texture file.", true)]
+    public class UptxCommand : ICommand
     {
         public string FileName;
 
-        public SeekCommand(string fileName)
+        public UptxCommand(string fileName)
         {
             FileName = fileName;
         }
@@ -277,18 +278,16 @@ namespace Me.EarzuChan.Ryo.Commands
                                 for (int no = 0; no < pixs.Length; no++)
                                 {
                                     RyoPixmap pix = pixs[no];
-                                    LogUtil.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format} 像素数：{pix.GetPixelsCount()}");
+                                    LogUtil.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format}");// 像素数：{pix.GetPixelsCount()}");
 
-                                    string levelFileName = levelPathName + $"\\No_{no + 1}.png";
+                                    string levelFileName = $"{levelPathName}\\No_{no + 1}.{(pix.IsJPG ? "jpg" : "png")}";
 
                                     try
                                     {
-                                        Bitmap? it = (Bitmap)pix;
-                                        if (it == null) throw new Exception("图片NULL，故写不出");
-
-                                        var streamHere = new FileStream(levelFileName, FileMode.OpenOrCreate);
-                                        it!.Save(streamHere, ImageFormat.Png);
-                                        streamHere.Dispose();
+                                        var it = pix.ToImage() ?? throw new Exception("图片转换失败，故写不出");
+                                        // var streamHere = new FileStream(levelFileName, FileMode.OpenOrCreate);
+                                        it.Save(levelFileName);
+                                        // streamHere.Dispose();
                                     }
                                     catch (Exception ex)
                                     {
@@ -623,6 +622,42 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 LogUtil.INSTANCE.PrintError($"添加失败", ex);
             }
+        }
+    }
+
+    [Command("PImg", "Pack a image to a texture file and save it")]
+    public class PImgCommand : ICommand
+    {
+        public string FileName;
+        public string ImgPath;
+
+        public PImgCommand(string fileName, string imgPath)
+        {
+            FileName = fileName;
+            ImgPath = imgPath;
+        }
+
+        public PImgCommand(string imgPath)
+        {
+            ImgPath = imgPath;
+            FileName = Path.GetFileNameWithoutExtension(ImgPath) + ".texture";
+        }
+
+        public void Execute()
+        {
+            if (!File.Exists(ImgPath)) throw new FileNotFoundException("没图说个几把");
+
+            using FileStream fileStream = new(ImgPath, FileMode.Open);
+
+            FragmentalImage image = TextureUtils.INSTANCE.FastCreateImg(fileStream);
+
+            var txfile = new TextureFile();
+            txfile.Add(image);
+
+            using FileStream saveStream = new(FileName, FileMode.OpenOrCreate);
+            if (!saveStream.CanWrite) throw new UnauthorizedAccessException("Coat Denied");
+
+            txfile.Save(saveStream);
         }
     }
 }

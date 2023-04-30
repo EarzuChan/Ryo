@@ -39,12 +39,14 @@ namespace Me.EarzuChan.MaterialForYou
         private MaterialStyleProfile? _styleProfile;
 
         // 初始化
-        public UIManager()
+        private UIManager(bool useDefaultStyleProfile)
         {
             Clickables = new(this);
 
-            StyleProfile = DefaultStyleProfiles.DefaultStyleProfile;
+            if (useDefaultStyleProfile) StyleProfile = DefaultStyleProfiles.DefaultStyleProfile;
         }
+
+        public UIManager() : this(true) { }
 
         // 为所给控件设置样式
         public void ApplyFor(UIElement element)

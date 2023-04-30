@@ -18,14 +18,9 @@ namespace Me.EarzuChan.MaterialForYou.Effects
             Trace.WriteLine(element + "播放动画");
 
             // 获取资源然后拨弄
+            // 资源是直接获取时长、故事版、在这里就直接Run和等待就行了
 
-            DoubleAnimation opacityAnimation = new()
-            {
-                To = 0.5,
-                Duration = TimeSpan.FromSeconds(0.2)
-            };
-
-            // 创建并启动故事板
+            /*// 创建并启动故事板
             Storyboard storyboard = new();
             storyboard.Children.Add(opacityAnimation);
             Storyboard.SetTarget(opacityAnimation, element);
@@ -44,7 +39,7 @@ namespace Me.EarzuChan.MaterialForYou.Effects
             storyboard.Children.Add(opacityAnimation);
             Storyboard.SetTarget(opacityAnimation, element);
             Storyboard.SetTargetProperty(opacityAnimation, new PropertyPath(UIElement.OpacityProperty));
-            storyboard.Begin();
+            storyboard.Begin();*/
         }
     }
 }

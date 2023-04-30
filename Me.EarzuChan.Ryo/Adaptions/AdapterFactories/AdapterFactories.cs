@@ -12,6 +12,8 @@ using System.Text;
 using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Adaptions.AdapterFactories.BaseArrayTypeAdapterFactory;
 using System.Reflection.PortableExecutable;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 {
@@ -496,11 +498,10 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             {
                 try
                 {
-                    var bmp = (Bitmap)pixmap;
+                    var bmp = pixmap.ToImage() ?? throw new NullReferenceException("转换图片失败，一得阁拉米");
 
                     var streamHere = new MemoryStream();
-
-                    bmp!.Save(streamHere, ImageFormat.Jpeg);
+                    bmp.Save(streamHere, new JpegEncoder());
                     anoWriter.WriteBytes(streamHere.ToArray());
                 }
                 catch (Exception th)
@@ -515,7 +516,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-            foreach (var item in DataAdapterRyoTypePairs) if (type.Name == item.Value.Name) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            foreach (var item in DataAdapterRyoTypePairs) if (type.Name == item.Value.Name || type.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
 
             throw new FormatException(type + "没有合适的特殊类型适配器");
         }
@@ -524,7 +525,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return item.Value;
 
-            throw new FormatException(ryoType + "没有合适的特殊类型适配器");
+            throw new FormatException(ryoType + "找不到合适的特殊类型适配器");
         }
     }
 }

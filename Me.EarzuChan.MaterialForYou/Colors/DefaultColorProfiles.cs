@@ -12,7 +12,7 @@ namespace Me.EarzuChan.MaterialForYou.Colors
     {
         public static readonly MaterialColorProfile DefaultColorProfile = new()
         {
-            Primary = new() { }
+            PrimaryTonal = new(0x9D2323)
         };
     }
 }
