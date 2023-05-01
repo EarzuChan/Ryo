@@ -11,45 +11,52 @@ namespace Me.EarzuChan.Ryo.Utils
 {
     public static class TextureUtils
     {
+        public const int MaxWidthOrHeight = 512;
+
         public static FragmentalImage FastCreateImg(Stream fileStream)
         {
-            //if (!File.Exists(path)) throw new FileNotFoundException("没图说个几把");
 
-            //using FileStream fileStream = new(path, FileMode.Open);
             if (!fileStream.CanRead) throw new UnauthorizedAccessException("Acceed Denied");
 
             try
             {
-                var sourceImage = Image.Load(fileStream) ?? throw new NullReferenceException("加载图片失败");
+                var image = Image.Load(fileStream) ?? throw new NullReferenceException("加载图片失败");
 
-                int maxWidthOrHeight = 512;
-
-                int width = sourceImage.Width;
-                int height = sourceImage.Height;
+                int width = image.Width;
+                int height = image.Height;
                 int newWidth = width, newHeight = height;
 
-                if (width > maxWidthOrHeight || height > maxWidthOrHeight)
+                if (width > MaxWidthOrHeight || height > MaxWidthOrHeight)
                 {
                     if (width > height)
                     {
-                        newWidth = maxWidthOrHeight;
-                        newHeight = (int)(height * ((float)maxWidthOrHeight / width));
+                        newWidth = MaxWidthOrHeight;
+                        newHeight = (int)(height * ((float)MaxWidthOrHeight / width));
                     }
                     else
                     {
-                        newHeight = maxWidthOrHeight;
-                        newWidth = (int)(width * ((float)maxWidthOrHeight / height));
+                        newHeight = MaxWidthOrHeight;
+                        newWidth = (int)(width * ((float)MaxWidthOrHeight / height));
                     }
 
-                    sourceImage.Mutate(x => x.Resize(newWidth, newHeight));
-                    // LogUtil.INSTANCE.PrintInfo("新大小：" + newHeight, newWidth.ToString());
+                    image.Mutate(x => x.Resize(newWidth, newHeight));
                 }
 
-                var targetImage = new FragmentalImage(maxWidthOrHeight, new int[] { newWidth }, new int[] { newHeight }, new RyoPixmap[1][]);
+                List<int> widths = new();
+                List<int> heights = new();
+                List<RyoPixmap[]> pixmaps = new();
+                while (newHeight > 1 && newWidth > 1)
+                {
+                    widths.Add(newWidth);
+                    heights.Add(newHeight);
+                    pixmaps.Add(new RyoPixmap[] { new RyoPixmap(image) });
 
-                targetImage.RyoPixmaps[0] = new RyoPixmap[] { new RyoPixmap(sourceImage) };
+                    newHeight /= 2;
+                    newWidth /= 2;
+                    image.Mutate(size => size.Resize(newWidth, newHeight));
+                }
 
-                return targetImage;
+                return new FragmentalImage(MaxWidthOrHeight, widths.ToArray(), heights.ToArray(), pixmaps.ToArray());
             }
             catch (Exception ex)
             {

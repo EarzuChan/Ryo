@@ -210,7 +210,7 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Uptx", "Unpack the images from a texture file.", true)]
+    [Command("Uptx", "Unpack the images from a texture file.")]
     public class UptxCommand : ICommand
     {
         public string FileName;
@@ -654,8 +654,7 @@ namespace Me.EarzuChan.Ryo.Commands
                 FragmentalImage image = TextureUtils.FastCreateImg(fileStream);
 
                 var txfile = new TextureFile();
-                int id = txfile.Add(image);
-                txfile.ImageIDsArray.Add(new() { id });
+                txfile.ImageIDsArray.Add(new() { txfile.Add(image) });
 
                 using FileStream saveStream = new(FileName, FileMode.OpenOrCreate);
                 if (!saveStream.CanWrite) throw new UnauthorizedAccessException("Coat Denied");
@@ -668,6 +667,49 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 LogUtil.INSTANCE.PrintError("图片保存失败", ex);
             }
+        }
+    }
+
+    [Command("JYFS", "Inflate a file")]
+    public class JYFSCommand : ICommand
+    {
+        public enum FILETYPE
+        {
+            FileSystem,
+            TextureFile
+        }
+
+        public FILETYPE FileType = FILETYPE.FileSystem;
+        public string FileName;
+        // public bool WriteToOriginal = false;
+
+        public JYFSCommand(string fileName)
+        {
+            FileName = fileName;
+        }
+
+        public JYFSCommand(string fileName, string fileType)
+        {
+            FileName = fileName;
+            FileType = (FILETYPE)int.Parse(fileType);
+        }
+
+        public void Execute()
+        {
+            if (!File.Exists(FileName)) throw new FileNotFoundException("找不到文件");
+            using FileStream fileStream = new(FileName, FileMode.Open);
+            Mass mass = FileType switch
+            {
+                FILETYPE.FileSystem => new MassFile(),
+                FILETYPE.TextureFile => new TextureFile(),
+                _ => throw new NotSupportedException("不支持"),
+            };
+            mass.Load(fileStream);
+
+            var fileName = FileName + "_INF";
+            mass.Save(new FileStream(fileName, FileMode.OpenOrCreate), true);
+
+            LogUtil.INSTANCE.PrintInfo("写出到" + fileName);
         }
     }
 }

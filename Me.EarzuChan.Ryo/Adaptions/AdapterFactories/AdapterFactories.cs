@@ -355,7 +355,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
-                int compressedLength;// 保留
+                int jpgLength;// 保留
 
                 int clipCount = reader.ReadInt();
                 int sliceCount = reader.ReadInt();
@@ -364,6 +364,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 int[] sliceHeights = new int[sliceCount];
                 RyoPixmap[][] pixmaps = new RyoPixmap[sliceCount][];
 
+                // 每层
                 for (int i2 = 0; i2 < sliceCount; i2++)
                 {
                     try
@@ -398,23 +399,19 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                             if (bottom > sliceHeight) bottom = sliceHeight;
 
-                            // 是否Raw
-                            if (!isJPG || (compressedLength = reader.ReadInt()) <= 0)
+                            // 是否JPG
+                            if (isJPG && (jpgLength = reader.ReadInt()) > 0)
+                            {
+                                // 是JPG
+                                var buffer = reader.ReadBytes(jpgLength);
+                                pixmaps[i2][i3] = new(buffer);
+                            }
+                            else
                             {
                                 // 不是JPG
                                 RyoPixmap pixmap = new(right - x, bottom - y, format);
                                 pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
                                 pixmaps[i2][i3] = pixmap;
-                            }
-                            else
-                            {
-                                // 是JPG
-                                //LogUtil.INSTANCE.PrintInfo($"IMG/ pixmaps[{i2}][{i3}]已压缩 格式：{format} 大小：{compressedLength} 已转储");
-
-                                var buffer = reader.ReadBytes(compressedLength);
-                                //File.WriteAllBytes($"E:\\PM[{i2}][{i3}]_{format}.Dump", buffer);
-
-                                pixmaps[i2][i3] = new(buffer);// { IsJPG = true };
                             }
                         }
                     }
@@ -428,7 +425,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                             foreach (RyoPixmap v in v1) v?.Dispose();
                         }
-                        throw new InvalidDataException("读取块时出现异常", th);
+                        throw new InvalidDataException("读取块时出现异常，因为" + th.Message, th);
                     }
                 }
                 return new FragmentalImage(clipCount, sliceWidths, sliceHeights, pixmaps);
@@ -462,25 +459,14 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                         // JPG
                         if (isJPG)
                         {
-                            throw new NotSupportedException("不太OK");
-                            /*// 图片>=32*32
-                            if (pixmap.Width * pixmap.Height >= 1024)
-                            {
-                                // 直接长度*/
+                            // 直接长度
                             writer.WriteInt(pixmap.Pixels.Length);
                             writer.WriteBytes(pixmap.Pixels);
-                            // }
-
-                            // 写大小-1 -> 当作规则的来读取
-                            writer.WriteInt(-1);
                         }
                         else
                         {
                             //这块原来是不括起来的，警告一下怕有问题！！
-
-                            // 规则，就不指定大小
-                            var pixels = pixmap.Pixels;
-                            writer.WriteBytes(pixels);
+                            writer.WriteBytes(pixmap.Pixels);
                         }
                     }
                 }

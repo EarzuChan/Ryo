@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
 using System.Reflection.PortableExecutable;
 using System.Diagnostics;
+using Me.EarzuChan.Ryo.Commands;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
@@ -401,7 +402,7 @@ namespace Me.EarzuChan.Ryo.Masses
     {
         void Load(FileStream fileStream);
 
-        void Save(FileStream fileStream);
+        void Save(FileStream fileStream, bool noDeflated = false);
 
         /*void AfterLoadingIndex(RyoReader reader);
 
@@ -545,7 +546,10 @@ namespace Me.EarzuChan.Ryo.Masses
 
                 return id;
             }
-            catch (Exception ex) { throw new Exception("不能添加对象，因为" + ex.Message, ex); }
+            catch (Exception ex)
+            {
+                throw new Exception("不能添加对象，因为" + ex.Message, ex);
+            }
         }
 
         public T Get<T>(int id)
@@ -737,7 +741,7 @@ namespace Me.EarzuChan.Ryo.Masses
             }
         }
 
-        public void Save(FileStream fileStream)
+        public void Save(FileStream fileStream, bool noDeflated = false)
         {
             using var fileWriter = new RyoWriter(fileStream);
             fileWriter.WriteFixedString(ExtendedName);
@@ -787,7 +791,7 @@ namespace Me.EarzuChan.Ryo.Masses
             indexWriter.PositionToZero();
             byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
             byte[] deflatedBytes = CompressionUtil.Deflate(indexBytes, 0, indexBytes.Length);
-            if (indexBytes.Length / deflatedBytes.Length >= 1.2F)
+            if (!noDeflated && indexBytes.Length / deflatedBytes.Length >= 1.2F)
             {
                 fileWriter.WriteInt((deflatedBytes.Length << 1) | 1);
                 fileWriter.WriteBytes(deflatedBytes);
