@@ -2,12 +2,9 @@
 
 namespace Me.EarzuChan.Ryo.Utils
 {
-    public class CompressionUtil
+    public static class CompressionUtil
     {
-        public static CompressionUtil INSTANCE { get { instance ??= new(); return instance; } }
-        private static CompressionUtil? instance;
-
-        public byte[] Inflate(byte[] input, int offset, int length)
+        public static byte[] Inflate(byte[] input, int offset, int length)
         {
             try
             {
@@ -30,7 +27,7 @@ namespace Me.EarzuChan.Ryo.Utils
             }
         }
 
-        public byte[] Deflate(byte[] indexBytes, int offset, int length)
+        public static byte[] Deflate(byte[] indexBytes, int offset, int length)
         {
             Deflater deflater = new Deflater();
             deflater.SetInput(indexBytes, offset, length);

@@ -5,8 +5,10 @@ using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Tiff;
+using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -52,26 +54,43 @@ namespace Me.EarzuChan.Ryo.Formations
             // LogUtil.INSTANCE.PrintInfo("BPP：" + image.PixelType.BitsPerPixel, "格式：" + image.PixelType);
 
             // Needly Overdose
-            IImageEncoder encoder;
             switch (image.PixelType.BitsPerPixel)
             {
                 case 24:
-                    encoder = new JpegEncoder();
-                    IsJPG = true;
-                    Format = FORMAT.RGB888;
-                    break;
+                    {
+                        IsJPG = true;
+                        Format = FORMAT.RGB888;
+
+                        // 因为是JPG，直接压缩即可
+                        using MemoryStream memoryStream = new();
+                        image.Save(memoryStream, new JpegEncoder());
+                        Pixels = memoryStream.ToArray();
+                        // File.WriteAllBytes("D:\\D Images\\Play My Genshin.jpg", Pixels);
+                        break;
+                    }
                 case 32:
-                    encoder = new PngEncoder();
                     Format = FORMAT.RGBA8888;
+
+                    var imgBuffer = ((ImageFrame<Rgba32>)image.Frames.RootFrame).PixelBuffer;
+                    var bytes = new List<byte>();
+                    for (int i = 0; i < Height; i++)
+                    {
+                        var span = imgBuffer.DangerousGetRowSpan(i);
+                        foreach (Rgba32 px in span)
+                        {
+                            bytes.Add(px.R);
+                            bytes.Add(px.G);
+                            bytes.Add(px.B);
+                            bytes.Add(px.A);
+                        }
+                    }
+                    // LogUtil.INSTANCE.PrintInfo($"指望的BytesCount：{Height * Width * 4}，实际：{bytes.Count}");
+
+                    Pixels = bytes.ToArray();
                     break;
                 default:
                     throw new NotSupportedException("这这格式不能：" + image.PixelType.BitsPerPixel);
             }
-
-            var imageDataBlob = image.Frames.RootFrame.PixelBuffer
-            using MemoryStream memoryStream = new();
-            image.Save(memoryStream, encoder);
-            Pixels = memoryStream.ToArray();
         }
 
         public RyoPixmap(byte[] buffer)
@@ -224,7 +243,12 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public Image ToImage()
         {
-            if (IsJPG) return Image.Load(Pixels);
+            // LogUtil.INSTANCE.PrintInfo("像素大小：" + Pixels.Length);
+            if (IsJPG)
+            {
+                // File.WriteAllBytes("D:\\D Images\\Play Testing Genshin.jpg", Pixels);
+                return Image.Load(Pixels);
+            }
             else return Format switch
             {
                 FORMAT.RGBA8888 => Image.LoadPixelData<Rgba32>(Pixels, Width, Height),
@@ -237,20 +261,20 @@ namespace Me.EarzuChan.Ryo.Formations
 
     public class FragmentalImage
     {
-        public int ClipCount;
+        public int MaxClipSize;
         public int[] SliceWidths;
         public int[] SliceHeights;
         public RyoPixmap[][] RyoPixmaps;
 
         public FragmentalImage(int clipCount, int[] sliceWidths, int[] sliceHeights, RyoPixmap[][] pixmaps)
         {
-            ClipCount = clipCount;
+            MaxClipSize = clipCount;
             SliceWidths = sliceWidths;
             SliceHeights = sliceHeights;
             RyoPixmaps = pixmaps;
         }
 
-        public static explicit operator object[](FragmentalImage image) => new object[] { image.ClipCount, image.SliceWidths, image.SliceHeights, image.RyoPixmaps };
+        public static explicit operator object[](FragmentalImage image) => new object[] { image.MaxClipSize, image.SliceWidths, image.SliceHeights, image.RyoPixmaps };
 
         public Image[][] DumpItems()
         {

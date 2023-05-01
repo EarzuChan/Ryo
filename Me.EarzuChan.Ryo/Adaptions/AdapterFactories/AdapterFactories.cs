@@ -376,7 +376,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                         //每层的格式
                         RyoPixmap.FORMAT format = (RyoPixmap.FORMAT)reader.ReadUnsignedByte();
-                        bool compressionAllowed = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                        bool isJPG = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
 
                         // 块数
                         int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidth);
@@ -398,17 +398,17 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                             if (bottom > sliceHeight) bottom = sliceHeight;
 
-                            // 归不规则的读
-                            if (!compressionAllowed || (compressedLength = reader.ReadInt()) <= 0)
+                            // 是否Raw
+                            if (!isJPG || (compressedLength = reader.ReadInt()) <= 0)
                             {
-                                // 需要指定大小
+                                // 不是JPG
                                 RyoPixmap pixmap = new(right - x, bottom - y, format);
                                 pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
                                 pixmaps[i2][i3] = pixmap;
                             }
                             else
                             {
-                                // 不需要指定大小
+                                // 是JPG
                                 //LogUtil.INSTANCE.PrintInfo($"IMG/ pixmaps[{i2}][{i3}]已压缩 格式：{format} 大小：{compressedLength} 已转储");
 
                                 var buffer = reader.ReadBytes(compressedLength);
@@ -438,10 +438,10 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
             public void To(object obj, Mass mass, RyoWriter writer)
             {
                 var image = (FragmentalImage)obj;
-                RyoWriter? directClipWritter = null;
+                // RyoWriter? directClipWritter = null;
 
                 // 元数据
-                writer.WriteInt(image.ClipCount);
+                writer.WriteInt(image.MaxClipSize);
                 writer.WriteInt(image.RyoPixmaps.Length);
 
                 for (int i = 0; i < image.RyoPixmaps.Length; i++)
@@ -454,47 +454,41 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                     // 写出类型序号
                     writer.WriteUnsignedByte((byte)format);
-                    bool isUnshaped = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                    bool isJPG = pixmapArr[0].IsJPG;
 
                     // 每块数据
                     foreach (RyoPixmap pixmap in pixmapArr)
                     {
-                        // 感觉逻辑有问题
-
-                        // 不规则
-                        if (isUnshaped)
+                        // JPG
+                        if (isJPG)
                         {
-                            // 图片大于32*32
+                            throw new NotSupportedException("不太OK");
+                            /*// 图片>=32*32
                             if (pixmap.Width * pixmap.Height >= 1024)
                             {
-                                directClipWritter ??= new RyoWriter(new MemoryStream(65536));
-                                directClipWritter.PositionToZero();
-                                WriteAsJpegToGivenWriter(pixmap, directClipWritter);
-
-                                if (directClipWritter.Position > 0)// 写出的有效
-                                {
-                                    // 直接长度
-                                    writer.WriteInt((int)directClipWritter.Position);
-                                    writer.WriteAnotherWriter(directClipWritter);
-
-                                    // 问题是没退出？
-                                }
-                            }
+                                // 直接长度*/
+                            writer.WriteInt(pixmap.Pixels.Length);
+                            writer.WriteBytes(pixmap.Pixels);
+                            // }
 
                             // 写大小-1 -> 当作规则的来读取
                             writer.WriteInt(-1);
                         }
+                        else
+                        {
+                            //这块原来是不括起来的，警告一下怕有问题！！
 
-                        // 规则，就不指定大小
-                        var pixels = pixmap.Pixels;
-                        writer.WriteBytes(pixels);
+                            // 规则，就不指定大小
+                            var pixels = pixmap.Pixels;
+                            writer.WriteBytes(pixels);
+                        }
                     }
                 }
 
             }
 
             // 实验性
-            public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
+            /*public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
             {
                 try
                 {
@@ -509,14 +503,14 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     LogUtil.INSTANCE.PrintError("Unable to convert image to JPEG", th);
                     anoWriter.PositionToZero();
                 }
-            }
+            }*/
         }
 
         public IAdapter Create(RyoType type)
         {
             //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-            foreach (var item in DataAdapterRyoTypePairs) if (type.Name == item.Value.Name || type.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            foreach (var item in DataAdapterRyoTypePairs) if (type.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
 
             throw new FormatException(type + "没有合适的特殊类型适配器");
         }

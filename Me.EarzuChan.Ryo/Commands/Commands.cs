@@ -261,9 +261,9 @@ namespace Me.EarzuChan.Ryo.Commands
 
                         //LogUtil.INSTANCE.PrintInfo($"\n总片数：{imageBlob.ClipCount}，总层数：{imageBlob.SliceWidths.Length}，解析各项图片：");
 
-                        if (imageBlob != null && imageBlob.ClipCount != 0)
+                        if (imageBlob != null && imageBlob.MaxClipSize != 0)
                         {
-                            LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 碎片数：[{imageBlob.ClipCount}] 碎片宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 碎片高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 碎片集层数：{imageBlob.RyoPixmaps.Length}");
+                            LogUtil.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}张 最大碎片长宽：[{imageBlob.MaxClipSize}] 层级宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceHeights)}] 层级高：[{FormatManager.INSTANCE.ItemToString(imageBlob.SliceWidths)}] 层级数：{imageBlob.RyoPixmaps.Length}");
                             string pathName = FileName + $".No_{piece}.dumps";
                             LogUtil.INSTANCE.PrintInfo("-- 该图片的相关资源将被写出在：" + pathName);
                             if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
@@ -640,24 +640,34 @@ namespace Me.EarzuChan.Ryo.Commands
         public PImgCommand(string imgPath)
         {
             ImgPath = imgPath;
-            FileName = Path.GetFileNameWithoutExtension(ImgPath) + ".texture";
+            FileName = imgPath + ".texture";
         }
 
         public void Execute()
         {
-            if (!File.Exists(ImgPath)) throw new FileNotFoundException("没图说个几把");
+            try
+            {
+                if (!File.Exists(ImgPath)) throw new FileNotFoundException("没图说个几把");
 
-            using FileStream fileStream = new(ImgPath, FileMode.Open);
+                using FileStream fileStream = new(ImgPath, FileMode.Open);
 
-            FragmentalImage image = TextureUtils.INSTANCE.FastCreateImg(fileStream);
+                FragmentalImage image = TextureUtils.FastCreateImg(fileStream);
 
-            var txfile = new TextureFile();
-            txfile.Add(image);
+                var txfile = new TextureFile();
+                int id = txfile.Add(image);
+                txfile.ImageIDsArray.Add(new() { id });
 
-            using FileStream saveStream = new(FileName, FileMode.OpenOrCreate);
-            if (!saveStream.CanWrite) throw new UnauthorizedAccessException("Coat Denied");
+                using FileStream saveStream = new(FileName, FileMode.OpenOrCreate);
+                if (!saveStream.CanWrite) throw new UnauthorizedAccessException("Coat Denied");
 
-            txfile.Save(saveStream);
+                txfile.Save(saveStream);
+
+                LogUtil.INSTANCE.PrintInfo("图片保存成功");
+            }
+            catch (Exception ex)
+            {
+                LogUtil.INSTANCE.PrintError("图片保存失败", ex);
+            }
         }
     }
 }

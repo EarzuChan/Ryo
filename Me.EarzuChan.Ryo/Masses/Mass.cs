@@ -516,22 +516,19 @@ namespace Me.EarzuChan.Ryo.Masses
                 int nowId = id;
                 while (nowId < id + SavedItems.Count)
                 {
-                    /* 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
-                    我感觉这个要Bind？在表中找不到就添加？？？
-                    或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
-                    以后要不要暂存Ryo和Adapter？太浪费
-                    会抛出就会*/
-
                     object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
                     // LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配前_循环第：{nowId}");
 
                     RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(nowObj.GetType());
+
+                    // LogUtil.INSTANCE.PrintInfo("类型：" + dataRyoType);
+
                     var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
                     var adaption = ItemAdaptions[adaptionId];
 
                     var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
 
-                    var writer = new RyoWriter(new MemoryStream());
+                    using var writer = new RyoWriter(new MemoryStream());
                     adapter.To(nowObj, this, writer);
                     writer.PositionToZero();
 
@@ -570,7 +567,7 @@ namespace Me.EarzuChan.Ryo.Masses
             catch (Exception ex)
             {
                 adapter = new DirectByteArrayAdapter();
-                LogUtil.INSTANCE.PrintError($"为对象（ID：{id}）适配器时出错", ex);
+                LogUtil.INSTANCE.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
             }
 
             // 获取各方面数据
@@ -683,7 +680,7 @@ namespace Me.EarzuChan.Ryo.Masses
             var indexInfo = reader.ReadInt();
             var isDeflated = (indexInfo & 1) != 0;
             var deflateLen = indexInfo >> 1;
-            var indexBlob = isDeflated ? CompressionUtil.INSTANCE.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
+            var indexBlob = isDeflated ? CompressionUtil.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
 
             List<bool> isItemBlobDeflatedList = new();
             List<int> itemBlobEndPositions = new();
@@ -735,7 +732,7 @@ namespace Me.EarzuChan.Ryo.Masses
                 int blobStart = i == 0 ? 0 : itemBlobEndPositions[i - 1];
                 int blobLength = itemBlobEndPositions[i] - blobStart;
                 byte[] itemBlobData = blobsReader.ReadBytes(blobLength);
-                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtil.INSTANCE.Inflate(itemBlobData, 0, blobLength);
+                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtil.Inflate(itemBlobData, 0, blobLength);
                 ItemBlobs.Add(new ItemBlob(itemBlobAdaptionIds[i], itemBlobStickyIds[i], itemBlobData));
             }
         }
@@ -789,7 +786,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 写入索引
             indexWriter.PositionToZero();
             byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
-            byte[] deflatedBytes = CompressionUtil.INSTANCE.Deflate(indexBytes, 0, indexBytes.Length);
+            byte[] deflatedBytes = CompressionUtil.Deflate(indexBytes, 0, indexBytes.Length);
             if (indexBytes.Length / deflatedBytes.Length >= 1.2F)
             {
                 fileWriter.WriteInt((deflatedBytes.Length << 1) | 1);
@@ -816,7 +813,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 暂不写覆盖
             if (IsPutting)
             {
-                // throw new NotImplementedException();
+                throw new NotImplementedException();
                 if (obj == null) throw new NullReferenceException("怕覆写空对象");
 
                 int stickyMetaData = StickyMetaDatas[SavedItemBlobStickyId];
