@@ -491,7 +491,6 @@ namespace Me.EarzuChan.Ryo.Masses
             return ItemAdaptions.IndexOf(itemAdaption);
         }
 
-        // TODO:实现带名字的添加很简单，添加ID于文本的Item就行了
         public int Add(object obj)
         {
             try
@@ -571,7 +570,7 @@ namespace Me.EarzuChan.Ryo.Masses
             catch (Exception ex)
             {
                 adapter = new DirectByteArrayAdapter();
-                LogUtil.INSTANCE.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
+                LogUtils.INSTANCE.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
             }
 
             // 获取各方面数据
@@ -584,7 +583,7 @@ namespace Me.EarzuChan.Ryo.Masses
             SavedId = id;
             SavedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyIndex;
             SavedItemBlobStickyId = itemBlob.StickyIndex;
-            LogUtil.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
+            // LogUtils.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
 
             // 获取Blob
             WorkBuffer.Buffer = itemBlob.Data;
@@ -620,7 +619,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
             // 获取元数据的真意
             int subitemId = metaOfIdMinusOne >> 2;
-            LogUtil.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
+            LogUtils.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
 
             // 必须满足要求
             if ((metaOfIdMinusOne & 3) == 3) return Get<T>(subitemId);
@@ -684,7 +683,7 @@ namespace Me.EarzuChan.Ryo.Masses
             var indexInfo = reader.ReadInt();
             var isDeflated = (indexInfo & 1) != 0;
             var deflateLen = indexInfo >> 1;
-            var indexBlob = isDeflated ? CompressionUtil.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
+            var indexBlob = isDeflated ? CompressionUtils.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
 
             List<bool> isItemBlobDeflatedList = new();
             List<int> itemBlobEndPositions = new();
@@ -736,11 +735,12 @@ namespace Me.EarzuChan.Ryo.Masses
                 int blobStart = i == 0 ? 0 : itemBlobEndPositions[i - 1];
                 int blobLength = itemBlobEndPositions[i] - blobStart;
                 byte[] itemBlobData = blobsReader.ReadBytes(blobLength);
-                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtil.Inflate(itemBlobData, 0, blobLength);
+                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtils.Inflate(itemBlobData, 0, blobLength);
                 ItemBlobs.Add(new ItemBlob(itemBlobAdaptionIds[i], itemBlobStickyIds[i], itemBlobData));
             }
         }
 
+        // 实现真正压缩
         public void Save(FileStream fileStream, bool noDeflated = false)
         {
             using var fileWriter = new RyoWriter(fileStream);
@@ -790,7 +790,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 写入索引
             indexWriter.PositionToZero();
             byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
-            byte[] deflatedBytes = CompressionUtil.Deflate(indexBytes, 0, indexBytes.Length);
+            byte[] deflatedBytes = CompressionUtils.Deflate(indexBytes, 0, indexBytes.Length);
             if (!noDeflated && indexBytes.Length / deflatedBytes.Length >= 1.2F)
             {
                 fileWriter.WriteInt((deflatedBytes.Length << 1) | 1);

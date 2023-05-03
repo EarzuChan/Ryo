@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Me.EarzuChan.Ryo.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,12 +48,12 @@ namespace Me.EarzuChan.Ryo.Masses
         public MassFile LoadMassFile(string filePath, string fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentNullException("文件名不该为空");
-            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException("文件名不该为空");
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException("文件路径不该为空");
             fileName = fileName.Trim().ToLower();
             filePath = filePath.Trim();
-            if (!File.Exists(filePath)) throw new FileNotFoundException("文件不存在");
-            using var fileStream = new FileStream(filePath, FileMode.Open);
-            if (fileStream.Length == 0) throw new FileLoadException("文件长度为零");
+
+            using var fileStream = FileUtils.OpenFile(filePath);
+
             var massFile = new MassFile();
             try
             {
@@ -63,6 +64,7 @@ namespace Me.EarzuChan.Ryo.Masses
                 throw new FileLoadException("文件加载出错，" + ex.Message);
             }
             MassFiles.Add(fileName, massFile);
+
             return massFile;
         }
 

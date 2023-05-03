@@ -86,6 +86,7 @@ namespace Me.EarzuChan.Ryo.Formations
                     }
                     // LogUtil.INSTANCE.PrintInfo($"指望的BytesCount：{Height * Width * 4}，实际：{bytes.Count}");
 
+                    // File.WriteAllBytes("D:\\D Images\\sim-button-text.png.buffer", bytes.ToArray());
                     Pixels = bytes.ToArray();
                     break;
                 default:
@@ -178,20 +179,13 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public static int GetPixelSize(FORMAT format)
         {
-            switch (format)
+            return format switch
             {
-                case FORMAT.RGBA8888:
-                    return 4;
-
-                case FORMAT.RGB888:
-                    return 3;
-
-                case FORMAT.RGB565:
-                case FORMAT.Alpha:
-                    return 2;
-            }
-
-            return 0;
+                FORMAT.RGBA8888 => 4,
+                FORMAT.RGB888 => 3,
+                FORMAT.RGB565 or FORMAT.Alpha => 2,
+                _ => throw new NotSupportedException("暂不支持"),
+            };
         }
 
         public void Dispose() => Pixels = Array.Empty<byte>();
@@ -243,6 +237,8 @@ namespace Me.EarzuChan.Ryo.Formations
 
         public Image ToImage()
         {
+            // 测试
+            // if (Width == 256 && Height == 128) File.WriteAllBytes("D:\\D Images\\Play Testing Genshin.buffer", Pixels);
             // LogUtil.INSTANCE.PrintInfo("像素大小：" + Pixels.Length);
             if (IsJPG)
             {
@@ -261,22 +257,22 @@ namespace Me.EarzuChan.Ryo.Formations
 
     public class FragmentalImage
     {
-        public int MaxClipSize;
-        public int[] SliceWidths;
-        public int[] SliceHeights;
+        public int ClipSize;
+        public int[] LevelWidths;
+        public int[] LevelHeights;
         public RyoPixmap[][] RyoPixmaps;
 
-        public FragmentalImage(int clipCount, int[] sliceWidths, int[] sliceHeights, RyoPixmap[][] pixmaps)
+        public FragmentalImage(int clipSize, int[] levelWidths, int[] levelHeights, RyoPixmap[][] pixmaps)
         {
-            MaxClipSize = clipCount;
-            SliceWidths = sliceWidths;
-            SliceHeights = sliceHeights;
+            ClipSize = clipSize;
+            LevelWidths = levelWidths;
+            LevelHeights = levelHeights;
             RyoPixmaps = pixmaps;
         }
 
-        public static explicit operator object[](FragmentalImage image) => new object[] { image.MaxClipSize, image.SliceWidths, image.SliceHeights, image.RyoPixmaps };
+        public static explicit operator object[](FragmentalImage image) => new object[] { image.ClipSize, image.LevelWidths, image.LevelHeights, image.RyoPixmaps };
 
-        public Image[][] DumpItems()
+        /*public Image[][] DumpItems()
         {
             Image[][] bitmaps = new Image[RyoPixmaps.Length][];
             for (int i = 0; i < RyoPixmaps.Length; i++)
@@ -289,6 +285,6 @@ namespace Me.EarzuChan.Ryo.Formations
                 }
             }
             return bitmaps;
-        }
+        }*/
     }
 }

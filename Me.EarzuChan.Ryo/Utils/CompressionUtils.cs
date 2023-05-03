@@ -2,7 +2,7 @@
 
 namespace Me.EarzuChan.Ryo.Utils
 {
-    public static class CompressionUtil
+    public static class CompressionUtils
     {
         public static byte[] Inflate(byte[] input, int offset, int length)
         {
@@ -22,7 +22,7 @@ namespace Me.EarzuChan.Ryo.Utils
             }
             catch (Exception e)
             {
-                LogUtil.INSTANCE.PrintError("解压出错", e);
+                LogUtils.INSTANCE.PrintError("解压出错", e);
                 return Array.Empty<byte>();
             }
         }

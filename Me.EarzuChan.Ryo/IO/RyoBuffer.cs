@@ -33,7 +33,7 @@ namespace Me.EarzuChan.Ryo.IO
             }
             catch (Exception ex)
             {
-                LogUtil.INSTANCE.PrintError("保存时错误", ex);
+                LogUtils.INSTANCE.PrintError("保存时错误", ex);
                 info += "失败（悲";
             }
             return info;

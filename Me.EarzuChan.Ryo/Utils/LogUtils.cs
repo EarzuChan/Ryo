@@ -2,10 +2,10 @@
 
 namespace Me.EarzuChan.Ryo.Utils
 {
-    public class LogUtil
+    public class LogUtils
     {
-        public static LogUtil INSTANCE { get { instance ??= new(); return instance; } }
-        private static LogUtil? instance;
+        public static LogUtils INSTANCE { get { instance ??= new(); return instance; } }
+        private static LogUtils? instance;
         private Action<string> Logger = str => Trace.WriteLine(str);
         public bool AllowPrintDebugInfo = false;
 
