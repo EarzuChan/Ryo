@@ -11,7 +11,7 @@ namespace Me.EarzuChan.Ryo
         {
             Console.InputEncoding = Encoding.Unicode;
 
-            LogUtil.INSTANCE.SetLogger(str => Console.WriteLine(str));
+            LogUtils.INSTANCE.SetLogger(str => Console.WriteLine(str));
 #if DEBUG
             CommandManager.INSTANCE.IsDev = true;
 #endif

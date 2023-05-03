@@ -113,7 +113,7 @@ namespace Me.EarzuChan.Ryo.Commands
             //Console.WriteLine("解析命令：");
             if (args == null || args.Length == 0)
             {
-                LogUtil.INSTANCE.PrintInfo("命令为空，输入Help查看支持的命令。");
+                LogUtils.INSTANCE.PrintInfo("命令为空，输入Help查看支持的命令。");
                 return;
             }
 
@@ -137,16 +137,16 @@ namespace Me.EarzuChan.Ryo.Commands
                             }
                             catch (Exception e)
                             {
-                                LogUtil.INSTANCE.PrintError("命令执行出错", e);
+                                LogUtils.INSTANCE.PrintError("命令执行出错", e);
                             }
                             return;
                         }
                     }
-                    LogUtil.INSTANCE.PrintInfo($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Help}");
+                    LogUtils.INSTANCE.PrintInfo($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Help}");
                     return;
                 }
             }
-            LogUtil.INSTANCE.PrintInfo($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
+            LogUtils.INSTANCE.PrintInfo($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
         }
     }
 

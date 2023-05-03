@@ -255,7 +255,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 if (oriItemType == null)
                 {
                     if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
-                    LogUtil.INSTANCE.PrintDebugInfo("额外重写匹配 类型为" + itemType);
+                    LogUtils.INSTANCE.PrintDebugInfo("额外重写匹配 类型为" + itemType);
                     if (itemType != typeof(object))
                     {
                         Array newArray = Array.CreateInstance(itemType, objArr.Length);
@@ -346,75 +346,70 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         {
             // public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
 
-            // 计算分块数，按长度分割总数一共要多少块（不足的也给完整一块）
-            public static int CalculateBlockCount(int fullLength, int blockLength)
-            {
-                int quotient = Math.DivRem(blockLength, fullLength, out int remainder);
-                return (remainder != 0 ? 1 : 0) + quotient;
-            }
-
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
-                int compressedLength;// 保留
+                int jpgLength;// 保留
 
-                int clipCount = reader.ReadInt();
-                int sliceCount = reader.ReadInt();
+                int clipSize = reader.ReadInt();
+                int levelCount = reader.ReadInt();
 
-                int[] sliceWidths = new int[sliceCount];
-                int[] sliceHeights = new int[sliceCount];
-                RyoPixmap[][] pixmaps = new RyoPixmap[sliceCount][];
+                int[] levelWidths = new int[levelCount];
+                int[] levelHeights = new int[levelCount];
+                RyoPixmap[][] pixmaps = new RyoPixmap[levelCount][];
 
-                for (int i2 = 0; i2 < sliceCount; i2++)
+                // 每层
+                for (int levelIndex = 0; levelIndex < levelCount; levelIndex++)
                 {
                     try
                     {
                         // 每层的宽高
-                        int sliceWidth = reader.ReadInt();
-                        sliceWidths[i2] = sliceWidth;
-                        int sliceHeight = reader.ReadInt();
-                        sliceHeights[i2] = sliceHeight;
+                        int levelWidth = reader.ReadInt();
+                        levelWidths[levelIndex] = levelWidth;
+                        int levelHeight = reader.ReadInt();
+                        levelHeights[levelIndex] = levelHeight;
 
                         //每层的格式
                         RyoPixmap.FORMAT format = (RyoPixmap.FORMAT)reader.ReadUnsignedByte();
-                        bool compressionAllowed = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                        bool isJPG = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
 
-                        // 块数
-                        int sliceBlockCount = CalculateBlockCount(clipCount, sliceWidth);
-                        // 片数
-                        int sliceClipCount = sliceBlockCount * CalculateBlockCount(clipCount, sliceHeight);
+                        // 横切数
+                        int levelWidthClipCount = TextureUtils.CalculateClipCount(clipSize, levelWidth);
 
-                        // 每层块数
-                        pixmaps[i2] = new RyoPixmap[sliceClipCount];
+                        // 纵切数
+                        int levelHeightClipCount = TextureUtils.CalculateClipCount(clipSize, levelHeight);
 
-                        for (int i3 = 0; i3 < sliceClipCount; i3++)
+                        // 每层单元格数
+                        int levelClipBlobCount = levelWidthClipCount * levelHeightClipCount;
+
+                        // 每层单元格图片承载者
+                        pixmaps[levelIndex] = new RyoPixmap[levelClipBlobCount];
+
+                        for (int levelClipBlobIndex = 0; levelClipBlobIndex < levelClipBlobCount; levelClipBlobIndex++)
                         {
-                            int x = (i3 % sliceBlockCount) * clipCount;
-                            int y = (i3 / sliceBlockCount) * clipCount;
-                            int right = x + clipCount;
-                            int bottom = y + clipCount;
+                            // XXYY计算不正确导致的黑屏？
+                            int x = (levelClipBlobIndex % levelWidthClipCount) * clipSize;
+                            int y = (levelClipBlobIndex / levelWidthClipCount) * clipSize;
+                            int right = x + clipSize;
+                            int bottom = y + clipSize;
 
                             // 处理宽高
-                            if (right > sliceWidth) right = sliceWidth;
+                            if (right > levelWidth) right = levelWidth;
 
-                            if (bottom > sliceHeight) bottom = sliceHeight;
+                            if (bottom > levelHeight) bottom = levelHeight;
 
-                            // 归不规则的读
-                            if (!compressionAllowed || (compressedLength = reader.ReadInt()) <= 0)
+                            // 是否JPG
+                            if (isJPG && (jpgLength = reader.ReadInt()) > 0)
                             {
-                                // 需要指定大小
-                                RyoPixmap pixmap = new(right - x, bottom - y, format);
-                                pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
-                                pixmaps[i2][i3] = pixmap;
+                                // 是JPG
+                                var buffer = reader.ReadBytes(jpgLength);
+                                pixmaps[levelIndex][levelClipBlobIndex] = new(buffer);
                             }
                             else
                             {
-                                // 不需要指定大小
-                                //LogUtil.INSTANCE.PrintInfo($"IMG/ pixmaps[{i2}][{i3}]已压缩 格式：{format} 大小：{compressedLength} 已转储");
-
-                                var buffer = reader.ReadBytes(compressedLength);
-                                //File.WriteAllBytes($"E:\\PM[{i2}][{i3}]_{format}.Dump", buffer);
-
-                                pixmaps[i2][i3] = new(buffer);// { IsJPG = true };
+                                // 不是JPG
+                                RyoPixmap pixmap = new(right - x, bottom - y, format);
+                                pixmap.Pixels = reader.ReadBytes(pixmap.Pixels.Length);
+                                pixmaps[levelIndex][levelClipBlobIndex] = pixmap;
                             }
                         }
                     }
@@ -428,73 +423,57 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                             foreach (RyoPixmap v in v1) v?.Dispose();
                         }
-                        throw new InvalidDataException("读取块时出现异常", th);
+                        throw new InvalidDataException("读取块时出现异常，因为" + th.Message, th);
                     }
                 }
-                return new FragmentalImage(clipCount, sliceWidths, sliceHeights, pixmaps);
+                return new FragmentalImage(clipSize, levelWidths, levelHeights, pixmaps);
             }
 
             // 实验性
             public void To(object obj, Mass mass, RyoWriter writer)
             {
                 var image = (FragmentalImage)obj;
-                RyoWriter? directClipWritter = null;
+                // RyoWriter? directClipWritter = null;
 
                 // 元数据
-                writer.WriteInt(image.ClipCount);
+                writer.WriteInt(image.ClipSize);
                 writer.WriteInt(image.RyoPixmaps.Length);
 
                 for (int i = 0; i < image.RyoPixmaps.Length; i++)
                 {
                     // 每层数据
+                    // XXYY计算不正确导致的黑屏？
                     RyoPixmap[] pixmapArr = image.RyoPixmaps[i];
-                    writer.WriteInt(image.SliceWidths[i]);
-                    writer.WriteInt(image.SliceHeights[i]);
+                    writer.WriteInt(image.LevelWidths[i]);
+                    writer.WriteInt(image.LevelHeights[i]);
                     RyoPixmap.FORMAT format = pixmapArr[0].Format;
 
                     // 写出类型序号
                     writer.WriteUnsignedByte((byte)format);
-                    bool isUnshaped = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                    bool isJPG = pixmapArr[0].IsJPG;
 
                     // 每块数据
                     foreach (RyoPixmap pixmap in pixmapArr)
                     {
-                        // 感觉逻辑有问题
-
-                        // 不规则
-                        if (isUnshaped)
+                        // JPG
+                        if (isJPG)
                         {
-                            // 图片大于32*32
-                            if (pixmap.Width * pixmap.Height >= 1024)
-                            {
-                                directClipWritter ??= new RyoWriter(new MemoryStream(65536));
-                                directClipWritter.PositionToZero();
-                                WriteAsJpegToGivenWriter(pixmap, directClipWritter);
-
-                                if (directClipWritter.Position > 0)// 写出的有效
-                                {
-                                    // 直接长度
-                                    writer.WriteInt((int)directClipWritter.Position);
-                                    writer.WriteAnotherWriter(directClipWritter);
-
-                                    // 问题是没退出？
-                                }
-                            }
-
-                            // 写大小-1 -> 当作规则的来读取
-                            writer.WriteInt(-1);
+                            // 直接长度
+                            writer.WriteInt(pixmap.Pixels.Length);
+                            writer.WriteBytes(pixmap.Pixels);
                         }
-
-                        // 规则，就不指定大小
-                        var pixels = pixmap.Pixels;
-                        writer.WriteBytes(pixels);
+                        else
+                        {
+                            //这块原来是不括起来的，警告一下怕有问题！！
+                            writer.WriteBytes(pixmap.Pixels);
+                        }
                     }
                 }
 
             }
 
             // 实验性
-            public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
+            /*public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
             {
                 try
                 {
@@ -509,14 +488,14 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     LogUtil.INSTANCE.PrintError("Unable to convert image to JPEG", th);
                     anoWriter.PositionToZero();
                 }
-            }
+            }*/
         }
 
         public IAdapter Create(RyoType type)
         {
             //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-            foreach (var item in DataAdapterRyoTypePairs) if (type.Name == item.Value.Name || type.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
+            foreach (var item in DataAdapterRyoTypePairs) if (type.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
 
             throw new FormatException(type + "没有合适的特殊类型适配器");
         }

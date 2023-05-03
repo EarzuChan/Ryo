@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions.AdapterFactories;
+using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Masses;
 using Me.EarzuChan.Ryo.Utils;
@@ -63,6 +64,9 @@ namespace Me.EarzuChan.Ryo.Adaptions
             RyoTypes.Add(new() { ShortName = "V", Name = "java.lang.Void", BaseType = typeof(void) });
             RyoTypes.Add(new() { Name = "java.lang.String", BaseType = typeof(string) });
 
+            // 特定类（图片等）
+            RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat$FragmentedImageData", BaseType = typeof(FragmentalImage) });
+
             // 注册工厂类
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.DefaultSerializers", BaseType = typeof(BaseTypeAdapterFactory) });
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.DefaultArraySerializers", BaseType = typeof(BaseArrayTypeAdapterFactory) });
@@ -70,8 +74,6 @@ namespace Me.EarzuChan.Ryo.Adaptions
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.MapSerializer", BaseType = typeof(BaseArrayTypeAdapterFactory) });
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
             RyoTypes.Add(new() { Name = "sengine.mass.serializers.FieldSerializer", BaseType = typeof(CustomFormatAdapterFactory) });
-
-            // 特定类（图片等）未修复
             RyoTypes.Add(new() { Name = "sengine.graphics2d.texturefile.FIFormat", BaseType = typeof(SpecialFormatAdapterFactory) });
 
             // 注册额外项目（从文件）：TODO

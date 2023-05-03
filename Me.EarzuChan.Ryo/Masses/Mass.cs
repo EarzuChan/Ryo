@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
 using System.Reflection.PortableExecutable;
 using System.Diagnostics;
+using Me.EarzuChan.Ryo.Commands;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
@@ -401,7 +402,7 @@ namespace Me.EarzuChan.Ryo.Masses
     {
         void Load(FileStream fileStream);
 
-        void Save(FileStream fileStream);
+        void Save(FileStream fileStream, bool noDeflated = false);
 
         /*void AfterLoadingIndex(RyoReader reader);
 
@@ -490,7 +491,6 @@ namespace Me.EarzuChan.Ryo.Masses
             return ItemAdaptions.IndexOf(itemAdaption);
         }
 
-        // TODO:实现带名字的添加很简单，添加ID于文本的Item就行了
         public int Add(object obj)
         {
             try
@@ -516,22 +516,19 @@ namespace Me.EarzuChan.Ryo.Masses
                 int nowId = id;
                 while (nowId < id + SavedItems.Count)
                 {
-                    /* 尝试解析适配器 RyoType adapterRyoType = AdaptionsManager.INSTANCE.GetTypeByCsClz();
-                    我感觉这个要Bind？在表中找不到就添加？？？
-                    或者是先从表里解析，没就现场适配，最后查重并加新怎么？自定义类直接返回Massable，其他的遍历工厂怎么？
-                    以后要不要暂存Ryo和Adapter？太浪费
-                    会抛出就会*/
-
                     object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
                     // LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配前_循环第：{nowId}");
 
                     RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(nowObj.GetType());
+
+                    // LogUtil.INSTANCE.PrintInfo("类型：" + dataRyoType);
+
                     var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
                     var adaption = ItemAdaptions[adaptionId];
 
                     var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
 
-                    var writer = new RyoWriter(new MemoryStream());
+                    using var writer = new RyoWriter(new MemoryStream());
                     adapter.To(nowObj, this, writer);
                     writer.PositionToZero();
 
@@ -548,7 +545,10 @@ namespace Me.EarzuChan.Ryo.Masses
 
                 return id;
             }
-            catch (Exception ex) { throw new Exception("不能添加对象，因为" + ex.Message, ex); }
+            catch (Exception ex)
+            {
+                throw new Exception("不能添加对象，因为" + ex.Message, ex);
+            }
         }
 
         public T Get<T>(int id)
@@ -570,7 +570,7 @@ namespace Me.EarzuChan.Ryo.Masses
             catch (Exception ex)
             {
                 adapter = new DirectByteArrayAdapter();
-                LogUtil.INSTANCE.PrintError($"为对象（ID：{id}）适配器时出错", ex);
+                LogUtils.INSTANCE.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
             }
 
             // 获取各方面数据
@@ -583,7 +583,7 @@ namespace Me.EarzuChan.Ryo.Masses
             SavedId = id;
             SavedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyIndex;
             SavedItemBlobStickyId = itemBlob.StickyIndex;
-            LogUtil.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
+            // LogUtils.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
 
             // 获取Blob
             WorkBuffer.Buffer = itemBlob.Data;
@@ -619,7 +619,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
             // 获取元数据的真意
             int subitemId = metaOfIdMinusOne >> 2;
-            LogUtil.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
+            LogUtils.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
 
             // 必须满足要求
             if ((metaOfIdMinusOne & 3) == 3) return Get<T>(subitemId);
@@ -683,7 +683,7 @@ namespace Me.EarzuChan.Ryo.Masses
             var indexInfo = reader.ReadInt();
             var isDeflated = (indexInfo & 1) != 0;
             var deflateLen = indexInfo >> 1;
-            var indexBlob = isDeflated ? CompressionUtil.INSTANCE.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
+            var indexBlob = isDeflated ? CompressionUtils.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
 
             List<bool> isItemBlobDeflatedList = new();
             List<int> itemBlobEndPositions = new();
@@ -735,12 +735,13 @@ namespace Me.EarzuChan.Ryo.Masses
                 int blobStart = i == 0 ? 0 : itemBlobEndPositions[i - 1];
                 int blobLength = itemBlobEndPositions[i] - blobStart;
                 byte[] itemBlobData = blobsReader.ReadBytes(blobLength);
-                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtil.INSTANCE.Inflate(itemBlobData, 0, blobLength);
+                if (isItemBlobDeflatedList[i]) itemBlobData = CompressionUtils.Inflate(itemBlobData, 0, blobLength);
                 ItemBlobs.Add(new ItemBlob(itemBlobAdaptionIds[i], itemBlobStickyIds[i], itemBlobData));
             }
         }
 
-        public void Save(FileStream fileStream)
+        // 实现真正压缩
+        public void Save(FileStream fileStream, bool noDeflated = false)
         {
             using var fileWriter = new RyoWriter(fileStream);
             fileWriter.WriteFixedString(ExtendedName);
@@ -789,8 +790,8 @@ namespace Me.EarzuChan.Ryo.Masses
             // 写入索引
             indexWriter.PositionToZero();
             byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
-            byte[] deflatedBytes = CompressionUtil.INSTANCE.Deflate(indexBytes, 0, indexBytes.Length);
-            if (indexBytes.Length / deflatedBytes.Length >= 1.2F)
+            byte[] deflatedBytes = CompressionUtils.Deflate(indexBytes, 0, indexBytes.Length);
+            if (!noDeflated && indexBytes.Length / deflatedBytes.Length >= 1.2F)
             {
                 fileWriter.WriteInt((deflatedBytes.Length << 1) | 1);
                 fileWriter.WriteBytes(deflatedBytes);
@@ -816,7 +817,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 暂不写覆盖
             if (IsPutting)
             {
-                // throw new NotImplementedException();
+                throw new NotImplementedException();
                 if (obj == null) throw new NullReferenceException("怕覆写空对象");
 
                 int stickyMetaData = StickyMetaDatas[SavedItemBlobStickyId];
