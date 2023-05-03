@@ -1,4 +1,4 @@
-# Ryo游戏资源管理解决方案
+# Ryo
 欢迎使用 Ryo 游戏资源管理解决方案！该解决方案由Earzu Chan独自研发，旨在提供一个便捷、易用、功能丰富的游戏资源管理系统，它由三个子项目组成：.Ryo、.Ryo.WPFFrontEnd、.MaterialForYou。下面将对每个子项目进行详细介绍。
 ---
 ## .Ryo
