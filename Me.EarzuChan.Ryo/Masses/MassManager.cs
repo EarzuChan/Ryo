@@ -61,7 +61,7 @@ namespace Me.EarzuChan.Ryo.Masses
             }
             catch (Exception ex)
             {
-                throw new FileLoadException("文件加载出错，" + ex.Message);
+                throw new FileLoadException("文件加载出错，" + ex.Message, ex);
             }
             MassFiles.Add(fileName, massFile);
 

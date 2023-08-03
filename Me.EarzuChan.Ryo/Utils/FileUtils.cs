@@ -20,7 +20,7 @@ namespace Me.EarzuChan.Ryo.Utils
 
             if (!fileStream.CanRead) throw new UnauthorizedAccessException("没有读取权限");
             if (needWrite && !fileStream.CanWrite) throw new UnauthorizedAccessException("没有写入权限");
-            if (guardZero && fileStream.Length == 0) throw new FileLoadException("文件长度为零");
+            if (guardZero && fileStream.Length == 0 && !allowCreate) throw new FileLoadException("文件长度为零");
 
             return fileStream;
         }

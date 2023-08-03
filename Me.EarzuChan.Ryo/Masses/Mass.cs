@@ -691,6 +691,7 @@ namespace Me.EarzuChan.Ryo.Masses
             List<int> itemBlobStickyIds = new();
             int objCount = 0;
 
+            LogUtils.INSTANCE.PrintInfo("索引长度：" + indexBlob.Length);
             if (indexBlob != null && indexBlob.Length != 0)
             {
                 using var inflatedDataReader = new RyoReader(new MemoryStream(indexBlob));
@@ -712,7 +713,8 @@ namespace Me.EarzuChan.Ryo.Masses
                 for (var i = 0; i < objCount; i++) itemBlobStickyIds.Add(inflatedDataReader.ReadInt());
 
                 // 读粘连元数据
-                for (var i = 0; i < itemBlobStickyIds.Last(); i++) StickyMetaDatas.Add(inflatedDataReader.ReadInt());
+                int stickyMetaDataCount = objCount == 0 ? 0 : itemBlobStickyIds.Last();
+                for (var i = 0; i < stickyMetaDataCount; i++) StickyMetaDatas.Add(inflatedDataReader.ReadInt());
 
                 // 读适配项
                 int regCount = inflatedDataReader.ReadInt();

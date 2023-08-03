@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Me.EarzuChan.Ryo.RyoChatter (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Me.EarzuChan.Ryo.RyoChatter (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
