@@ -14,6 +14,8 @@ using static Me.EarzuChan.Ryo.Adaptions.AdapterFactories.BaseArrayTypeAdapterFac
 using System.Reflection.PortableExecutable;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using System.Runtime.InteropServices.ObjectiveC;
+using System.Security;
 
 namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 {
@@ -29,12 +31,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
     // 说明：真的智将来的，根据写出的多少个参数（Out方法的输出长度可以内部判断）来对于多长的构造器！高！师爷！
     public class CustomFormatAdapterFactory : IAdapterFactory
     {
-        public class CustomFormatAdapter : IAdapter
+        public class CustomFormatCtorAdapter : IAdapter
         {
             private readonly List<ConstructorInfo> Ctors = new();
             private readonly List<List<Type>> CtorParams = new();
 
-            public CustomFormatAdapter(List<ConstructorInfo> constructorInfos)
+            public CustomFormatCtorAdapter(List<ConstructorInfo> constructorInfos)
             {
                 Ctors = constructorInfos;
 
@@ -73,15 +75,16 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 object[] args = new object[paramTypes.Count];
                 for (int i = 0; i < paramTypes.Count; i++)
                 {
-                    Type item = paramTypes[i];
-
-                    //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
-                    // TODO:读参数方法
-                    if (item == typeof(int)) args[i] = reader.ReadInt();
-                    else if (item == typeof(string)) args[i] = reader.ReadString();
-                    else if (item == typeof(float)) args[i] = reader.ReadFloat();
-                    else if (item == typeof(bool)) args[i] = reader.ReadBoolean();
-                    else args[i] = mass.Read<object>();
+                    Type itemType = paramTypes[i];
+                    // 读参数方法
+                    try
+                    {
+                        args[i] = ReadWriteTypesUtils.Read(itemType, reader, mass);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidCastException($"读取第{i + 1}号参数时错误，是因为" + ex.Message, ex);
+                    }
                 }
 
                 // 使用构造器构造
@@ -90,47 +93,130 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             public void To(object obj, Mass mass, RyoWriter writer)
             {
-                object[] args = ((IAdaptable)obj).GetAdaptedArray() ?? throw new NullReferenceException("给我Null我怎么写入？");
+                object[] args = ((ICtorAdaptable)obj).GetAdaptedArray() ?? throw new NullReferenceException($"该类型{obj.GetType()}暂不能构建适配列表");
 
-                int i = 0;
-                while (i < Ctors.Count)
-                {
-                    if (CtorParams[i].Count == args.Length) break;
-                    i++;
-                }
+                int matchedCtorIndex;
+                for (matchedCtorIndex = 0; matchedCtorIndex < Ctors.Count && CtorParams[matchedCtorIndex].Count != args.Length; matchedCtorIndex++) ;
 
-                if (i == Ctors.Count) throw new InvalidCastException("没有符合参数数的构造器");
+                if (matchedCtorIndex == Ctors.Count) throw new InvalidCastException("适配列表的参数不符合任意构造器参数");
 
-                if (Ctors.Count > 1) writer.WriteSignedByte((sbyte)i);
+                if (Ctors.Count > 1) writer.WriteSignedByte((sbyte)matchedCtorIndex);
 
-                var paramTypes = CtorParams[i];
+                var paramTypes = CtorParams[matchedCtorIndex];
 
                 /*LogUtil.INSTANCE.PrintInfo("参数数：" + paramTypes.Count);
                 foreach (Type tp in paramTypes) LogUtil.INSTANCE.PrintInfo("参数类型：" + tp);*/
-
                 //mass.ItemBlobs[mass.SavedId].StickyId++;
-                for (int i2 = 0; i2 < args.Length; i2++)
+                for (int i = 0; i < args.Length; i++)
                 {
-                    Type item = paramTypes[i2];
+                    Type itemType = paramTypes[i];
 
                     //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
                     // TODO:读参数方法
-                    object ob = args[i2];
+                    object item = args[i];
                     try
                     {
                         //LogUtil.INSTANCE.PrintInfo($"写参数{i2 + 1}，预测类型：{item}，实际：{ob.GetType()}，值：{ob}");
-
-                        if (item == typeof(int)) writer.WriteInt((int)ob);
-                        else if (item == typeof(string)) writer.WrintString((string)ob);
-                        else if (item == typeof(float)) writer.WriteFloat((float)ob);
-                        else if (item == typeof(bool)) writer.WriteBoolean((bool)ob);
-                        else mass.Write<object>(ob);
+                        ReadWriteTypesUtils.Write(itemType, item, writer, mass);
                     }
                     catch (Exception ex)
                     {
-                        throw new InvalidCastException($"写入第{i2 + 1}号参数时错误，是因为" + ex.Message, ex);
+                        throw new InvalidCastException($"写入第{i + 1}号参数时错误，是因为" + ex.Message, ex);
                     }
                 }
+            }
+        }
+
+        public class CustomFormatFieldAdapter : IAdapter
+        {
+            private readonly FieldInfo[] FieldInfos;
+            private readonly Type ObjectType;
+
+            public object From(Mass mass, RyoReader reader, RyoType ryoType)
+            {
+                object item = Activator.CreateInstance(ObjectType)!;
+                // 所以顺序必须按照Java 紧密排序！
+                for (int i = 0; i < FieldInfos.Length; i++)
+                {
+                    FieldInfo field = FieldInfos[i];
+                    try
+                    {
+                        object value = ReadWriteTypesUtils.Read(field.FieldType, reader, mass, true);
+                        LogUtils.INSTANCE.PrintInfo($"读取第{i + 1}：{value.GetType()}");
+                        field.SetValue(item, value);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new FieldAccessException($"读取第 {i + 1} 字段 [{field.Name}] 对象 {field.FieldType} 时出错", ex);
+                    }
+                }
+                return item;
+
+            }
+
+            public void To(object obj, Mass mass, RyoWriter writer)
+            {
+                for (int i = 0; i < FieldInfos.Length; i++)
+                {
+                    FieldInfo field = FieldInfos[i];
+                    try
+                    {
+                        ReadWriteTypesUtils.Write(field.FieldType, field.GetValue(obj)!, writer, mass, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new FieldAccessException($"写入第 {i + 1} 个字段 [{field.Name}]：{field.FieldType} 时出错，对象：{obj}", ex);
+                    }
+
+                }
+            }
+
+            public CustomFormatFieldAdapter(Type type)
+            {
+                ObjectType = type;
+                // FieldInfo[] declaredFields;
+                if (type.IsInterface)
+                {
+                    FieldInfos = Array.Empty<FieldInfo>();
+                    return;
+                }
+
+                try
+                {
+                    type.GetConstructor(Type.EmptyTypes);
+                    List<FieldInfo> fullList = new();
+                    List<FieldInfo> loopingList = new();
+
+                    // 整理每个层级字段们
+                    while (type != typeof(object))
+                    {
+                        foreach (FieldInfo field in type.GetFields())
+                        {
+                            var modifiers = field.Attributes;
+                            if ((modifiers & FieldAttributes.NotSerialized) == 0 && (modifiers & FieldAttributes.Static) == 0 && !field.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute)))
+                            {
+                                if (!field.IsPublic)
+                                {
+                                    // 也没有关系，可以读取
+                                }
+                                loopingList.Add(field);
+                            }
+                        }
+
+                        fullList.AddRange(loopingList.OrderBy(field => field.Name, StringComparer.Ordinal));
+                        loopingList.Clear();
+
+                        if (type.BaseType == null) break;
+                        type = type.BaseType;
+                    }
+
+                    FieldInfos = fullList.ToArray();
+                }
+                catch (Exception)
+                {
+                    throw new MissingFieldException($"{type}：没有可访问的无参数构造函数 不能嗯造字段填充适配器");
+                }
+
             }
         }
 
@@ -144,7 +230,9 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             try
             {
-                var adapter = new CustomFormatAdapter(formatType.GetConstructors().Where(c => c.GetCustomAttribute<IAdaptable.AdaptableConstructor>() != null).OrderBy(c => c.GetParameters().Length).ToList());
+                IAdapter adapter = type.IsAdaptWithCtor ?
+                    new CustomFormatCtorAdapter(formatType.GetConstructors().Where(c => c.GetCustomAttribute<ICtorAdaptable.AdaptableConstructor>() != null).OrderBy(c => c.GetParameters().Length).ToList())
+                    : new CustomFormatFieldAdapter(formatType);
 
                 return adapter;
             }
@@ -240,11 +328,12 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
                 var oriItemType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType)?.GetElementType();
+                // LogUtils.INSTANCE.PrintInfo($"这是类型：{ryoType} 这是结果：{ryoType.IsAdaptableCustom}");
                 Type itemType = oriItemType ?? typeof(object);
 
                 // 读个数
                 Array objArr = Array.CreateInstance(itemType, reader.ReadInt());
-                // LogUtil.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
+                LogUtils.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
 
                 //mass.Reference(objArr);
 
@@ -335,7 +424,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
         }
     }
 
-    // 待修正
     public class SpecialFormatAdapterFactory : IAdapterFactory
     {
         public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new() {
@@ -344,7 +432,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public class FragmentalImageAdapter : IAdapter
         {
-            // public string JavaClz => "sengine.graphics2d.texturefile.FIFormat";
 
             public object From(Mass mass, RyoReader reader, RyoType ryoType)
             {
@@ -429,7 +516,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 return new FragmentalImage(clipSize, levelWidths, levelHeights, pixmaps);
             }
 
-            // 实验性
             public void To(object obj, Mass mass, RyoWriter writer)
             {
                 var image = (FragmentalImage)obj;
@@ -471,24 +557,6 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 }
 
             }
-
-            // 实验性
-            /*public void WriteAsJpegToGivenWriter(RyoPixmap pixmap, RyoWriter anoWriter)
-            {
-                try
-                {
-                    var bmp = pixmap.ToImage() ?? throw new NullReferenceException("转换图片失败，一得阁拉米");
-
-                    var streamHere = new MemoryStream();
-                    bmp.Save(streamHere, new JpegEncoder());
-                    anoWriter.WriteBytes(streamHere.ToArray());
-                }
-                catch (Exception th)
-                {
-                    LogUtil.INSTANCE.PrintError("Unable to convert image to JPEG", th);
-                    anoWriter.PositionToZero();
-                }
-            }*/
         }
 
         public IAdapter Create(RyoType type)

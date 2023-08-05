@@ -36,9 +36,9 @@ namespace Me.EarzuChan.Ryo.Formations
                 return $"{{\"{type.GetElementType()?.Name}数组:{strList.Count}\":[{string.Join(',', strList)}]}}";
 
             }
-            else if (typeof(IAdaptable).IsAssignableFrom(type))
+            else if (typeof(ICtorAdaptable).IsAssignableFrom(type))
             {
-                return OldItemToString(((IAdaptable)item).GetAdaptedArray(), type.Name);
+                return OldItemToString(((ICtorAdaptable)item).GetAdaptedArray(), type.Name);
             }
             else
             {

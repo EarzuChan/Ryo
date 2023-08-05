@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions;
+using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.Utils;
 using System;
 using System.Collections.Generic;
@@ -8,15 +9,15 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Formations
 {
-    [IAdaptable.AdaptableFormat("sengine.graphics2d.FontSprites")]
-    public class FontSprites : IAdaptable
+    [AdaptableFormat("sengine.graphics2d.FontSprites")]
+    public class FontSprites : ICtorAdaptable
     {
         public int[] IArr;
         public byte[][] BArr;
         public float F;
         public int I;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public FontSprites(int[] iArr, byte[][] bArr, float f, int i)
         {
             IArr = iArr;
@@ -25,16 +26,16 @@ namespace Me.EarzuChan.Ryo.Formations
             I = i;
         }
 
-        object[] IAdaptable.GetAdaptedArray() => new object[] { IArr, BArr, F, I };
+        object[] ICtorAdaptable.GetAdaptedArray() => new object[] { IArr, BArr, F, I };
     }
 
-    [IAdaptable.AdaptableFormat("game31.DialogueTree$DialogueTreeDescriptor")]
-    public class Conversations : IAdaptable
+    [AdaptableFormat("game31.DialogueTree$DialogueTreeDescriptor")]
+    public class Conversations : ICtorAdaptable
     {
         public string DialogueNameSpace;
         public List<Conversation> ConversationArray;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public Conversations(string nsps, Conversation[] cons)
         {
             DialogueNameSpace = nsps;
@@ -44,8 +45,8 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { DialogueNameSpace, ConversationArray.ToArray() };
     }
 
-    [IAdaptable.AdaptableFormat("game31.DialogueTree$Conversation")]
-    public class Conversation : IAdaptable
+    [AdaptableFormat("game31.DialogueTree$Conversation")]
+    public class Conversation : ICtorAdaptable
     {
         public List<string> Tags;
         public string Status;
@@ -56,7 +57,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public List<string> TagsToLock;
         public string Trigger;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public Conversation(string[] tags, string status, UserMessage[] userMessages, bool stateOfDiswatch, SenderMessage[] senderMessagers, string[] tagsToUnlock, string[] tagsToLock, string trigger)
         {
             Tags = tags.ToList();
@@ -73,13 +74,13 @@ namespace Me.EarzuChan.Ryo.Formations
 
     }
 
-    [IAdaptable.AdaptableFormat("game31.DialogueTree$UserMessage")]
-    public class UserMessage : IAdaptable
+    [AdaptableFormat("game31.DialogueTree$UserMessage")]
+    public class UserMessage : ICtorAdaptable
     {
         public bool IsHidden;
         public string Message;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public UserMessage(string str, bool z)
         {
             Message = str;
@@ -89,8 +90,8 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { Message, IsHidden };
     }
 
-    [IAdaptable.AdaptableFormat("game31.DialogueTree$SenderMessage")]
-    public class SenderMessage : IAdaptable
+    [AdaptableFormat("game31.DialogueTree$SenderMessage")]
+    public class SenderMessage : ICtorAdaptable
     {
         public string DateText;
         public string Message;
@@ -101,7 +102,7 @@ namespace Me.EarzuChan.Ryo.Formations
         public string TimeText;
         public string Trigger;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public SenderMessage(string message, string origin, string dataText, string timeText, float idleTime, float typingTime, string trigger, float triggerTime)
         {
             Message = message;
@@ -117,13 +118,13 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime };
     }
 
-    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.Outer")]
-    public class YsbNmslOuter : IAdaptable
+    [AdaptableFormat("me.earzuchan.weakpipe.Outer")]
+    public class YsbNmslOuter : ICtorAdaptable
     {
         public string Origin;
         public YsbNmslInner Inner;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public YsbNmslOuter(string origin, YsbNmslInner inner)
         {
             Origin = origin;
@@ -133,25 +134,25 @@ namespace Me.EarzuChan.Ryo.Formations
         public object[] GetAdaptedArray() => new object[] { Origin, Inner };
     }
 
-    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.Inner")]
-    public class YsbNmslInner : IAdaptable
+    [AdaptableFormat("me.earzuchan.weakpipe.Inner")]
+    public class YsbNmslInner : ICtorAdaptable
     {
         public string Origin;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public YsbNmslInner(string origin) => Origin = origin;
 
         public object[] GetAdaptedArray() => new object[] { Origin };
     }
 
-    [IAdaptable.AdaptableFormat("me.earzuchan.weakpipe.HugeOuter")]
-    public class YsbNmslHugeOuter : IAdaptable
+    [AdaptableFormat("me.earzuchan.weakpipe.HugeOuter")]
+    public class YsbNmslHugeOuter : ICtorAdaptable
     {
         public string Origin;
         public YsbNmslInner Inner;
         public YsbNmslInner[] Inners;
 
-        [IAdaptable.AdaptableConstructor]
+        [ICtorAdaptable.AdaptableConstructor]
         public YsbNmslHugeOuter(string origin, YsbNmslInner inner, YsbNmslInner[] inners)
         {
             Origin = origin;
@@ -160,5 +161,57 @@ namespace Me.EarzuChan.Ryo.Formations
         }
 
         public object[] GetAdaptedArray() => new object[] { Origin, Inner, Inners };
+    }
+
+    [AdaptableFormat("game23.model.DialogueTreeModel")]
+    public class SaraDialogueTree
+    {
+
+        public ConditionMacroModel[] ConditionMacros;
+        public ConversationModel[] Conversations;
+        public string Initialization;
+        public string Namespace;
+
+        // TODO:要不要注解子类同名？要
+        [AdaptableFormat("game23.model.DialogueTreeModel$ConditionMacroModel")]
+        public class ConditionMacroModel
+        {
+            public string Condition;
+            public string Name;
+        }
+
+        [AdaptableFormat("game23.model.DialogueTreeModel$ConversationModel")]
+        public class ConversationModel
+        {
+            public string Condition;
+            public bool IsUserIgnored;
+            public SenderMessageModel[] SenderMessages;
+            public string Tags;
+            public string TagsToLock;
+            public string TagsToUnlock;
+            public string Trigger;
+            public UserMessageModel[] UserMessages;
+        }
+
+        [AdaptableFormat("game23.model.DialogueTreeModel$SenderMessageModel")]
+        public class SenderMessageModel
+        {
+            public string DateText;
+            public float IdleTime;
+            public string Message;
+            public string Origin;
+            public string TimeText;
+            public string Trigger;
+            public float TriggerTime;
+            public float TypingTime;
+        }
+
+        [AdaptableFormat("game23.model.DialogueTreeModel$UserMessageModel")]
+
+        public class UserMessageModel
+        {
+            public bool IsHidden;
+            public string Message;
+        }
     }
 }

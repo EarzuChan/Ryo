@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
+using static Me.EarzuChan.Ryo.Formations.SaraDialogueTree;
 
 namespace Me.EarzuChan.Ryo.Adaptions
 {
@@ -20,6 +21,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
         public bool IsAdaptableCustom = false; // 可适配类
         public bool IsArray = false; // 是列表
         public Type? BaseType; // C#基类
+        public bool IsAdaptWithCtor = false; // 是否用构造器来适配
 
         // 属性
         public bool IsJvmBaseType => ShortName != null; // JVM基本类型
@@ -91,7 +93,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             // LogUtil.INSTANCE.PrintInfo("isArray：" + isArray, "shortName：" + shortName, "clzName：" + clzName);
 
             // 是否是基本类型
-            if (isArray && shortName.StartsWith('L') && clzName.EndsWith(';'))
+            if (isArray && shortName!.StartsWith('L') && clzName.EndsWith(';'))
             {
                 clzName = clzName[2..^1];
                 shortName = null;
@@ -111,26 +113,16 @@ namespace Me.EarzuChan.Ryo.Adaptions
             if (ryoType == null)
             {
                 // 是可适配自定义
-                Type? baseType = null;
-                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
-                foreach (var item in types)
-                {
-                    var attribute = item.GetCustomAttribute<IAdaptable.AdaptableFormat>();
-                    if (attribute != null && typeof(IAdaptable).IsAssignableFrom(item))
-                    {
-                        if (attribute.FormatName == clzName)
-                        {
-                            baseType = item;
-                            break;
-                        }
-                    }
-                }
+                Type? baseType = SearchBaseType(clzName);
                 bool isAdaptableCustom = baseType != null;
+
+                bool isAdaptWithCtor = false;
+                if (baseType != null) isAdaptWithCtor = typeof(ICtorAdaptable).IsAssignableFrom(baseType);
 
                 // if (!isAdaptableCustom) throw new InvalidDataException($"给定的类名“{clzName}”不合法：" );
 
                 // 不是可适配自定义就没有BaseType
-                ryoType = new() { IsAdaptableCustom = isAdaptableCustom, Name = clzName, BaseType = baseType };
+                ryoType = new() { IsAdaptableCustom = isAdaptableCustom, Name = clzName, BaseType = baseType, IsAdaptWithCtor = isAdaptWithCtor };
 
                 // 还套数组怎么办？不关它事，用一个属性怎么样？
                 // if (clzName.StartsWith('[')) ryoType.HasSubitem = true;
@@ -140,6 +132,37 @@ namespace Me.EarzuChan.Ryo.Adaptions
             ryoType.IsArray = isArray;
 
             return ryoType;
+        }
+
+        private Type? SearchBaseType(string clzName)
+        {
+            Type? baseType = null;
+            // string[] splitedClzName = clzName.Split('$');
+            var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+            foreach (var item in types)
+            {
+                var attribute = item.GetCustomAttribute<AdaptableFormat>();
+                if (attribute != null)
+                {
+                    if (attribute.FormatName == clzName) // splitedClzName[0])
+                    {
+                        // Type theItem = item;
+                        /*if (splitedClzName.Length == 2) // 需要同名子类则置换
+                        {
+                            Type[] nestedTypes = item.GetNestedTypes();
+                            if (nestedTypes.Length == 0) break; // 没有嵌套类
+                                                                // foreach (var typ in nestedTypes) LogUtils.INSTANCE.PrintInfo($"类名：{typ} 需要：{splitedClzName[1]}");
+                            Type? matchingNestedType = nestedTypes.FirstOrDefault(nestedType => nestedType.Name.EndsWith(splitedClzName[1])); // TODO:优化
+                            if (matchingNestedType == null) continue; // 没有符合
+                            theItem = matchingNestedType;
+                            LogUtils.INSTANCE.PrintInfo("找到符合：" + theItem);
+                        }*/
+                        baseType = item; // theItem;
+                        break;
+                    }
+                }
+            }
+            return baseType;
         }
 
         // GetJavaByRyo
@@ -167,23 +190,9 @@ namespace Me.EarzuChan.Ryo.Adaptions
             // 匹配一手自定义
             Type? baseType = ryoType.BaseType;
 
-            // 额外野食
-            if (baseType == null && ryoType.IsAdaptableCustom)
-            {
-                var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
-                foreach (var item in types)
-                {
-                    var attribute = item.GetCustomAttribute<IAdaptable.AdaptableFormat>();
-                    if (attribute != null && typeof(IAdaptable).IsAssignableFrom(item))
-                    {
-                        if (attribute.FormatName == ryoType.Name)
-                        {
-                            baseType = item;
-                            break;
-                        }
-                    }
-                }
-            }
+            // 额外查询
+            if (baseType == null && ryoType.IsAdaptableCustom) baseType = SearchBaseType(ryoType.Name!);
+
             // baseType ??= Type.GetType(ryoType.Name!); JAVA不友好
             //formatType ??= typeof(object);
             // if (formatType == null) throw new InvalidCastException(ryoType + "不可转换为有效C#类");
@@ -211,7 +220,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             }
 
             // 如果为可适配自定义，那么就有attr_format_name，就不用if
-            var attr = type.GetCustomAttribute<IAdaptable.AdaptableFormat>();
+            var attr = type.GetCustomAttribute<AdaptableFormat>();
             var clzName = attr?.FormatName;
             //clzName ??= type.Name; // Java不友好
 
@@ -228,9 +237,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
             var factoryType = GetCsClzByRyoType(adapterFactoryRyoType);
 
             if (typeof(IAdapterFactory).IsAssignableFrom(factoryType))
-            {
                 return ((IAdapterFactory)Activator.CreateInstance(factoryType)!).Create(dataRyoType);
-            }
             else throw new InvalidCastException($"{adapterFactoryRyoType}不是一个适配器工厂类");
         }
 
@@ -275,20 +282,23 @@ namespace Me.EarzuChan.Ryo.Adaptions
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteBytes((byte[])obj);
     }
 
-    public interface IAdaptable
+    public interface ICtorAdaptable
     {
         // TODO:一、我希望能动态构建类；二、如果真没多个Mass构造器，那就改成根据类公开成员的顺序进行输入输出类型的构建
 
         [AttributeUsage(AttributeTargets.Constructor)]
         public class AdaptableConstructor : Attribute { }
 
-        [AttributeUsage(AttributeTargets.Class)]
-        public class AdaptableFormat : Attribute
-        {
-            public string FormatName;
-            public AdaptableFormat(string formatName) => FormatName = formatName;
-        }
-
         object[] GetAdaptedArray();
+    }
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class AdaptableFormat : Attribute
+    {
+        public readonly string FormatName;
+        // private readonly bool IsSubSameNameType = false;
+
+        public AdaptableFormat(string formatName) => FormatName = formatName;
+        // public AdaptableFormat() => IsSubSameNameType = true;
     }
 }

@@ -6,10 +6,10 @@ using Newtonsoft.Json;
 using SixLabors.ImageSharp.Processing;
 using System.Collections;
 
-namespace Me.EarzuChan.Ryo.Commands
+namespace Me.EarzuChan.Ryo.OldCommands
 {
-    [Command("Load", "Load file from path")]
-    public class LoadCommand : ICommand
+    [OldCommand("Load", "Load file from path")]
+    public class LoadCommand : IOldCommand
     {
         public string PathString;
         public LoadCommand(string path)
@@ -27,8 +27,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Info", "Show the info of a file")]
-    public class InfoCommand : ICommand
+    [OldCommand("Info", "Show the info of a file")]
+    public class InfoCommand : IOldCommand
     {
         public string FileName;
         public InfoCommand(string fileName)
@@ -47,8 +47,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("New", "Create a new empty file")]
-    public class NewCommand : ICommand
+    [OldCommand("New", "Create a new empty file")]
+    public class NewCommand : IOldCommand
     {
         public string FileName;
         public NewCommand(string fileName)
@@ -70,8 +70,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Unload", "Unload a file by its name")]
-    public class UnloadCommand : ICommand
+    [OldCommand("Unload", "Unload a file by its name")]
+    public class UnloadCommand : IOldCommand
     {
         public string FileName;
         public UnloadCommand(string fileName)
@@ -82,25 +82,25 @@ namespace Me.EarzuChan.Ryo.Commands
 
     }
 
-    [Command("Help", "Get the help infomations of this application")]
-    public class HelpCommand : ICommand
+    [OldCommand("Help", "Get the help infomations of this application")]
+    public class HelpCommand : IOldCommand
     {
         public void Execute()
         {
-            LogUtils.INSTANCE.PrintInfo($"如今支持{CommandManager.INSTANCE.commands.Count}个命令，使用方法如下：");
+            LogUtils.INSTANCE.PrintInfo($"如今支持{OldCommandManager.INSTANCE.commands.Count}个命令，使用方法如下：");
 
             int i = 1;
-            foreach (var cmd in CommandManager.INSTANCE.commands)
+            foreach (var cmd in OldCommandManager.INSTANCE.commands)
             {
                 LogUtils.INSTANCE.PrintInfo($"No.{i++} {cmd.Key.Name} 用法：{cmd.Key.Help}");
             }
 
-            if (!CommandManager.INSTANCE.RunningWithArgs) LogUtils.INSTANCE.PrintInfo("\n如需退出，键入Exit。");
+            if (!OldCommandManager.INSTANCE.RunningWithArgs) LogUtils.INSTANCE.PrintInfo("\n如需退出，键入Exit。");
         }
     }
 
-    [Command("Get", "Get the item infomation of your given id in a file")]
-    public class GetCommand : ICommand
+    [OldCommand("Get", "Get the item infomation of your given id in a file")]
+    public class GetCommand : IOldCommand
     {
         public string FileName;
         public int Id;
@@ -130,8 +130,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Search", "Search the target item in a file")]
-    public class SearchCommand : ICommand
+    [OldCommand("Search", "Search the target item in a file")]
+    public class SearchCommand : IOldCommand
     {
         public string FileName;
         public string SearchName;
@@ -164,8 +164,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Write", "Saves the file to the path you given")]
-    public class WriteCommand : ICommand
+    [OldCommand("Write", "Saves the file to the path you given")]
+    public class WriteCommand : IOldCommand
     {
         public string FileName;
         public string PathName;
@@ -195,18 +195,18 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("LoadTestFile", "For dev only", true)]
-    public class LoadTestFileCommand : ICommand
+    [OldCommand("LoadTestFile", "For dev only", true)]
+    public class LoadTestFileCommand : IOldCommand
     {
         public void Execute()
         {
-            CommandManager.INSTANCE.ParseCommand("Load", "D:\\A Sources\\WeakPipeRecovery\\assets\\fuqi.fs");
+            OldCommandManager.INSTANCE.ParseCommand("Load", "D:\\A Sources\\WeakPipeRecovery\\assets\\fuqi.fs");
         }
     }
 
     // TODO:解压并拼接
-    [Command("UnpackImage", "Unpack the images from a texture file.")]
-    public class UpackImageCommand : ICommand
+    [OldCommand("UnpackImage", "Unpack the images from a texture file.")]
+    public class UpackImageCommand : IOldCommand
     {
         public enum MODE
         {
@@ -343,8 +343,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("TestConversion", "For Dev only", true)]
-    public class TestConversionCommand : ICommand
+    [OldCommand("TestConversion", "For Dev only", true)]
+    public class TestConversionCommand : IOldCommand
     {
         public string? Name { get; set; }
 
@@ -367,8 +367,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("TestConversion2", "For Dev only", true)]
-    public class TestConversion2Command : ICommand
+    [OldCommand("TestConversion2", "For Dev only", true)]
+    public class TestConversion2Command : IOldCommand
     {
         // public string MassName;
         public ArrayList Items = new() { "测试", 114514, 1.0F, new UserMessage("太美丽", true), new int[] { 0 } };
@@ -459,8 +459,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }*/
 
-    [Command("AddConversations", "Add a crazy Conversastions in a file")]
-    public class AddConversationsCommand : ICommand
+    [OldCommand("AddConversations", "Add a crazy Conversastions in a file")]
+    public class AddConversationsCommand : IOldCommand
     {
         public string FileName;
         public string Msg;
@@ -494,8 +494,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("AddOuter", "For Dev only", true)]
-    public class AddOuterCommand : ICommand
+    [OldCommand("AddOuter", "For Dev only", true)]
+    public class AddOuterCommand : IOldCommand
     {
         public string FileName;
         public string Msg;
@@ -523,8 +523,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("AddHugeOuter", "For Dev only", true)]
-    public class AddHugeOuterCommand : ICommand
+    [OldCommand("AddHugeOuter", "For Dev only", true)]
+    public class AddHugeOuterCommand : IOldCommand
     {
         public string FileName;
         public string Msg;
@@ -552,8 +552,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("AddInner", "For Dev only", true)]
-    public class AddInnerCommand : ICommand
+    [OldCommand("AddInner", "For Dev only", true)]
+    public class AddInnerCommand : IOldCommand
     {
         public string FileName;
         public string Msg;
@@ -581,8 +581,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("ParseConversations", "Parse a Conversations by a json text into a file")]
-    public class ParseConversationsCommand : ICommand
+    [OldCommand("ParseConversations", "Parse a Conversations by a json text into a file")]
+    public class ParseConversationsCommand : IOldCommand
     {
         public string FileName;
         public string MsgPath;
@@ -616,8 +616,8 @@ namespace Me.EarzuChan.Ryo.Commands
     }
 
     // 裁切
-    [Command("PackImage", "Pack a image to a texture file and save it")]
-    public class PackImageCommand : ICommand
+    [OldCommand("PackImage", "Pack a image to a texture file and save it")]
+    public class PackImageCommand : IOldCommand
     {
         public string FileName;
         public string ImgPath;
@@ -657,8 +657,8 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    [Command("Inflate", "Inflate a file")]
-    public class InflateCommand : ICommand
+    [OldCommand("Inflate", "Inflate a file")]
+    public class InflateCommand : IOldCommand
     {
         public enum FILETYPE
         {
@@ -693,10 +693,12 @@ namespace Me.EarzuChan.Ryo.Commands
             mass.Load(fileStream);
 
             var fileName = FileName + "_inflated";
-            using var writer = FileUtils.OpenFile(fileName);
+            using var writer = FileUtils.OpenFile(fileName, true, true);
             mass.Save(writer, true);
 
             LogUtils.INSTANCE.PrintInfo("写出到" + fileName);
         }
     }
+
+    // 增加一个写出到文件夹然后格式化为Json或者就是Raw
 }

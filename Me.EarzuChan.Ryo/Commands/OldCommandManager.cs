@@ -3,14 +3,14 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Me.EarzuChan.Ryo.Commands
+namespace Me.EarzuChan.Ryo.OldCommands
 {
-    public class CommandManager
+    public class OldCommandManager
     {
-        public static CommandManager INSTANCE { get { instance ??= new(); return instance; } }
-        private static CommandManager? instance;
+        public static OldCommandManager INSTANCE { get { instance ??= new(); return instance; } }
+        private static OldCommandManager? instance;
 
-        public readonly Dictionary<CommandAttribute, Type> commands = new();
+        public readonly Dictionary<OldCommandAttribute, Type> commands = new();
         public bool RunningWithArgs = false;
         public bool IsDev
         {
@@ -34,8 +34,8 @@ namespace Me.EarzuChan.Ryo.Commands
             var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
             foreach (var type in types)
             {
-                var attribute = type.GetCustomAttribute<CommandAttribute>();
-                if (attribute != null && typeof(ICommand).IsAssignableFrom(type))
+                var attribute = type.GetCustomAttribute<OldCommandAttribute>();
+                if (attribute != null && typeof(IOldCommand).IsAssignableFrom(type))
                 {
                     if (attribute.IsDev && !isDev) continue;
                     // DEBUG逻辑
@@ -45,12 +45,12 @@ namespace Me.EarzuChan.Ryo.Commands
             }
         }
 
-        public CommandManager() => RegCmds();
+        public OldCommandManager() => RegCmds();
 
         public void ParseCommandLine(string input)
         {
             // 解析命令行参数
-            /*string pattern = @"([^""]\S*|"".+?"")\s*";
+            /*string pattern = @"([^"", true)]\S*|"".+?"")\s*";
             MatchCollection matches = Regex.Matches(input, pattern);
             string[] cmdArgs = new string[matches.Count];
             for (int i = 0; i < matches.Count; i++)
@@ -132,7 +132,7 @@ namespace Me.EarzuChan.Ryo.Commands
                         {
                             try
                             {
-                                var command = (ICommand)constructor.Invoke(cmdArgs);
+                                var command = (IOldCommand)constructor.Invoke(cmdArgs);
                                 command.Execute();
                             }
                             catch (Exception e)
@@ -151,18 +151,18 @@ namespace Me.EarzuChan.Ryo.Commands
     }
 
     [AttributeUsage(AttributeTargets.Class)]
-    public class CommandAttribute : Attribute
+    public class OldCommandAttribute : Attribute
     {
         public string Name { get; set; }
         public string Help { get; set; }
         public bool IsDev { get; set; }
 
-        public CommandAttribute(string name, string help)
+        public OldCommandAttribute(string name, string help)
         {
             Name = name;
             Help = help;
         }
-        public CommandAttribute(string name, string help, bool isDev)
+        public OldCommandAttribute(string name, string help, bool isDev)
         {
             Name = name;
             Help = help;
@@ -170,7 +170,7 @@ namespace Me.EarzuChan.Ryo.Commands
         }
     }
 
-    public interface ICommand
+    public interface IOldCommand
     {
         void Execute();
     }

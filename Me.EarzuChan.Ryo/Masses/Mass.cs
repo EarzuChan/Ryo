@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
 using System.Reflection.PortableExecutable;
 using System.Diagnostics;
-using Me.EarzuChan.Ryo.Commands;
+using Me.EarzuChan.Ryo.OldCommands;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
@@ -560,7 +560,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
             // 获取适配项
             var dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
-            // LogUtil.INSTANCE.PrintInfo("项目类型：" + dataRyoType);
+            // LogUtils.INSTANCE.PrintInfo("项目类型：" + dataRyoType);
             IAdapter adapter;
             try
             {
@@ -588,7 +588,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 获取Blob
             WorkBuffer.Buffer = itemBlob.Data;
 
-            // LogUtil.INSTANCE.PrintDebugInfo("源长度", RealItemDataBuffer.Length.ToString(), "ID", id.ToString(), "起始", blobStartPosition.ToString(), "长度", workBuffer.Length.ToString(), "3-1", SavedStickedDataIntArrayIdMinusOne.ToString(), "3", SavedStickedDataIntArrayId.ToString());
+            LogUtils.INSTANCE.PrintInfo("长度", workBuffer.Length.ToString());
 
             // 从Blob建立对象
             T item = (T)adapter.From(this, (RyoReader)WorkBuffer.Buffer, dataRyoType);
@@ -598,6 +598,8 @@ namespace Me.EarzuChan.Ryo.Masses
             SavedId = savedId;
             SavedItemBlobMinusOneStickyId = savedItemBlobStickyIdIndexMinusOne;
             SavedItemBlobStickyId = savedItemBlobStickyIdIndex;
+
+            // LogUtils.INSTANCE.PrintInfo("读取终了");
 
             return item;
         }
@@ -691,7 +693,7 @@ namespace Me.EarzuChan.Ryo.Masses
             List<int> itemBlobStickyIds = new();
             int objCount = 0;
 
-            LogUtils.INSTANCE.PrintInfo("索引长度：" + indexBlob.Length);
+            // LogUtils.INSTANCE.PrintInfo("索引长度：" + indexBlob.Length);
             if (indexBlob != null && indexBlob.Length != 0)
             {
                 using var inflatedDataReader = new RyoReader(new MemoryStream(indexBlob));
