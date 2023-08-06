@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
 using System.Reflection.PortableExecutable;
 using System.Diagnostics;
-using Me.EarzuChan.Ryo.OldCommands;
+using Me.EarzuChan.Ryo.Commands;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
@@ -570,7 +570,7 @@ namespace Me.EarzuChan.Ryo.Masses
             catch (Exception ex)
             {
                 adapter = new DirectByteArrayAdapter();
-                LogUtils.INSTANCE.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
+                LogUtils.PrintError($"为对象（ID：{id}）创建适配器时出错", ex);
             }
 
             // 获取各方面数据
@@ -588,7 +588,7 @@ namespace Me.EarzuChan.Ryo.Masses
             // 获取Blob
             WorkBuffer.Buffer = itemBlob.Data;
 
-            LogUtils.INSTANCE.PrintInfo("长度", workBuffer.Length.ToString());
+            // LogUtils.INSTANCE.PrintInfo("长度", workBuffer.Length.ToString());
 
             // 从Blob建立对象
             T item = (T)adapter.From(this, (RyoReader)WorkBuffer.Buffer, dataRyoType);
@@ -621,7 +621,7 @@ namespace Me.EarzuChan.Ryo.Masses
 
             // 获取元数据的真意
             int subitemId = metaOfIdMinusOne >> 2;
-            LogUtils.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
+            // LogUtils.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
 
             // 必须满足要求
             if ((metaOfIdMinusOne & 3) == 3) return Get<T>(subitemId);

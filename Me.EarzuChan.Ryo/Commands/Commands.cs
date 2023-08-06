@@ -6,10 +6,10 @@ using Newtonsoft.Json;
 using SixLabors.ImageSharp.Processing;
 using System.Collections;
 
-namespace Me.EarzuChan.Ryo.OldCommands
+namespace Me.EarzuChan.Ryo.Commands
 {
-    [OldCommand("Load", "Load file from path")]
-    public class LoadCommand : IOldCommand
+    [Command("Load", "Load file from path")]
+    public class LoadCommand : ICommand
     {
         public string PathString;
         public LoadCommand(string path)
@@ -17,18 +17,18 @@ namespace Me.EarzuChan.Ryo.OldCommands
             PathString = path;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var fileName = Path.GetFileNameWithoutExtension(PathString);
             var mass = MassManager.INSTANCE.LoadMassFile(PathString, fileName);
 
-            LogUtils.INSTANCE.PrintInfo("已载入，索引信息如下：\n\n" + MassManager.INSTANCE.GetInfo(mass));
-            LogUtils.INSTANCE.PrintInfo($"\n档案已载入，名称：{fileName.ToUpper()}，稍后可凭借该名称Dump文件、查看索引信息、进行增删改查等操作。");
+            commandFrame.PrintLine("已载入，索引信息如下：\n\n" + MassManager.INSTANCE.GetInfo(mass));
+            commandFrame.PrintLine($"\n档案已载入，名称：{fileName.ToUpper()}，稍后可凭借该名称Dump文件、查看索引信息、进行增删改查等操作。");
         }
     }
 
-    [OldCommand("Info", "Show the info of a file")]
-    public class InfoCommand : IOldCommand
+    [Command("Info", "Show the info of a file")]
+    public class InfoCommand : ICommand
     {
         public string FileName;
         public InfoCommand(string fileName)
@@ -36,19 +36,16 @@ namespace Me.EarzuChan.Ryo.OldCommands
             FileName = fileName;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
-            if (mass != null)
-            {
-                LogUtils.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n\n" + MassManager.INSTANCE.GetInfo(mass));
-            }
+            if (mass != null) commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + MassManager.INSTANCE.GetInfo(mass));
             else throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
         }
     }
 
-    [OldCommand("New", "Create a new empty file")]
-    public class NewCommand : IOldCommand
+    [Command("New", "Create a new empty file")]
+    public class NewCommand : ICommand
     {
         public string FileName;
         public NewCommand(string fileName)
@@ -56,7 +53,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             FileName = fileName;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             if (mass == null)
@@ -64,43 +61,43 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 var newMass = new MassFile();
                 MassManager.INSTANCE.AddMassFile(newMass, FileName);
 
-                LogUtils.INSTANCE.PrintInfo("文件：" + FileName + " 添加成功");
+                commandFrame.PrintLine("文件：" + FileName + " 添加成功");
             }
             else throw new Exception("存在已加载的同名文件，请换一个名字");
         }
     }
 
-    [OldCommand("Unload", "Unload a file by its name")]
-    public class UnloadCommand : IOldCommand
+    [Command("Unload", "Unload a file by its name")]
+    public class UnloadCommand : ICommand
     {
         public string FileName;
         public UnloadCommand(string fileName)
         {
             FileName = fileName;
         }
-        public void Execute() => MassManager.INSTANCE.UnloadMassFile(FileName);
+        public void Execute(ICommand.CommandFrame commandFrame) => MassManager.INSTANCE.UnloadMassFile(FileName);
 
     }
 
-    [OldCommand("Help", "Get the help infomations of this application")]
-    public class HelpCommand : IOldCommand
+    [Command("Help", "Get the help infomations of this application")]
+    public class HelpCommand : ICommand
     {
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
-            LogUtils.INSTANCE.PrintInfo($"如今支持{OldCommandManager.INSTANCE.commands.Count}个命令，使用方法如下：");
+            commandFrame.PrintLine($"如今支持{commandFrame.Manager.commands.Count}个命令，使用方法如下：");
 
             int i = 1;
-            foreach (var cmd in OldCommandManager.INSTANCE.commands)
+            foreach (var cmd in commandFrame.Manager.commands)
             {
-                LogUtils.INSTANCE.PrintInfo($"No.{i++} {cmd.Key.Name} 用法：{cmd.Key.Help}");
+                commandFrame.PrintLine($"No.{i++} {cmd.Key.Name} 用法：{cmd.Key.Information}");
             }
 
-            if (!OldCommandManager.INSTANCE.RunningWithArgs) LogUtils.INSTANCE.PrintInfo("\n如需退出，键入Exit。");
+            if (!commandFrame.Manager.RunningWithArgs) commandFrame.PrintLine("\n如需退出，键入Exit。");
         }
     }
 
-    [OldCommand("Get", "Get the item infomation of your given id in a file")]
-    public class GetCommand : IOldCommand
+    [Command("Get", "Get the item infomation of your given id in a file")]
+    public class GetCommand : ICommand
     {
         public string FileName;
         public int Id;
@@ -111,7 +108,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Id = int.Parse(id);
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -121,17 +118,17 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 var typename = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(mass.ItemAdaptions[mass.ItemBlobs[Id].AdaptionId].DataJavaClz);
                 var item = mass.Get<object>(Id);
 
-                LogUtils.INSTANCE.PrintInfo($"数据类型：{typename}\n\n内置读取器：\n{FormatManager.INSTANCE.OldItemToString(item)}\n\nNewtonsoft读取器：\n{FormatManager.INSTANCE.ItemToString(item)}");
+                commandFrame.PrintLine($"数据类型：{typename}\n\n内置读取器：\n{FormatManager.INSTANCE.OldItemToString(item)}\n\nNewtonsoft读取器：\n{FormatManager.INSTANCE.ItemToString(item)}");
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"不能获取对象", ex);
+                throw new Exception($"不能获取对象", ex);
             }
         }
     }
 
-    [OldCommand("Search", "Search the target item in a file")]
-    public class SearchCommand : IOldCommand
+    [Command("Search", "Search the target item in a file")]
+    public class SearchCommand : ICommand
     {
         public string FileName;
         public string SearchName;
@@ -141,7 +138,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             SearchName = searchName;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -149,23 +146,23 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 if (mass == null) throw new Exception("请求的文件不存在，请检查是否载入成功、文件名拼写是否正确？");
 
                 var map = mass.IdStrPairs;
-                LogUtils.INSTANCE.PrintInfo("搜索结果：");
+                commandFrame.PrintLine("搜索结果：");
                 foreach (var item in map)
                 {
                     var itBlob = mass.ItemBlobs[item.Value];
                     var adaTion = mass.ItemAdaptions[itBlob.AdaptionId];
-                    if (item.Key.ToLower().Contains(SearchName)) LogUtils.INSTANCE.PrintInfo($"Id.{item.Value} 名称：{item.Key} 大小：{itBlob.Data.Length} 类型：{adaTion.DataJavaClz} 适配器：{adaTion.AdapterJavaClz}");
+                    if (item.Key.ToLower().Contains(SearchName)) commandFrame.PrintLine($"Id.{item.Value} 名称：{item.Key} 大小：{itBlob.Data.Length} 类型：{adaTion.DataJavaClz} 适配器：{adaTion.AdapterJavaClz}");
                 }
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"不能查找对象", ex);
+                throw new Exception($"不能查找对象", ex);
             }
         }
     }
 
-    [OldCommand("Write", "Saves the file to the path you given")]
-    public class WriteCommand : IOldCommand
+    [Command("Write", "Saves the file to the path you given")]
+    public class WriteCommand : ICommand
     {
         public string FileName;
         public string PathName;
@@ -176,7 +173,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             PathName = pathName;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -186,27 +183,27 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 using var fileStream = FileUtils.OpenFile(PathName, true, true);
                 mass.Save(fileStream);
 
-                LogUtils.INSTANCE.PrintInfo("已保存");
+                commandFrame.PrintLine("已保存");
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"不能写出档案", ex);
+                throw new Exception($"不能写出档案", ex);
             }
         }
     }
 
-    [OldCommand("LoadTestFile", "For dev only", true)]
-    public class LoadTestFileCommand : IOldCommand
+    [Command("LoadTestFile", "For dev only", true)]
+    public class LoadTestFileCommand : ICommand
     {
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
-            OldCommandManager.INSTANCE.ParseCommand("Load", "D:\\A Sources\\WeakPipeRecovery\\assets\\fuqi.fs");
+            commandFrame.Manager.ParseCommand("Load", "D:\\A Sources\\WeakPipeRecovery\\assets\\fuqi.fs");
         }
     }
 
     // TODO:解压并拼接
-    [OldCommand("UnpackImage", "Unpack the images from a texture file.")]
-    public class UpackImageCommand : IOldCommand
+    [Command("UnpackImage", "Unpack the images from a texture file.")]
+    public class UpackImageCommand : ICommand
     {
         public enum MODE
         {
@@ -228,7 +225,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Mode = (MODE)int.Parse(mode);
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             try
             {
@@ -243,20 +240,20 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 {
                     case MODE.FullInfoAndDump:
                         {
-                            LogUtils.INSTANCE.PrintInfo($"名称：{fileName.ToUpper()}\n\n信息如下：\n");
+                            commandFrame.PrintLine($"名称：{fileName.ToUpper()}\n\n信息如下：\n");
 
-                            LogUtils.INSTANCE.PrintInfo(FileName.ToUpper() + "的索引信息：\n");
-                            LogUtils.INSTANCE.PrintInfo($"图片碎片数：{textureFile.ItemBlobs.Count}");
+                            commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n");
+                            commandFrame.PrintLine($"图片碎片数：{textureFile.ItemBlobs.Count}");
 
-                            LogUtils.INSTANCE.PrintInfo($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
-                            foreach (var item in textureFile.ItemAdaptions) LogUtils.INSTANCE.PrintInfo($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+                            commandFrame.PrintLine($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
+                            foreach (var item in textureFile.ItemAdaptions) commandFrame.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
 
-                            LogUtils.INSTANCE.PrintInfo($"\n图片项数：{textureFile.ImageIDsArray.Count}");
-                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) LogUtils.INSTANCE.PrintInfo($"-- No.{i + 1} 对应的ID：[{FormatManager.INSTANCE.ItemToString(textureFile.ImageIDsArray[i])}]");
+                            commandFrame.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
+                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{FormatManager.INSTANCE.ItemToString(textureFile.ImageIDsArray[i])}]");
 
                             if (textureFile.ImageIDsArray.Count == 0) return;
 
-                            LogUtils.INSTANCE.PrintInfo("\n解析各项图片：");
+                            commandFrame.PrintLine("\n解析各项图片：");
 
                             int piece = 1;
                             for (int i = 0; i < textureFile.ImageIDsArray.Count; i++)
@@ -271,22 +268,22 @@ namespace Me.EarzuChan.Ryo.OldCommands
 
                                     if (imageBlob != null && imageBlob.ClipSize != 0)
                                     {
-                                        LogUtils.INSTANCE.PrintInfo($"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{FormatManager.INSTANCE.ItemToString(imageBlob.LevelHeights)}] 层级宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.LevelWidths)}] 层级数：{imageBlob.RyoPixmaps.Length}");
+                                        commandFrame.PrintLine($"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{FormatManager.INSTANCE.ItemToString(imageBlob.LevelHeights)}] 层级宽：[{FormatManager.INSTANCE.ItemToString(imageBlob.LevelWidths)}] 层级数：{imageBlob.RyoPixmaps.Length}");
                                         string pathName = FileName + $" No_{piece} Dumps";
-                                        LogUtils.INSTANCE.PrintInfo("-- 该图片的相关资源将被写出在：" + pathName);
+                                        commandFrame.PrintLine("-- 该图片的相关资源将被写出在：" + pathName);
                                         if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
 
                                         for (int level = 0; level < imageBlob.RyoPixmaps.Length; level++)
                                         {
                                             RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
-                                            LogUtils.INSTANCE.PrintInfo($"---- 第{level + 1}层 有{pixs.Length}个");
+                                            commandFrame.PrintLine($"---- 第{level + 1}层 有{pixs.Length}个");
 
                                             string levelPathName = pathName + $"\\Lv_{level + 1}";
                                             if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
                                             for (int no = 0; no < pixs.Length; no++)
                                             {
                                                 RyoPixmap pix = pixs[no];
-                                                LogUtils.INSTANCE.PrintInfo($"------ 第{no + 1}个 类型：{pix.Format}");// 像素数：{pix.GetPixelsCount()}");
+                                                commandFrame.PrintLine($"------ 第{no + 1}个 类型：{pix.Format}");// 像素数：{pix.GetPixelsCount()}");
 
                                                 string levelFileName = $"{levelPathName}\\No_{no + 1}.{(pix.IsJPG ? "jpg" : "png")}";
 
@@ -299,7 +296,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
                                                 }
                                                 catch (Exception ex)
                                                 {
-                                                    LogUtils.INSTANCE.PrintError("不能写出图片", ex);
+                                                    commandFrame.PrintLine($"不能写出图片 只因：{ex}");
                                                 }
                                             }
                                         }
@@ -321,13 +318,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
                             string savePath = FileName.Replace(".texture", "");
                             if (fragmentalImage.RyoPixmaps.First().First().IsJPG)
                             {
-                                LogUtils.INSTANCE.PrintInfo("该文件实际上被转存为了Jpg");
+                                commandFrame.PrintLine("该文件实际上被转存为了Jpg");
 
                                 if (savePath.Contains(".png")) savePath = savePath.Replace(".png", ".jpg");
                             }
 
                             outputImage.Save(savePath);
-                            LogUtils.INSTANCE.PrintInfo("写出成功，路径：" + savePath);
+                            commandFrame.PrintLine("写出成功，路径：" + savePath);
 
                             break;
                         }
@@ -338,19 +335,19 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception e)
             {
-                LogUtils.INSTANCE.PrintError("解包图片失败", e);
+                throw new Exception("解包图片失败", e);
             }
         }
     }
 
-    [OldCommand("TestConversion", "For Dev only", true)]
-    public class TestConversionCommand : IOldCommand
+    [Command("TestConversion", "For Dev only", true)]
+    public class TestConversionCommand : ICommand
     {
         public string? Name { get; set; }
 
         public TestConversionCommand() { }
         public TestConversionCommand(string name) => Name = name;
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             List<string> types = new() { "[I", "java.lang.Integer", "cust0m", "[Lcust0m;", "java.lang.String", "[Ljava.lang.String;", "[[B", "[B" };
 
@@ -361,14 +358,14 @@ namespace Me.EarzuChan.Ryo.OldCommands
             {
                 var ryo = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(item);
                 var re = AdaptionManager.INSTANCE.GetJavaClzByRyoType(ryo);
-                LogUtils.INSTANCE.PrintInfo($"No.{i}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
+                commandFrame.PrintLine($"No.{i}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
                 i++;
             }
         }
     }
 
-    [OldCommand("TestConversion2", "For Dev only", true)]
-    public class TestConversion2Command : IOldCommand
+    [Command("TestConversion2", "For Dev only", true)]
+    public class TestConversion2Command : ICommand
     {
         // public string MassName;
         public ArrayList Items = new() { "测试", 114514, 1.0F, new UserMessage("太美丽", true), new int[] { 0 } };
@@ -378,14 +375,14 @@ namespace Me.EarzuChan.Ryo.OldCommands
             MassName = massName;
         }*/
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             for (int i = 0; i < Items.Count; i++)
             {
                 var item = Items[i]!.GetType();
                 var ryo = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(item);
                 var re = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryo);
-                LogUtils.INSTANCE.PrintInfo($"No.{i + 1}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
+                commandFrame.PrintLine($"No.{i + 1}  原：{item}  结果：{re}  Java短名：{ryo.ShortName}  Java名：{ryo.Name}  自定义：{ryo.IsAdaptableCustom}  是列表：{ryo.IsArray}  C#类：{ryo.BaseType}");
             }
         }
     }
@@ -405,7 +402,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.ICommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -437,7 +434,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.ICommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -459,8 +456,8 @@ namespace Me.EarzuChan.Ryo.OldCommands
         }
     }*/
 
-    [OldCommand("AddConversations", "Add a crazy Conversastions in a file")]
-    public class AddConversationsCommand : IOldCommand
+    [Command("AddConversations", "Add a crazy Conversastions in a file")]
+    public class AddConversationsCommand : ICommand
     {
         public string FileName;
         public string Msg;
@@ -471,7 +468,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -489,13 +486,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"添加失败", ex);
+                throw new Exception($"添加失败", ex);
             }
         }
     }
 
-    [OldCommand("AddOuter", "For Dev only", true)]
-    public class AddOuterCommand : IOldCommand
+    [Command("AddOuter", "For Dev only", true)]
+    public class AddOuterCommand : ICommand
     {
         public string FileName;
         public string Msg;
@@ -506,7 +503,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -518,13 +515,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"添加失败", ex);
+                throw new Exception($"添加失败", ex);
             }
         }
     }
 
-    [OldCommand("AddHugeOuter", "For Dev only", true)]
-    public class AddHugeOuterCommand : IOldCommand
+    [Command("AddHugeOuter", "For Dev only", true)]
+    public class AddHugeOuterCommand : ICommand
     {
         public string FileName;
         public string Msg;
@@ -535,7 +532,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -547,13 +544,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"添加失败", ex);
+                throw new Exception($"添加失败", ex);
             }
         }
     }
 
-    [OldCommand("AddInner", "For Dev only", true)]
-    public class AddInnerCommand : IOldCommand
+    [Command("AddInner", "For Dev only", true)]
+    public class AddInnerCommand : ICommand
     {
         public string FileName;
         public string Msg;
@@ -564,7 +561,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             Msg = msg;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -576,13 +573,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"添加失败", ex);
+                throw new Exception($"添加失败", ex);
             }
         }
     }
 
-    [OldCommand("ParseConversations", "Parse a Conversations by a json text into a file")]
-    public class ParseConversationsCommand : IOldCommand
+    [Command("ParseConversations", "Parse a Conversations by a json text into a file")]
+    public class ParseConversationsCommand : ICommand
     {
         public string FileName;
         public string MsgPath;
@@ -595,7 +592,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             ItemName = itemName;
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             var mass = MassManager.INSTANCE.GetMassFile(FileName);
             try
@@ -610,14 +607,14 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError($"添加失败", ex);
+                throw new Exception($"添加失败", ex);
             }
         }
     }
 
     // 裁切
-    [OldCommand("PackImage", "Pack a image to a texture file and save it")]
-    public class PackImageCommand : IOldCommand
+    [Command("PackImage", "Pack a image to a texture file and save it")]
+    public class PackImageCommand : ICommand
     {
         public string FileName;
         public string ImgPath;
@@ -634,7 +631,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             FileName = imgPath + ".texture";
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             try
             {
@@ -648,17 +645,17 @@ namespace Me.EarzuChan.Ryo.OldCommands
                 using FileStream saveStream = FileUtils.OpenFile(FileName, true, true, false);
                 txfile.Save(saveStream);
 
-                LogUtils.INSTANCE.PrintInfo("保存成功，路径：" + FileName);
+                commandFrame.PrintLine("保存成功，路径：" + FileName);
             }
             catch (Exception ex)
             {
-                LogUtils.INSTANCE.PrintError("图片保存失败", ex);
+                throw new Exception("图片保存失败", ex);
             }
         }
     }
 
-    [OldCommand("Inflate", "Inflate a file")]
-    public class InflateCommand : IOldCommand
+    [Command("Inflate", "Inflate a file")]
+    public class InflateCommand : ICommand
     {
         public enum FILETYPE
         {
@@ -681,7 +678,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             FileType = (FILETYPE)int.Parse(fileType);
         }
 
-        public void Execute()
+        public void Execute(ICommand.CommandFrame commandFrame)
         {
             using FileStream fileStream = FileUtils.OpenFile(FileName);
             Mass mass = FileType switch
@@ -696,7 +693,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             using var writer = FileUtils.OpenFile(fileName, true, true);
             mass.Save(writer, true);
 
-            LogUtils.INSTANCE.PrintInfo("写出到" + fileName);
+            commandFrame.PrintLine("写出到" + fileName);
         }
     }
 

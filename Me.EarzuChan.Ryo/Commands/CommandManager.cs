@@ -3,14 +3,14 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Me.EarzuChan.Ryo.OldCommands
+namespace Me.EarzuChan.Ryo.Commands
 {
-    public class OldCommandManager
+    public class CommandManager
     {
-        public static OldCommandManager INSTANCE { get { instance ??= new(); return instance; } }
-        private static OldCommandManager? instance;
+        /*public static CommandManager INSTANCE { get { instance ??= new(); return instance; } }
+        private static CommandManager? instance;*/
 
-        public readonly Dictionary<OldCommandAttribute, Type> commands = new();
+        public readonly Dictionary<CommandAttribute, Type> commands = new();
         public bool RunningWithArgs = false;
         public bool IsDev
         {
@@ -27,6 +27,10 @@ namespace Me.EarzuChan.Ryo.OldCommands
         }
         private bool isDev = false;
 
+        public IConsole ConsoleImplement = new DefaultConsole();
+
+        public readonly ICommand.CommandFrame CommandFrame; // 需要抽象
+
         public void RegCmds()
         {
             commands.Clear();
@@ -34,8 +38,8 @@ namespace Me.EarzuChan.Ryo.OldCommands
             var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
             foreach (var type in types)
             {
-                var attribute = type.GetCustomAttribute<OldCommandAttribute>();
-                if (attribute != null && typeof(IOldCommand).IsAssignableFrom(type))
+                var attribute = type.GetCustomAttribute<CommandAttribute>();
+                if (attribute != null && typeof(ICommand).IsAssignableFrom(type))
                 {
                     if (attribute.IsDev && !isDev) continue;
                     // DEBUG逻辑
@@ -45,7 +49,13 @@ namespace Me.EarzuChan.Ryo.OldCommands
             }
         }
 
-        public OldCommandManager() => RegCmds();
+        public CommandManager()
+        {
+            RegCmds();
+            CommandFrame = new ICommand.CommandFrame(this);
+        }
+
+        public CommandManager(IConsole console) : this() => ConsoleImplement = console;
 
         public void ParseCommandLine(string input)
         {
@@ -113,7 +123,7 @@ namespace Me.EarzuChan.Ryo.OldCommands
             //Console.WriteLine("解析命令：");
             if (args == null || args.Length == 0)
             {
-                LogUtils.INSTANCE.PrintInfo("命令为空，输入Help查看支持的命令。");
+                ConsoleImplement.PrintLine("命令为空，输入Help查看支持的命令。");
                 return;
             }
 
@@ -132,46 +142,94 @@ namespace Me.EarzuChan.Ryo.OldCommands
                         {
                             try
                             {
-                                var command = (IOldCommand)constructor.Invoke(cmdArgs);
-                                command.Execute();
+                                var command = (ICommand)constructor.Invoke(cmdArgs);
+                                // TODO:可选参数
+                                command.Execute(CommandFrame);
                             }
                             catch (Exception e)
                             {
-                                LogUtils.INSTANCE.PrintError("命令执行出错", e);
+                                CommandFrame.PrintLine(LogUtils.MakeErrorLog("命令执行出错", e));
                             }
                             return;
                         }
                     }
-                    LogUtils.INSTANCE.PrintInfo($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Help}");
+                    ConsoleImplement.PrintLine($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Information}");
                     return;
                 }
             }
-            LogUtils.INSTANCE.PrintInfo($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
+            ConsoleImplement.PrintLine($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
         }
     }
 
+    public interface IConsole
+    {
+        public void PrintLine(string text);
+        public string ReadLine();
+        public void Print(string text);
+        public Char ReadKey();
+    }
+
+    // 默认实现，基于 Console 类
+    public class DefaultConsole : IConsole
+    {
+        public void PrintLine(string text) => Console.WriteLine(text);
+
+        public string ReadLine() => Console.ReadLine()!;
+
+        public Char ReadKey() => Console.ReadKey().KeyChar;
+
+        public void Print(string text) => Console.Write(text);
+    }
+
     [AttributeUsage(AttributeTargets.Class)]
-    public class OldCommandAttribute : Attribute
+    public class CommandAttribute : Attribute
     {
         public string Name { get; set; }
-        public string Help { get; set; }
+        public string Information { get; set; }
         public bool IsDev { get; set; }
 
-        public OldCommandAttribute(string name, string help)
+        public CommandAttribute(string name, string info)
         {
             Name = name;
-            Help = help;
+            Information = info;
         }
-        public OldCommandAttribute(string name, string help, bool isDev)
+        public CommandAttribute(string name, string info, bool isDev)
         {
             Name = name;
-            Help = help;
+            Information = info;
             IsDev = isDev;
         }
     }
 
-    public interface IOldCommand
+    public interface ICommand
     {
-        void Execute();
+        void Execute(CommandFrame commandFrame);
+
+        public class CommandFrame
+        {
+            public readonly CommandManager Manager;
+
+            public CommandFrame(CommandManager commandManager) => Manager = commandManager;
+
+            public void PrintLine(string text) => Manager.ConsoleImplement.PrintLine(text);
+
+            public string ReadLine(string title)
+            {
+                Manager.ConsoleImplement.Print($"{title}: ");
+                return Manager.ConsoleImplement.ReadLine()!;
+            }
+
+            public bool ReadYesOrNo(string title)
+            {
+                while (true)
+                {
+                    Manager.ConsoleImplement.Print($"{title} [Y/N]: ");
+                    char input = Manager.ConsoleImplement.ReadKey();
+                    if (input == 'y') return true;
+                    else if (input == 'n') return false;
+                    Manager.ConsoleImplement.PrintLine("Invalid input. Please enter 'Y' or 'N'."); // 需要抽象
+                }
+            }
+        }
     }
 }

@@ -142,7 +142,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     try
                     {
                         object value = ReadWriteTypesUtils.Read(field.FieldType, reader, mass, true);
-                        LogUtils.INSTANCE.PrintInfo($"读取第{i + 1}：{value.GetType()}");
+                        // LogUtils.PrintInfo($"读取第{i + 1}：{value.GetType()}");
                         field.SetValue(item, value);
                     }
                     catch (Exception ex)
@@ -333,7 +333,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                 // 读个数
                 Array objArr = Array.CreateInstance(itemType, reader.ReadInt());
-                LogUtils.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
+                // LogUtils.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
 
                 //mass.Reference(objArr);
 
@@ -344,7 +344,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                 if (oriItemType == null)
                 {
                     if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
-                    LogUtils.INSTANCE.PrintDebugInfo("额外重写匹配 类型为" + itemType);
+                    // LogUtils.INSTANCE.PrintInfo("额外重写匹配 类型为" + itemType);
                     if (itemType != typeof(object))
                     {
                         Array newArray = Array.CreateInstance(itemType, objArr.Length);

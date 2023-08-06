@@ -22,7 +22,7 @@ namespace Me.EarzuChan.Ryo.Utils
             }
             catch (Exception e)
             {
-                LogUtils.INSTANCE.PrintError("解压出错", e);
+                LogUtils.PrintError("解压出错", e);
                 return Array.Empty<byte>();
             }
         }

@@ -2,34 +2,27 @@
 
 namespace Me.EarzuChan.Ryo.Utils
 {
-    public class LogUtils
+    public static class LogUtils
     {
-        public static LogUtils INSTANCE { get { instance ??= new(); return instance; } }
-        private static LogUtils? instance;
-        private Action<string> Logger = str => Trace.WriteLine(str);
-        public bool AllowPrintDebugInfo = false;
+        private static Action<string> Logger = str => Trace.WriteLine(str);
+        public const bool AllowPrintDebugInfo = false;
 
-        public void SetLogger(Action<string> logger) => Logger = logger;
+        public static void SetLogger(Action<string> logger) => Logger = logger;
 
-        public void PrintError(String info, Exception e, bool printStack = true)
+        public static void PrintError(String info, Exception e, bool printStack = true) => Logger(MakeErrorLog(info, e, printStack));
+
+        public static string MakeErrorLog(string info, Exception e, bool printStack = false)
         {
-            Logger("错误：" + info + "，因为：" + e.Message);
+            var str = "错误：" + info + "，因为：" + e.Message;
             if (e.StackTrace != null && printStack)
             {
                 var stack = e.StackTrace;
                 if (e.InnerException != null && e.InnerException.StackTrace != null) stack = e.InnerException.StackTrace + "\n" + stack;
-                Logger(stack);
+                str += stack;
             }
+            return str;
         }
 
-        public void PrintInfo(params string[] args)
-        {
-            Logger(string.Join(' ', args));
-        }
-
-        public void PrintDebugInfo(params string[] args)
-        {
-            if (AllowPrintDebugInfo) PrintInfo("额外调试信息：" + args);
-        }
+        public static void PrintInfo(params string[] args) => Logger(string.Join(' ', args));
     }
 }
