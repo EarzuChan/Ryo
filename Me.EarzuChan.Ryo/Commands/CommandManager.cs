@@ -29,7 +29,7 @@ namespace Me.EarzuChan.Ryo.Commands
 
         public IConsole ConsoleImplement = new DefaultConsole();
 
-        public readonly ICommand.CommandFrame CommandFrame; // 需要抽象
+        public readonly ICommand.CommandFrame CommandFrame;
 
         public void RegCmds()
         {
@@ -123,7 +123,7 @@ namespace Me.EarzuChan.Ryo.Commands
             //Console.WriteLine("解析命令：");
             if (args == null || args.Length == 0)
             {
-                ConsoleImplement.PrintLine("命令为空，输入Help查看支持的命令。");
+                ConsoleImplement.PrintLine("Command is empty. Enter 'Help' to view supported commands.");
                 return;
             }
 
@@ -148,16 +148,16 @@ namespace Me.EarzuChan.Ryo.Commands
                             }
                             catch (Exception e)
                             {
-                                CommandFrame.PrintLine(LogUtils.MakeErrorLog("命令执行出错", e));
+                                ConsoleImplement.PrintLine(LogUtils.MakeErrorText("An unhandled exception occurred during command execution.", e, true));
                             }
                             return;
                         }
                     }
-                    ConsoleImplement.PrintLine($"The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Information}");
+                    ConsoleImplement.PrintLine($"Error: The parameter is incorrect. Usage of {cmd.Key.Name}: {cmd.Key.Information}");
                     return;
                 }
             }
-            ConsoleImplement.PrintLine($"'{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
+            ConsoleImplement.PrintLine($"Error: '{givenCmdName}' is not recognized as an available command, enter 'Help' for more information.");
         }
     }
 
@@ -174,9 +174,19 @@ namespace Me.EarzuChan.Ryo.Commands
     {
         public void PrintLine(string text) => Console.WriteLine(text);
 
-        public string ReadLine() => Console.ReadLine()!;
+        public string ReadLine()
+        {
+            string? str = Console.ReadLine();
+            // if (str == null) LogUtils.PrintInfo("读行遇到问题");
+            return str ?? "";
+        }
 
-        public Char ReadKey() => Console.ReadKey().KeyChar;
+        public Char ReadKey()
+        {
+            char c = Console.ReadKey().KeyChar;
+            Console.WriteLine();
+            return c;
+        }
 
         public void Print(string text) => Console.Write(text);
     }
@@ -188,7 +198,7 @@ namespace Me.EarzuChan.Ryo.Commands
         public string Information { get; set; }
         public bool IsDev { get; set; }
 
-        public CommandAttribute(string name, string info)
+        public CommandAttribute(string name, string info = "No description available.")
         {
             Name = name;
             Information = info;
@@ -211,23 +221,25 @@ namespace Me.EarzuChan.Ryo.Commands
 
             public CommandFrame(CommandManager commandManager) => Manager = commandManager;
 
-            public void PrintLine(string text) => Manager.ConsoleImplement.PrintLine(text);
+            public void PrintLine(string text = "") => Manager.ConsoleImplement.PrintLine(text);
 
-            public string ReadLine(string title)
+            public string ReadLine(string title, bool hideColon = false)
             {
-                Manager.ConsoleImplement.Print($"{title}: ");
-                return Manager.ConsoleImplement.ReadLine()!;
+                Manager.ConsoleImplement.Print($"{title}{(hideColon ? "" : ": ")}");
+                return Manager.ConsoleImplement.ReadLine();
             }
+
+            public void Print(string text) => Manager.ConsoleImplement.Print(text);
 
             public bool ReadYesOrNo(string title)
             {
                 while (true)
                 {
                     Manager.ConsoleImplement.Print($"{title} [Y/N]: ");
-                    char input = Manager.ConsoleImplement.ReadKey();
+                    char input = char.ToLower(Manager.ConsoleImplement.ReadKey());
                     if (input == 'y') return true;
                     else if (input == 'n') return false;
-                    Manager.ConsoleImplement.PrintLine("Invalid input. Please enter 'Y' or 'N'."); // 需要抽象
+                    Manager.ConsoleImplement.PrintLine("Invalid input. Please enter 'Y' or 'N'.");
                 }
             }
         }

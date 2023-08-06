@@ -423,7 +423,7 @@ namespace Me.EarzuChan.Ryo.Masses
          * 实现数据块压缩与刷新适配项、元数据
          */
 
-        T Read<T>(); // 需要被取缔
+        // T Read<T>(); // 需要被取缔
     }
 
     public class Mass : IMass
@@ -482,7 +482,7 @@ namespace Me.EarzuChan.Ryo.Masses
             var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
             if (result != null) return ItemAdaptions.IndexOf(result);
 
-            var adapterRyoType = AdaptionManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException("类型没有可用的适配器：" + ryoType);
+            var adapterRyoType = AdaptionManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
 
             var adapterJavaClz = AdaptionManager.INSTANCE.GetJavaClzByRyoType(adapterRyoType)!;
             var itemAdaption = new ItemAdaption(javaClz, adapterJavaClz);
@@ -517,14 +517,14 @@ namespace Me.EarzuChan.Ryo.Masses
                 while (nowId < id + SavedItems.Count)
                 {
                     object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
-                    // LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配前_循环第：{nowId}");
+                    // LogUtils.PrintInfo($"主Id：{id} 本Id：{nowId}");
 
                     RyoType dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByCsClz(nowObj.GetType());
 
-                    // LogUtil.INSTANCE.PrintInfo("类型：" + dataRyoType);
-
                     var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
                     var adaption = ItemAdaptions[adaptionId];
+
+                    // LogUtils.PrintInfo($"Id：{adaptionId} 类型：{dataRyoType} {adaption.AdapterJavaClz}");
 
                     var adapter = AdaptionManager.INSTANCE.CreateAdapter(AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
 

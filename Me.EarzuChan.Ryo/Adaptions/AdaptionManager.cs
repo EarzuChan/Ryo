@@ -2,15 +2,8 @@
 using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Masses;
-using Me.EarzuChan.Ryo.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Security.AccessControl;
-using System.Text;
-using System.Threading.Tasks;
-using static Me.EarzuChan.Ryo.Formations.SaraDialogueTree;
 
 namespace Me.EarzuChan.Ryo.Adaptions
 {
@@ -38,7 +31,7 @@ namespace Me.EarzuChan.Ryo.Adaptions
         public override string ToString()
         {
             // return $"[RyoType信息：{AdaptionManager.INSTANCE.GetJavaClzByType(this)}，Java短名：{ShortName}，Java名：{Name}，自定义：{IsCustom}，是列表：{IsArray}，C#类：{BaseType}]";
-            return $"[RyoType：Java：{Name}，短名：{(ShortName == null ? "无" : ShortName)}，可适配自定：{IsAdaptableCustom}，列表：{IsArray}，C#：{BaseType}]";
+            return $"[RyoType：Java：{Name}，短名：{(ShortName == null ? "无" : ShortName)}，可适配自定：{IsAdaptableCustom} 通过构造器：{IsAdaptWithCtor}，列表：{IsArray}，C#：{BaseType}]";
         }
     }
 
@@ -219,13 +212,15 @@ namespace Me.EarzuChan.Ryo.Adaptions
                 break;
             }
 
-            // 如果为可适配自定义，那么就有attr_format_name，就不用if
+            // 如果为可适配自定义，那么就有attr_format_name，就不用if 然后检测字段还是构造器
+            bool isAdaptWithCtor = false;
             var attr = type.GetCustomAttribute<AdaptableFormat>();
             var clzName = attr?.FormatName;
+            if (clzName != null) isAdaptWithCtor = typeof(ICtorAdaptable).IsAssignableFrom(type);
             //clzName ??= type.Name; // Java不友好
 
             // 没有就创建新的
-            ryoType ??= new() { IsAdaptableCustom = clzName != null, Name = clzName, BaseType = type };
+            ryoType ??= new() { IsAdaptableCustom = clzName != null, IsAdaptWithCtor = isAdaptWithCtor, Name = clzName, BaseType = type };
             ryoType.IsArray = isArray;
 
             return ryoType;

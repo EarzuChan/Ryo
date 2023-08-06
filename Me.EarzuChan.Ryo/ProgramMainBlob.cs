@@ -9,9 +9,13 @@ namespace Me.EarzuChan.Ryo
     {
         static void Main(string[] args)
         {
+            //
+            // Console.WriteLine(FormatUtils.NewtonsoftItemToJson(FormatUtils.SystemBinaryToItem(File.ReadAllBytes("E:\\2341\\content_chats_introteddy1.DialogueTreeDescriptor.bin"))));
+
+            // 系统配置
             Console.InputEncoding = Encoding.Unicode;
 
-            LogUtils.SetLogger(str => Console.WriteLine(str)); // 重定向日志输出
+            LogUtils.SetLogger(str => Console.WriteLine(str)); // 重定向日志输出_使用缺省
 
             CommandManager commandManager = new();
 #if DEBUG
@@ -22,20 +26,25 @@ namespace Me.EarzuChan.Ryo
             //LogUtil.INSTANCE.PrintInfo($"当前Dev状态：{CommandManager.INSTANCE.IsDev}");
             if (args.Length > 0)
             {
-                commandManager.RunningWithArgs = true;
-                commandManager.ParseCommand(args);
+                commandManager.CommandFrame.PrintLine("=========================================================\n     Ryo Console [Special Effects Mode]\n=========================================================\nError: Quick Access Feature is currently disabled.\nPlease run the console without any parameters for full functionality.\nExiting Ryo Console... Thank you for understanding.");
+                // TODO:真正的快速使用
+                /*commandManager.RunningWithArgs = true;
+                commandManager.ParseCommand(args);*/
                 return;
             }
 
-            Console.WriteLine($"Ryo Console [Version {Assembly.GetExecutingAssembly().GetName().Version}]\nCopyright (C) Earzu Chan. All rights reserved.");
+            // Welcome Info
+            commandManager.CommandFrame.PrintLine($"=========================================================\n        Ryo Console [Version {Assembly.GetExecutingAssembly().GetName().Version}]\n   Copyright (C) Earzu Chan. All rights reserved.\n=========================================================\n\nType 'help' to see the list of available commands.");
+
             while (true)
             {
-                Console.Write("\nE:\\Ryo\\User>");
-                string input = Console.ReadLine()!.Trim();
+                string input = commandManager.CommandFrame.ReadLine("\n> ", true).Trim();
                 if (input.ToLower() == "exit") break;
 
                 commandManager.ParseCommandLine(input);
             }
+
+            commandManager.CommandFrame.PrintLine("\nExiting Ryo Console... Have a great day!");
         }
     }
 }

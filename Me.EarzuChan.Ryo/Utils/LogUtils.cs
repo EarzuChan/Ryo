@@ -9,16 +9,16 @@ namespace Me.EarzuChan.Ryo.Utils
 
         public static void SetLogger(Action<string> logger) => Logger = logger;
 
-        public static void PrintError(String info, Exception e, bool printStack = true) => Logger(MakeErrorLog(info, e, printStack));
+        public static void PrintError(String info, Exception e, bool printStack = true) => Logger(MakeErrorText(info, e, printStack));
 
-        public static string MakeErrorLog(string info, Exception e, bool printStack = false)
+        public static string MakeErrorText(string info, Exception? e, bool withStack = false)
         {
-            var str = "错误：" + info + "，因为：" + e.Message;
-            if (e.StackTrace != null && printStack)
+            var str = $"Error: {info}";
+            while (e != null)
             {
-                var stack = e.StackTrace;
-                if (e.InnerException != null && e.InnerException.StackTrace != null) stack = e.InnerException.StackTrace + "\n" + stack;
-                str += stack;
+                str += $"\n\nError Details:\n--------------\nException: {e.GetType()}\nMessage: {e.Message}\nSource: {e.Source}\nStack Trace:\n";
+                if (withStack) str += e.StackTrace;
+                e = e.InnerException;
             }
             return str;
         }

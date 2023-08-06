@@ -2,20 +2,7 @@
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Masses;
 using Me.EarzuChan.Ryo.Utils;
-using System;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
-using System.Drawing;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using static Me.EarzuChan.Ryo.Adaptions.AdapterFactories.BaseArrayTypeAdapterFactory;
-using System.Reflection.PortableExecutable;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using System.Runtime.InteropServices.ObjectiveC;
-using System.Security;
 
 namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 {
@@ -104,15 +91,14 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
                 var paramTypes = CtorParams[matchedCtorIndex];
 
-                /*LogUtil.INSTANCE.PrintInfo("参数数：" + paramTypes.Count);
-                foreach (Type tp in paramTypes) LogUtil.INSTANCE.PrintInfo("参数类型：" + tp);*/
+                // LogUtils.PrintInfo("参数数：" + paramTypes.Count);
+                // foreach (Type tp in paramTypes) LogUtils.PrintInfo("参数类型：" + tp);
                 //mass.ItemBlobs[mass.SavedId].StickyId++;
                 for (int i = 0; i < args.Length; i++)
                 {
                     Type itemType = paramTypes[i];
 
                     //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
-                    // TODO:读参数方法
                     object item = args[i];
                     try
                     {
@@ -121,7 +107,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
                     }
                     catch (Exception ex)
                     {
-                        throw new InvalidCastException($"写入第{i + 1}号参数时错误，是因为" + ex.Message, ex);
+                        throw new InvalidCastException($"写入第{i + 1}号参数（{item.GetType}）时错误，是因为" + ex.Message, ex);
                     }
                 }
             }
@@ -226,13 +212,15 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
             var formatType = AdaptionManager.INSTANCE.GetCsClzByRyoType(type) ?? throw new NotSupportedException("不支持解析不了的自定义类型：" + type);
 
-            // TODO:未来给普通类做的字段适配器
+            // 未来给普通类做的字段适配器 做了
 
             try
             {
                 IAdapter adapter = type.IsAdaptWithCtor ?
                     new CustomFormatCtorAdapter(formatType.GetConstructors().Where(c => c.GetCustomAttribute<ICtorAdaptable.AdaptableConstructor>() != null).OrderBy(c => c.GetParameters().Length).ToList())
                     : new CustomFormatFieldAdapter(formatType);
+
+                // LogUtils.PrintInfo($"{type} 拥有：{adapter.GetType()}");
 
                 return adapter;
             }
@@ -244,7 +232,7 @@ namespace Me.EarzuChan.Ryo.Adaptions.AdapterFactories
 
         public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
         {
-            if (ryoType.IsAdaptableCustom && !ryoType.IsArray) return new() { Name = "sengine.mass.serializers.MassSerializableSerializer", BaseType = typeof(CustomFormatAdapterFactory) };
+            if (ryoType.IsAdaptableCustom && !ryoType.IsArray) return new() { Name = ryoType.IsAdaptWithCtor ? "sengine.mass.serializers.MassSerializableSerializer" : "sengine.mass.serializers.FieldSerialize", BaseType = typeof(CustomFormatAdapterFactory) };
             else throw new InvalidDataException("类型不属于可适配自定义类型：" + ryoType);
         }
     }
