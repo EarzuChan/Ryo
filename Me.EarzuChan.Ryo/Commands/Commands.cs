@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions;
+using Me.EarzuChan.Ryo.Commands.CommandExceptions;
 using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.Formations.PipeDream;
 using Me.EarzuChan.Ryo.Formations.WeakPipe;
@@ -164,7 +165,7 @@ namespace Me.EarzuChan.Ryo.Commands
             }
             catch (Exception ex)
             {
-                throw new Exception($"Cannot retrieve object due to {ex.Message}.", ex);
+                throw new Exception($"Cannot retrieve object due to {ex.Message.MakeFirstCharLower()}.", ex);
             }
         }
     }
@@ -198,7 +199,7 @@ namespace Me.EarzuChan.Ryo.Commands
             }
             catch (Exception ex)
             {
-                throw new Exception($"Cannot locate object due to {ex.Message}.", ex);
+                throw new Exception($"Cannot locate object due to {ex.Message.MakeFirstCharLower()}.", ex);
             }
         }
     }
@@ -229,7 +230,7 @@ namespace Me.EarzuChan.Ryo.Commands
             }
             catch (Exception ex)
             {
-                throw new Exception($"Cannot save object due to {ex.Message}.", ex);
+                throw new Exception($"Cannot save object due to {ex.Message.MakeFirstCharLower()}.", ex);
             }
         }
     }
@@ -465,7 +466,7 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 if (mass == null) throw new NoSuchFileException();
 
-                var msg = new YsbNmslHugeOuter(Msg, new YsbNmslInner(Msg), new YsbNmslInner[] { new YsbNmslInner("YesBean" + Msg) });
+                var msg = new YsbNmslHugeOuter(Msg, new YsbNmslInner(Msg), new YsbNmslInner[] { new YsbNmslInner("Yoasobi" + Msg) });
                 mass.Add(Msg, msg);
             }
             catch (Exception ex)
@@ -637,16 +638,16 @@ namespace Me.EarzuChan.Ryo.Commands
             Id = int.Parse(id);
         }
 
-        private string Trans(CommandFrame commandFrame, string ori)
+        private static string Edit(CommandFrame commandFrame, string ori)
         {
             while (true)
             {
-                bool doTrans = commandFrame.ReadYesOrNo("Translate 1 for Yes, 0 for Skip:");
+                bool doTrans = commandFrame.ReadYesOrNo("Do you want to edit it", ConsoleKey.Enter, ConsoleKey.DownArrow);
 
                 if (!doTrans) return ori;
-                string str = commandFrame.ReadLine("Translation");
+                string str = commandFrame.ReadLine("Content");
 
-                if (commandFrame.ReadYesOrNo("Save")) return str;
+                if (commandFrame.ReadYesOrNo("Save changes", ConsoleKey.Enter, ConsoleKey.Backspace)) return str;
             }
         }
 
@@ -665,7 +666,7 @@ namespace Me.EarzuChan.Ryo.Commands
                 {
                     commandFrame.PrintLine($"{(dialogueItemName != null ? $"Item Name: {dialogueItemName}" : "This is a sub-item, no item name")} Dialogue Tree Namespace: {dialogue.DialogueNameSpace} Conversation Count: {dialogue.ConversationList.Count}");
 
-                    bool translating = dialogueItemName == null ? false : commandFrame.ReadYesOrNo("Apply Translate mode");
+                    bool applyEdit = dialogueItemName != null && commandFrame.ReadYesOrNo("Apply edit mode");
 
                     int no = 1;
                     foreach (var conv in dialogue.ConversationList)
@@ -677,7 +678,7 @@ namespace Me.EarzuChan.Ryo.Commands
                         foreach (var send in conv.SenderMessagers)
                         {
                             commandFrame.PrintLine($"----\nSender's Conversation {no2}/{all}:\nDate Text: {send.DateText} Time Text: {send.TimeText} Original: {send.Origin}\nTrigger: {send.Trigger} Trigger Time: {send.TriggerTime}\nIdle Time: {send.IdleTime} Typing Time: {send.TypingTime}:\n{send.Message}");
-                            if (translating) send.Message = Trans(commandFrame, send.Message); // else send.Message += "日恁毛";
+                            if (applyEdit) send.Message = Edit(commandFrame, send.Message); // else send.Message += "日恁毛";
                             no2++;
                         }
                         all = conv.UserMessages.Count;
@@ -686,28 +687,36 @@ namespace Me.EarzuChan.Ryo.Commands
                         foreach (var user in conv.UserMessages)
                         {
                             commandFrame.PrintLine($"----\nUser's Conversation {no2}/{all} Hidden: {user.IsHidden}:\n{user.Message.Trim()}");
-                            if (translating) user.Message = Trans(commandFrame, user.Message); // else user.Message += "物支浪了吸";
+                            if (applyEdit) user.Message = Edit(commandFrame, user.Message); // else user.Message += "物支浪了吸";
                             no2++;
                         }
                         no++;
                     }
 
-                    if (translating && commandFrame.ReadYesOrNo("Save translation result"))
+                    if (applyEdit)
                     {
-                        mass.Add(dialogueItemName!, dialogue);
-                        commandFrame.PrintLine("Translation result saved.");
+                        Thread.Sleep(1000);
+                        if (commandFrame.ReadYesOrNo("\n--------\nSave all changes"))
+                        {
+                            mass.Add(dialogueItemName!, dialogue);
+                            commandFrame.PrintLine("Changes saved.");
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception($"Operating Dialogue Tree encountered an issue, due to {ex.Message}.", ex);
+                if (ex.GetType() == typeof(InvalidCastException)) ex = new Exception("This is not a Dialogue Tree item");
+                throw new Exception($"Operating Dialogue Tree encountered an issue, due to {ex.Message.MakeFirstCharLower()}.", ex);
             }
         }
     }
 
-    public class NoSuchFileException : Exception
+    namespace CommandExceptions
     {
-        public NoSuchFileException() : base("The requested file does not exist. Please check if it has been loaded successfully and ensure the correct spelling of the file name.") { }
+        public class NoSuchFileException : Exception
+        {
+            public NoSuchFileException() : base("The requested file does not exist. Please check if it has been loaded successfully and ensure the correct spelling of the file name.") { }
+        }
     }
 }

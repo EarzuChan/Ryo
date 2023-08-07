@@ -166,7 +166,7 @@ namespace Me.EarzuChan.Ryo.Commands
         public void PrintLine(string text);
         public string ReadLine();
         public void Print(string text);
-        public Char ReadKey();
+        public ConsoleKey ReadKey();
     }
 
     // 默认实现，基于 Console 类
@@ -181,9 +181,9 @@ namespace Me.EarzuChan.Ryo.Commands
             return str ?? "";
         }
 
-        public Char ReadKey()
+        public ConsoleKey ReadKey()
         {
-            char c = Console.ReadKey().KeyChar;
+            var c = Console.ReadKey().Key;
             Console.WriteLine();
             return c;
         }
@@ -231,17 +231,26 @@ namespace Me.EarzuChan.Ryo.Commands
 
             public void Print(string text) => Manager.ConsoleImplement.Print(text);
 
-            public bool ReadYesOrNo(string title)
+            public bool ReadYesOrNo(string title, ConsoleKey yesKey = ConsoleKey.Y, ConsoleKey noKey = ConsoleKey.N)
             {
+                string yesKeyName = SolveKeyName(yesKey.ToString());
+                string noKeyName = SolveKeyName(noKey.ToString());
+                ConsoleKey yesKeySecond = SolveSecondKey(yesKey);
+                ConsoleKey noKeySecond = SolveSecondKey(noKey);
+
                 while (true)
                 {
-                    Manager.ConsoleImplement.Print($"{title} [1/0]: ");
-                    char input = Manager.ConsoleImplement.ReadKey();
-                    if (input == '1') return true;
-                    else if (input == '0') return false;
-                    Manager.ConsoleImplement.PrintLine("Invalid input. Please press '1' or '0'.");
+                    Manager.ConsoleImplement.Print($"{title} [{yesKeyName}/{noKeyName}]: ");
+                    var inputKey = Manager.ConsoleImplement.ReadKey();
+                    if (inputKey == yesKey || inputKey == yesKeySecond) return true;
+                    else if (inputKey == noKey || inputKey == noKeySecond) return false;
+                    Manager.ConsoleImplement.PrintLine($"Invalid inputKey. Please press '{yesKeyName}' or '{noKeyName}'.");
                 }
             }
+
+            private static string SolveKeyName(string oriKeyName) => oriKeyName.StartsWith('D') && oriKeyName.Length == 2 ? oriKeyName[1..] : oriKeyName == "DownArrow" ? "↓" : oriKeyName == "UpArrow" ? "↑" : oriKeyName;
+
+            private static ConsoleKey SolveSecondKey(ConsoleKey oriKey) => oriKey == ConsoleKey.D1 ? ConsoleKey.NumPad1 : oriKey == ConsoleKey.D0 ? ConsoleKey.NumPad0 : oriKey;
         }
     }
 }
