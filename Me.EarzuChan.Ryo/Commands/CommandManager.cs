@@ -235,11 +235,11 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 while (true)
                 {
-                    Manager.ConsoleImplement.Print($"{title} [Y/N]: ");
-                    char input = char.ToLower(Manager.ConsoleImplement.ReadKey());
-                    if (input == 'y') return true;
-                    else if (input == 'n') return false;
-                    Manager.ConsoleImplement.PrintLine("Invalid input. Please enter 'Y' or 'N'.");
+                    Manager.ConsoleImplement.Print($"{title} [1/0]: ");
+                    char input = Manager.ConsoleImplement.ReadKey();
+                    if (input == '1') return true;
+                    else if (input == '0') return false;
+                    Manager.ConsoleImplement.PrintLine("Invalid input. Please press '1' or '0'.");
                 }
             }
         }

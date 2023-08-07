@@ -154,6 +154,8 @@ namespace Me.EarzuChan.Ryo.Commands
                             xmlFile.Write(Encoding.UTF8.GetBytes(xml));*/
                             using var jsonFile = FileUtils.OpenFile(dumpPath + ".json", true, true);
                             jsonFile.Write(Encoding.UTF8.GetBytes(newtonJson));
+
+                            commandFrame.PrintLine("Saved.");
                         }
                         else commandFrame.PrintLine("Filename is not correct, no dumping.");
                     }
@@ -463,7 +465,7 @@ namespace Me.EarzuChan.Ryo.Commands
             {
                 if (mass == null) throw new NoSuchFileException();
 
-                var msg = new YsbNmslHugeOuter(Msg, new YsbNmslInner(Msg), new YsbNmslInner[] { new YsbNmslInner("叶仕斌" + Msg) });
+                var msg = new YsbNmslHugeOuter(Msg, new YsbNmslInner(Msg), new YsbNmslInner[] { new YsbNmslInner("YesBean" + Msg) });
                 mass.Add(Msg, msg);
             }
             catch (Exception ex)
@@ -639,7 +641,7 @@ namespace Me.EarzuChan.Ryo.Commands
         {
             while (true)
             {
-                bool doTrans = commandFrame.ReadYesOrNo("Translate Y for Yes, N for Back:");
+                bool doTrans = commandFrame.ReadYesOrNo("Translate 1 for Yes, 0 for Skip:");
 
                 if (!doTrans) return ori;
                 string str = commandFrame.ReadLine("Translation");
@@ -663,7 +665,7 @@ namespace Me.EarzuChan.Ryo.Commands
                 {
                     commandFrame.PrintLine($"{(dialogueItemName != null ? $"Item Name: {dialogueItemName}" : "This is a sub-item, no item name")} Dialogue Tree Namespace: {dialogue.DialogueNameSpace} Conversation Count: {dialogue.ConversationList.Count}");
 
-                    bool translating = dialogueItemName == null ? false : commandFrame.ReadYesOrNo("Translate mode Y for Yes, only preview N");
+                    bool translating = dialogueItemName == null ? false : commandFrame.ReadYesOrNo("Apply Translate mode");
 
                     int no = 1;
                     foreach (var conv in dialogue.ConversationList)
@@ -693,7 +695,7 @@ namespace Me.EarzuChan.Ryo.Commands
                     if (translating && commandFrame.ReadYesOrNo("Save translation result"))
                     {
                         mass.Add(dialogueItemName!, dialogue);
-                        commandFrame.PrintLine("Save translation result.");
+                        commandFrame.PrintLine("Translation result saved.");
                     }
                 }
             }

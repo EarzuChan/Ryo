@@ -45,6 +45,8 @@ namespace Me.EarzuChan.Ryo
             }
 
             commandManager.CommandFrame.PrintLine("\nExiting Ryo Console... Have a great day!");
+
+            Thread.Sleep(1500);
         }
     }
 }
