@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.Utils
@@ -26,40 +25,4 @@ namespace Me.EarzuChan.Ryo.Utils
 
         public static void PrintInfo(params string[] args) => Logger(string.Join(' ', args));
     }
-=======
-﻿using System.Diagnostics;
-
-namespace Me.EarzuChan.Ryo.Utils
-{
-    public class LogUtils
-    {
-        public static LogUtils INSTANCE { get { instance ??= new(); return instance; } }
-        private static LogUtils? instance;
-        private Action<string> Logger = str => Trace.WriteLine(str);
-        public bool AllowPrintDebugInfo = false;
-
-        public void SetLogger(Action<string> logger) => Logger = logger;
-
-        public void PrintError(String info, Exception e, bool printStack = true)
-        {
-            Logger("错误：" + info + "，因为：" + e.Message);
-            if (e.StackTrace != null && printStack)
-            {
-                var stack = e.StackTrace;
-                if (e.InnerException != null && e.InnerException.StackTrace != null) stack = e.InnerException.StackTrace + "\n" + stack;
-                Logger(stack);
-            }
-        }
-
-        public void PrintInfo(params string[] args)
-        {
-            Logger(string.Join(' ', args));
-        }
-
-        public void PrintDebugInfo(params string[] args)
-        {
-            if (AllowPrintDebugInfo) PrintInfo("额外调试信息：" + args);
-        }
-    }
->>>>>>> 62013cbf2e8e2181ffdf41d357ae518f5ad00c74
 }
