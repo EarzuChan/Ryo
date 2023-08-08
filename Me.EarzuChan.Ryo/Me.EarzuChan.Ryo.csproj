@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -16,3 +17,23 @@
   </ItemGroup>
 
 </Project>
+=======
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <FileVersion></FileVersion>
+    <AssemblyVersion>1.1.4.5</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SharpZipLib.NETStandard" Version="1.0.7" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.0.1" />
+  </ItemGroup>
+
+</Project>
+>>>>>>> 62013cbf2e8e2181ffdf41d357ae518f5ad00c74
