@@ -2,7 +2,6 @@
 using Me.EarzuChan.Ryo.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
 
@@ -28,7 +27,7 @@ namespace Me.EarzuChan.Ryo.Utils
         public static object SystemBinaryToItem(byte[] item)
         {
             using MemoryStream memoryStream = new(item);
-            BinaryFormatter formatter = new ();
+            BinaryFormatter formatter = new();
 #pragma warning disable SYSLIB0011 // 类型或成员已过时
             return formatter.Deserialize(memoryStream);
 #pragma warning restore SYSLIB0011 // 类型或成员已过时

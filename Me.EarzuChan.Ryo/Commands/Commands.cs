@@ -2,12 +2,9 @@ using Me.EarzuChan.Ryo.Adaptions;
 using Me.EarzuChan.Ryo.Commands.CommandExceptions;
 using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.Formations.PipeDream;
-using Me.EarzuChan.Ryo.Formations.WeakPipe;
 using Me.EarzuChan.Ryo.Masses;
 using Me.EarzuChan.Ryo.Utils;
 using Newtonsoft.Json;
-using SixLabors.ImageSharp.Processing;
-using System.Collections;
 using System.Text;
 using static Me.EarzuChan.Ryo.Commands.ICommand;
 

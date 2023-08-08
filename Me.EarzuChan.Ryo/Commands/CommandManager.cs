@@ -1,7 +1,6 @@
 ﻿using Me.EarzuChan.Ryo.Utils;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Me.EarzuChan.Ryo.Commands
 {

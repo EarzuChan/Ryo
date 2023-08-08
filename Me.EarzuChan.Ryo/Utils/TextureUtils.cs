@@ -1,14 +1,4 @@
 ﻿using Me.EarzuChan.Ryo.Formations;
-using Me.EarzuChan.Ryo.Masses;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Utils
 {

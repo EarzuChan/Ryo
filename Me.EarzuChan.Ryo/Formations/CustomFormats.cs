@@ -1,11 +1,4 @@
 ﻿using Me.EarzuChan.Ryo.Adaptions;
-using Me.EarzuChan.Ryo.Formations;
-using Me.EarzuChan.Ryo.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Formations
 {

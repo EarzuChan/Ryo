@@ -1,12 +1,6 @@
 
-﻿using Me.EarzuChan.Ryo.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+using Me.EarzuChan.Ryo.Utils;
 using System.Text;
-using System.Threading.Tasks;
-using static Me.EarzuChan.Ryo.Masses.Mass;
 
 namespace Me.EarzuChan.Ryo.Masses
 {

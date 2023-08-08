@@ -3,7 +3,6 @@ using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Masses;
 using System.Reflection;
-using System.Security.AccessControl;
 
 namespace Me.EarzuChan.Ryo.Adaptions
 {

@@ -1,16 +1,6 @@
-﻿using Me.EarzuChan.Ryo.Adaptions.AdapterFactories;
-using Me.EarzuChan.Ryo.Adaptions;
+﻿using Me.EarzuChan.Ryo.Adaptions;
 using Me.EarzuChan.Ryo.IO;
 using Me.EarzuChan.Ryo.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Me.EarzuChan.Ryo.Formations.RyoPixmap;
-using System.Reflection.PortableExecutable;
-using System.Diagnostics;
-using Me.EarzuChan.Ryo.Commands;
 
 namespace Me.EarzuChan.Ryo.Masses
 {
