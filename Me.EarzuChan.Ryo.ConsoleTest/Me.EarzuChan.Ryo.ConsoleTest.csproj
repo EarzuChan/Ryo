@@ -5,12 +5,10 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <FileVersion>1.4.5.1</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Me.EarzuChan.Ryo.ConsoleSystem\Me.EarzuChan.Ryo.ConsoleSystem.csproj" />
-    <ProjectReference Include="..\Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
     <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
   </ItemGroup>
 

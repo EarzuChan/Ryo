@@ -7,10 +7,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
 {
     public class MassManager
     {
-        public static MassManager INSTANCE { get { instance ??= new(); return instance; } }
-        private static MassManager? instance;
-
-        private readonly Dictionary<string, MassFile> MassFiles = new();
+        public readonly Dictionary<string, MassFile> MassFiles = new();
 
         public MassFile GetMassFileOrThrow(string fileName)
         {

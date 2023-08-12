@@ -1,4 +1,4 @@
-using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
+using Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement;
 using Me.EarzuChan.Ryo.Core.Adaptions;
 using Me.EarzuChan.Ryo.Core.Formations;
 using Me.EarzuChan.Ryo.Core.Formations.PipeDream;
@@ -10,6 +10,7 @@ using Me.EarzuChan.Ryo.Utils;
 using SixLabors.ImageSharp;
 using System.Text;
 using static Me.EarzuChan.Ryo.ConsoleSystem.Commands.ICommand;
+using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
 
 namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 {
@@ -27,12 +28,12 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             CustomFileName = customFileName;
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             var fileName = CustomFileName ?? Path.GetFileNameWithoutExtension(PathString);
-            var mass = MassManager.INSTANCE.LoadMassFile(PathString, fileName);
+            var mass = StartUp.MassManager.LoadMassFile(PathString, fileName);
 
-            commandFrame.PrintLine($"Loaded, index information as follows:\n\n{MassManager.INSTANCE.GetInfo(mass)}");
+            commandFrame.PrintLine($"Loaded, index information as follows:\n\n{StartUp.MassManager.GetInfo(mass)}");
             commandFrame.PrintLine($"\nFile loaded, named {fileName.MakeFirstCharUpper()}, you can later dump the file, view index information, perform CRUD operations, and more using this name.");
         }
     }
@@ -47,9 +48,9 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             FileName = fileName;
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
-            ControlFlowUtils.TryCatchingThenThrow("Couldn't show file info", () => commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + MassManager.INSTANCE.GetInfo(MassManager.INSTANCE.GetMassFileOrThrow(FileName)))
+            ControlFlowUtils.TryCatchingThenThrow("Couldn't show file info", () => commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + StartUp.MassManager.GetInfo(StartUp.MassManager.GetMassFileOrThrow(FileName)))
             );
         }
     }
@@ -63,12 +64,12 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             FileName = fileName;
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
-            if (MassManager.INSTANCE.ExistsMass(FileName)) throw new RyoException("A file with the same name is already loaded, please choose a different name.");
+            if (StartUp.MassManager.ExistsMass(FileName)) throw new RyoException("A file with the same name is already loaded, please choose a different name.");
 
             var newMass = new MassFile();
-            MassManager.INSTANCE.AddMassFile(newMass, FileName);
+            StartUp.MassManager.AddMassFile(newMass, FileName);
 
             commandFrame.PrintLine($"File: {FileName} added successfully.");
 
@@ -83,29 +84,12 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         {
             FileName = fileName;
         }
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
-            if (MassManager.INSTANCE.ExistsMass(FileName)) MassManager.INSTANCE.UnloadMassFile(FileName);
+            if (StartUp.MassManager.ExistsMass(FileName)) StartUp.MassManager.UnloadMassFile(FileName);
             else throw new NoSuchFileException(FileName);
         }
 
-    }
-
-    [Command("Help", "Get the help infomations of this application")]
-    public class HelpCommand : ICommand
-    {
-        public void Execute(ICommand.CommandFrame commandFrame)
-        {
-            commandFrame.PrintLine($"{commandFrame.Manager.commands.Count} Available Commands:\n-------------------");
-
-            int i = 1;
-            foreach (var cmd in commandFrame.Manager.commands)
-            {
-                commandFrame.PrintLine($"{i++}. {cmd.Key.Name} - {cmd.Key.Information}");
-            }
-
-            if (!commandFrame.Manager.RunningWithArgs) commandFrame.PrintLine("\nType 'exit' to exit the command console.");
-        }
     }
 
     [Command("View", "View the item of your given id in a file")]
@@ -120,11 +104,11 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             Id = int.Parse(id);
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             ControlFlowUtils.TryCatchingThenThrow("Cannot retrieve object", () =>
             {
-                var mass = MassManager.INSTANCE.GetMassFileOrThrow(FileName);
+                var mass = StartUp.MassManager.GetMassFileOrThrow(FileName);
 
                 var typename = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(mass.ItemAdaptions[mass.ItemBlobs[Id].AdaptionId].DataJavaClz);
                 var item = mass.Get<object>(Id);
@@ -201,11 +185,11 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             SearchName = searchName;
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             ControlFlowUtils.TryCatchingThenThrow("Cannot locate object", () =>
             {
-                var mass = MassManager.INSTANCE.GetMassFileOrThrow(FileName);
+                var mass = StartUp.MassManager.GetMassFileOrThrow(FileName);
 
                 var map = mass.IdStrPairs;
                 commandFrame.PrintLine("Search Results:");
@@ -231,11 +215,11 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             PathName = pathName;
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             ControlFlowUtils.TryCatchingThenThrow("Cannot save object", () =>
             {
-                var mass = MassManager.INSTANCE.GetMassFileOrThrow(FileName);
+                var mass = StartUp.MassManager.GetMassFileOrThrow(FileName);
 
                 using var fileStream = FileUtils.OpenFile(PathName, true, true);
                 mass.Save(fileStream);
@@ -268,7 +252,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             Mode = (MODE)int.Parse(mode);
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             ControlFlowUtils.TryCatchingThenThrow("Couldn't unpack image", () =>
             {
@@ -379,39 +363,6 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
-    public class ImportDialogueTreeCommand : ICommand
-    {
-        public string FileName;
-        public string JsonFilePath;
-        public string ItemName;
-
-        public ImportDialogueTreeCommand(string fileName, string jsonFilePath, string itemName)
-        {
-            FileName = fileName;
-            JsonFilePath = jsonFilePath;
-            ItemName = itemName;
-        }
-
-        public void Execute(ICommand.CommandFrame commandFrame)
-        {
-            ControlFlowUtils.TryCatchingThenThrow("Parse failed", () =>
-            {
-                var mass = MassManager.INSTANCE.GetMassFileOrThrow(FileName);
-
-                // TODO:创建通用的拨弄 我们得约定一个输出格式 才能输入
-
-                string msgText = File.ReadAllText(JsonFilePath);
-
-                var msg = FormatUtils.NewtonsoftJsonToItem<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
-
-                var result = mass.Add(ItemName, msg);
-
-                commandFrame.PrintLine($"Added, mode is {result.ToString().MakeFirstCharLower()}");
-            });
-        }
-    }
-
     [Command("PackImage", "Pack a image to a texture file and save it")]
     public class PackImageCommand : ICommand
     {
@@ -430,7 +381,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             FileName = imgPath + ".texture";
         }
 
-        public void Execute(ICommand.CommandFrame commandFrame)
+        public void Execute(CommandFrame commandFrame)
         {
             ControlFlowUtils.TryCatchingThenThrow("Couldn't pack image to a \".texture\"", () =>
             {
@@ -449,51 +400,38 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    // Mass那边是否配合完了项目压缩
-    [Command("Inflate", "Inflate a file")]
-    public class InflateCommand : ICommand
+    [Command("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
+    public class ImportDialogueTreeCommand : ICommand
     {
-        public enum FILETYPE
-        {
-            FileSystem,
-            TextureFile
-        }
-
-        public FILETYPE FileType = FILETYPE.FileSystem;
         public string FileName;
-        // public bool WriteToOriginal = false;
+        public string JsonFilePath;
+        public string ItemName;
 
-        public InflateCommand(string fileName)
+        public ImportDialogueTreeCommand(string fileName, string jsonFilePath, string itemName)
         {
             FileName = fileName;
+            JsonFilePath = jsonFilePath;
+            ItemName = itemName;
         }
 
-        public InflateCommand(string fileName, string fileType)
+        public void Execute(CommandFrame commandFrame)
         {
-            FileName = fileName;
-            FileType = (FILETYPE)int.Parse(fileType);
-        }
-
-        public void Execute(ICommand.CommandFrame commandFrame)
-        {
-            using FileStream fileStream = FileUtils.OpenFile(FileName);
-            Mass mass = FileType switch
+            ControlFlowUtils.TryCatchingThenThrow("Parse failed", () =>
             {
-                FILETYPE.FileSystem => new MassFile(),
-                FILETYPE.TextureFile => new TextureFile(),
-                _ => throw new NotSupportedException("This file type is not supported at the moment."),
-            };
-            mass.Load(fileStream);
+                var mass = StartUp.MassManager.GetMassFileOrThrow(FileName);
 
-            var fileName = FileName + "_inflated";
-            using var writer = FileUtils.OpenFile(fileName, true, true);
-            mass.Save(writer, false);
+                // TODO:创建通用的拨弄 我们得约定一个输出格式 才能输入
 
-            commandFrame.PrintLine($"Write out to {fileName}.");
+                string msgText = File.ReadAllText(JsonFilePath);
+
+                var msg = FormatUtils.NewtonsoftJsonToItem<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+
+                var result = mass.Add(ItemName, msg);
+
+                commandFrame.PrintLine($"Added, mode is {result.ToString().MakeFirstCharLower()}");
+            });
         }
     }
-
-    // TODO:增加一个全体写出到文件夹然后格式化为Json或者就是Raw或者是Dumped
 
     [Command("OperateDialogueTree", "Only for PipeDreams now")]
     public class OperateDialogueTreeCommand : ICommand
@@ -524,7 +462,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         {
             ControlFlowUtils.TryCatchingThenThrow("Operating Dialogue Tree encountered an issue", () =>
             {
-                var mass = MassManager.INSTANCE.GetMassFileOrThrow(FileName);
+                var mass = StartUp.MassManager.GetMassFileOrThrow(FileName);
 
                 var dialogue = mass.Get<DialogueTreeDescriptor>(Id);
 
@@ -570,4 +508,50 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             }, new Dictionary<Type, string> { { typeof(InvalidCastException), "The item got by the id you given is not a Dialogue Tree item" } });
         }
     }
+
+    // Mass那边是否配合完了项目压缩
+    [Command("Inflate", "Inflate a file")]
+    public class InflateCommand : ICommand
+    {
+        public enum FILETYPE
+        {
+            FileSystem,
+            TextureFile
+        }
+
+        public FILETYPE FileType = FILETYPE.FileSystem;
+        public string FileName;
+        // public bool WriteToOriginal = false;
+
+        public InflateCommand(string fileName)
+        {
+            FileName = fileName;
+        }
+
+        public InflateCommand(string fileName, string fileType)
+        {
+            FileName = fileName;
+            FileType = (FILETYPE)int.Parse(fileType);
+        }
+
+        public void Execute(CommandFrame commandFrame)
+        {
+            using FileStream fileStream = FileUtils.OpenFile(FileName);
+            Mass mass = FileType switch
+            {
+                FILETYPE.FileSystem => new MassFile(),
+                FILETYPE.TextureFile => new TextureFile(),
+                _ => throw new NotSupportedException("This file type is not supported at the moment."),
+            };
+            mass.Load(fileStream);
+
+            var fileName = FileName + "_inflated";
+            using var writer = FileUtils.OpenFile(fileName, true, true);
+            mass.Save(writer, false);
+
+            commandFrame.PrintLine($"Write out to {fileName}.");
+        }
+    }
+
+    // TODO:增加一个全体写出到文件夹然后格式化为Json或者就是Raw或者是Dumped
 }
