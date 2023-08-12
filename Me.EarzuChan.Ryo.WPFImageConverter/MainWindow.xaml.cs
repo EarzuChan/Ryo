@@ -1,4 +1,5 @@
-﻿using Me.EarzuChan.Ryo.Formations;
+﻿using Me.EarzuChan.Ryo.Exceptions;
+using Me.EarzuChan.Ryo.Formations;
 using Me.EarzuChan.Ryo.Masses;
 using Me.EarzuChan.Ryo.Utils;
 using Me.EarzuChan.Ryo.WPFImageConverter.Langs;
@@ -187,17 +188,17 @@ namespace Me.EarzuChan.Ryo.WPFImageConverter
 
                 int imgId = textureFile.ImageIDsArray.First().First();
 
-                Img = TextureUtils.MakeFullImage(textureFile.Get<FragmentalImage>(imgId));
+                Img = textureFile.Get<FragmentalImage>(imgId).ToImage();
 
                 MainWindow.INSTANCE.ShowImage(Img);
 
             }
-            else throw new Exception("未正确选取图片资源");
+            else throw new RyoException("未正确选取图片资源");
         }
 
         public override void Save()
         {
-            if (Img == null) throw new Exception("未打开图片");
+            if (Img == null) throw new RyoException("未打开图片");
 
             var saveFileDialog = new SaveFileDialog
             {
@@ -217,7 +218,7 @@ namespace Me.EarzuChan.Ryo.WPFImageConverter
 
                 if (MainWindow.INSTANCE.OpenSavedPath) Process.Start("explorer.exe", $"/select,\"{fileName}\"");
             }
-            else throw new Exception("未正确选取图片保存地址");
+            else throw new RyoException("未正确选取图片保存地址");
         }
     }
 
@@ -246,12 +247,12 @@ namespace Me.EarzuChan.Ryo.WPFImageConverter
 
                 DefaultSaveName = Path.GetFileName(fileName) + ".texture";
             }
-            else throw new Exception("未正确选取图片资源");
+            else throw new RyoException("未正确选取图片资源");
         }
 
         public override void Save()
         {
-            if (Img == null) throw new Exception("未打开图片");
+            if (Img == null) throw new RyoException("未打开图片");
 
             SaveFileDialog saveFileDialog = new()
             {
@@ -271,12 +272,12 @@ namespace Me.EarzuChan.Ryo.WPFImageConverter
                 using var fileStream = FileUtils.OpenFile(fileName, true, true, false);
 
                 TextureFile textureFile = new();
-                int imgId = textureFile.Add(TextureUtils.CreateImage(Img, 512));
+                int imgId = textureFile.Add(Img.ToFragmentalImage(512));
                 textureFile.ImageIDsArray.Add(new List<int> { imgId });
 
                 textureFile.Save(fileStream);
             }
-            else throw new Exception("未正确选取图片资源保存地址");
+            else throw new RyoException("未正确选取图片资源保存地址");
         }
     }
 }

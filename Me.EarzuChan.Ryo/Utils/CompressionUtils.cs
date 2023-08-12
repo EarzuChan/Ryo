@@ -29,12 +29,12 @@ namespace Me.EarzuChan.Ryo.Utils
 
         public static byte[] Deflate(byte[] indexBytes, int offset, int length)
         {
-            Deflater deflater = new Deflater();
+            Deflater deflater = new();
             deflater.SetInput(indexBytes, offset, length);
             deflater.Finish();
 
             byte[] buffer = new byte[1024];
-            List<byte> outputList = new List<byte>();
+            List<byte> outputList = new();
 
             while (!deflater.IsFinished)
             {

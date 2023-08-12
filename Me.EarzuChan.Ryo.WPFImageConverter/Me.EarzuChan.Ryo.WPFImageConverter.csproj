@@ -25,10 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Resource Include="button_open.png" />
     <Resource Include="button_save.png" />
     <Resource Include="checkbox_checked.png" />
