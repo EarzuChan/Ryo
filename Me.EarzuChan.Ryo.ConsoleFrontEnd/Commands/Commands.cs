@@ -33,7 +33,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             var fileName = CustomFileName ?? Path.GetFileNameWithoutExtension(PathString);
             var mass = StartUp.MassManager.LoadMassFile(PathString, fileName);
 
-            commandFrame.PrintLine($"Loaded, index information as follows:\n\n{StartUp.MassManager.GetInfo(mass)}");
+            commandFrame.PrintLine($"Loaded, index information as follows:\n\n{mass.GetInfo()}");
             commandFrame.PrintLine($"\nFile loaded, named {fileName.MakeFirstCharUpper()}, you can later dump the file, view index information, perform CRUD operations, and more using this name.");
         }
     }

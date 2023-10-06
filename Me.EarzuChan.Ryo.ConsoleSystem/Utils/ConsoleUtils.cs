@@ -8,7 +8,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.Utils
 {
     public static class ConsoleUtils
     {
-        public string[] ParseCommandLineArguments(string commandLine)
+        public static string[] ParseCommandLineArguments(string commandLine)
         {
             List<string> arguments = new();
 

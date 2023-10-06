@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Me.EarzuChan.Ryo.DesktopFrontEnd
+namespace Me.EarzuChan.Ryo.DesktopTest
 {
     /// <summary>
     /// Interaction logic for App.xaml
