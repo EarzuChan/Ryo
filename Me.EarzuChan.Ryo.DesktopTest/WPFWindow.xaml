@@ -6,8 +6,18 @@
         xmlns:local="clr-namespace:Me.EarzuChan.Ryo.DesktopTest"
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="Ryo Desktop" Height="450" Width="800">
-    <wpf:WebView2 x:Name="MyWebView2">
-        
-    </wpf:WebView2>
+        Title="Ryo Desktop"
+        Height="800"
+        Width="1200"
+        WindowStyle="None"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <WindowChrome x:Key="WindowChromeKey">
+            <WindowChrome.ResizeBorderThickness>
+                <Thickness>5</Thickness>
+            </WindowChrome.ResizeBorderThickness>
+            <WindowChrome.CaptionHeight>0</WindowChrome.CaptionHeight>
+        </WindowChrome>
+    </Window.Resources>
+    <wpf:WebView2 x:Name="MyWebView2" />
 </Window>

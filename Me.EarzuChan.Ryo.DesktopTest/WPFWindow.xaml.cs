@@ -2,6 +2,7 @@
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Path = System.IO.Path;
 
 namespace Me.EarzuChan.Ryo.DesktopTest
 {
@@ -35,116 +37,112 @@ namespace Me.EarzuChan.Ryo.DesktopTest
         {
             InitializeComponent();
 
-            MassServer.MassManager.LoadMassFile("D:\\A Sources\\WeakPipeRecovery\\assets\\content.fs", "Content");
+            // FIXME:窗口白条问题
 
             InitWebView();
         }
 
         private async void InitWebView()
         {
+            // 注册回调
             MyWebView2.CoreWebView2InitializationCompleted += OnWebViewInited;
 
-            // 加载
-
+            // 加载核心
             await MyWebView2.EnsureCoreWebView2Async();
-            // var text = File.ReadAllText("WebResources/index.html");
-            // MyWebView2.NavigateToString(text);
 
-            MyWebView2.CoreWebView2.SetVirtualHostNameToFolderMapping("genshin.launch", "../../../WebResources", CoreWebView2HostResourceAccessKind.Deny);
-            //导航
-            MyWebView2.CoreWebView2.Navigate("https://genshin.launch/index.html");
+            // 加载资源
+            MyWebView2.CoreWebView2.SetVirtualHostNameToFolderMapping("ryo_web_frontend", "../../../WebResources", CoreWebView2HostResourceAccessKind.Deny);
+            MyWebView2.CoreWebView2.Navigate("https://ryo_web_frontend/index.html");
         }
 
         private void OnWebViewInited(object? sender, CoreWebView2InitializationCompletedEventArgs e)
         {
+            // 当浏览器加载好
+
             // 注入对象 互操作
             MyWebView2.CoreWebView2.AddHostObjectToScript("massServer", MassServer);
-            Trace.WriteLine(MassServer.GetMasses());
+            // Trace.WriteLine(MassServer.GetMasses());
 
-            // 每当页面加载好
-            /*MyWebView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
- """
-const MassServer = window.chrome.webview.hostObjects.MassServer
-
-(async () => {
-    // 获取文本列表
-    const textList = await MassServer.GetMasses()
-
-    // 创建列表DOM
-    const listContainer = document.createElement("ul")
-    listContainer.style.backgroundColor = "black"
-    listContainer.style.listStyle = "none"
-    listContainer.style.padding = "10px"
-    document.body.appendChild(listContainer)
-
-    // 循环创建DOM项
-    textList.forEach(text => {
-        const listItem = document.createElement("li")
-        listItem.style.color = "white"
-        listItem.textContent = text
-        listContainer.appendChild(listItem)
-    })
-})()
-""");*/
-
+#if DEBUG
             // 打开开发者工具
             MyWebView2.CoreWebView2.OpenDevToolsWindow();
+#endif
         }
     }
 
     public class MassServer
     {
-        public class MassBean
+        public class FileBean
         {
             [JsonProperty("label")]
             public string Name;
 
             [JsonProperty("children")]
-            public MassItemBean[] Items;
+            public ItemBean[] Items;
 
-            public MassBean(string name, MassItemBean[] items)
+            public FileBean(string name, ItemBean[] items)
             {
                 Name = name;
                 Items = items;
             }
         }
 
-        public class MassItemBean
+        public class ItemBean
         {
-            [JsonIgnore]// [JsonProperty("id")]
+            [JsonIgnore]
             public int Id;
 
             [JsonProperty("label")]
             public string Name;
 
-            [JsonProperty("type")]
-            public string Type;
-
-            [JsonIgnore]// [JsonProperty("adapter_type")]
-            public string AdapterType;
-
-            public MassItemBean(int id, string name, string type, string adapterType)
+            public ItemBean(int id, string name)
             {
                 Id = id;
                 Name = name;
-                Type = type;
-                AdapterType = adapterType;
             }
         }
 
         public MassManager MassManager = new();
 
-        public MassServer() => LogUtils.PrintInfo("MassServer Inited");
+        // public MassServer() => LogUtils.PrintInfo("MassServer Inited");
 
-        /*public string DoSth(string text)
+        public string GetFileTreeData() => FormatUtils.NewtonsoftItemToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
+
+        public void OpenFile()
         {
-            var a = $"Hello, {text}";
+            OpenFileDialog openFileDialog = new()
+            {
+                Title = "Open MassFile (.fs)",
+                Filter = "MassFile|*.fs",
+                FileName = string.Empty,
+                FilterIndex = 1,
+                Multiselect = false,
+                RestoreDirectory = true,
+                DefaultExt = "fs"
+            };
+            if (openFileDialog.ShowDialog() == false) return;
 
-            Trace.WriteLine(a);
+            MassManager.LoadMassFile(openFileDialog.FileName, Path.GetFileNameWithoutExtension(openFileDialog.FileName));
+        }
 
-            return a;
-        }*/
+        public void NewFile() => MassManager.MassFiles.Add($"file {MassManager.MassFiles.Count + 1}", new MassFile());
 
-        public string GetMasses() => FormatUtils.NewtonsoftItemToJson(MassManager.MassFiles.Select(oneMass => new MassBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new MassItemBean(pair.Value, pair.Key, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz)).ToArray())).ToArray());
+        public void NewFile(string fileName) => MassManager.MassFiles.Add(fileName, new MassFile());
+
+        public void ExitApp() => Environment.Exit(0);
+
+        public string GetItemData(string fileName, string itemName)
+        {
+            try
+            {
+                var mass = MassManager.MassFiles[fileName];
+
+                return FormatUtils.NewtonsoftItemToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
+            }
+            catch (Exception ex)
+            {
+                return $"{{\"error\":\"{ex.Message}\"}}";
+            }
+        }
     }
 }
