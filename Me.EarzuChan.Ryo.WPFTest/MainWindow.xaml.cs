@@ -23,7 +23,6 @@ namespace Me.EarzuChan.Ryo.WPFTest
         public MainWindow()
         {
             InitializeComponent();
-
             ViewHost.Children.Add(new FieldEditor(Obj));
         }
     }

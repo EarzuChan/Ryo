@@ -1,4 +1,5 @@
-﻿using Me.EarzuChan.Ryo.Core.Masses;
+﻿using Me.EarzuChan.Ryo.Core.Adaptions;
+using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using Microsoft.Web.WebView2.Core;
@@ -9,6 +10,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -23,6 +26,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Path = System.IO.Path;
+using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 
 namespace Me.EarzuChan.Ryo.DesktopTest
 {
@@ -51,8 +55,12 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             await MyWebView2.EnsureCoreWebView2Async();
 
             // 加载资源
-            MyWebView2.CoreWebView2.SetVirtualHostNameToFolderMapping("ryo_web_frontend", "../../../WebResources", CoreWebView2HostResourceAccessKind.Deny);
+            MyWebView2.CoreWebView2.SetVirtualHostNameToFolderMapping("ryo_web_frontend", "WebResources", CoreWebView2HostResourceAccessKind.Deny);
             MyWebView2.CoreWebView2.Navigate("https://ryo_web_frontend/index.html");
+
+#if DEBUG
+            MyWebView2.CoreWebView2.Navigate("http://127.0.0.1:5173/");
+#endif
         }
 
         private void OnWebViewInited(object? sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -68,6 +76,9 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             MyWebView2.CoreWebView2.OpenDevToolsWindow();
 #endif
         }
+
+        private void MoveWindow(object sender, MouseButtonEventArgs e) => DragMove();
+
     }
 
     public class MassServer
@@ -141,7 +152,77 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             }
             catch (Exception ex)
             {
-                return $"{{\"error\":\"{ex.Message}\"}}";
+                return $"{{\"error_getting\":\"{ex.Message}\"}}";
+            }
+        }
+
+        // TODO:十分甚至九分不稳健 能跑进行
+        public void SetItemData(string fileName, string itemName, string json)
+        {
+            try
+            {
+                Trace.WriteLine($"文件：{fileName} 项目：{itemName} Json：{json}");
+
+                var mass = MassManager.MassFiles[fileName];
+
+                var itemBlob = mass.ItemBlobs[mass.IdStrPairs[itemName]];
+
+                var itemAdaption = mass.ItemAdaptions[itemBlob.AdaptionId];
+
+                var dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
+
+                Trace.WriteLine(dataRyoType);
+
+                MethodInfo tempMethod = typeof(FormatUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.BaseType);
+                object value = tempMethod.Invoke(null, new[] { json });
+
+                mass.Add(itemName, value);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"设文件项目爆了：\n{ex}");
+            }
+        }
+
+        public void SaveFile(string fileName)
+        {
+            try
+            {
+                ControlFlowUtils.TryCatchingThenThrow("Cannot save object", () =>
+                {
+                    SaveFileDialog saveFileDialog = new()
+                    {
+                        Title = "Save MassFile (.fs)",
+                        Filter = "MassFile|*.fs",
+                        FileName = string.Empty,
+                        FilterIndex = 1,
+                        RestoreDirectory = true,
+                        DefaultExt = "fs"
+                    };
+                    if (saveFileDialog.ShowDialog() == false) throw new Exception("未选取文件");
+
+                    var mass = MassManager.GetMassFileOrThrow(fileName);
+
+                    using var fileStream = FileUtils.OpenFile(saveFileDialog.FileName, true, true);
+                    mass.Save(fileStream);
+                });
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"保存文件爆了：\n{ex}");
+            }
+        }
+
+        public void CloseFile(string fileName)
+        {
+            try
+            {
+                if (MassManager.ExistsMass(fileName)) MassManager.UnloadMassFile(fileName);
+                else throw new NoSuchFileException(fileName);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"关闭文件爆了：\n{ex}");
             }
         }
     }

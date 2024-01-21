@@ -120,6 +120,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
                 ItemBlobs.Add(new ItemBlob(114514, 1919810, Array.Empty<byte>()));// 占位耳
 
                 // 代表正在序列化，托管给原主
+                // 收集单
                 if (SavedItems != null)
                 {
                     SavedItems.Add(id, obj);
@@ -239,8 +240,12 @@ namespace Me.EarzuChan.Ryo.Core.Masses
             // LogUtils.INSTANCE.PrintInfo($"减一元数据：{metaOfIdMinusOne}", $"保存的减一：{SavedItemBlobMinusOneStickyId}", $"子项ID：{subitemId}", $"与三和：{metaOfIdMinusOne & 3}");
 
             // 必须满足要求
-            if ((metaOfIdMinusOne & 3) == 3) return Get<T>(subitemId);
-            throw new NotSupportedException($"元数据的类型（{metaOfIdMinusOne & 3}）暂不支持");
+            return (metaOfIdMinusOne & 3) switch
+            {
+                0 => default,// 本该返回NULL
+                3 => Get<T>(subitemId),
+                _ => throw new NotSupportedException($"元数据的类型（{metaOfIdMinusOne & 3}）暂不支持"), // 1抛NULL、2内联还不支持
+            };
         }
 
         // 如果是FS，需要在ID名字表中拨弄删除
@@ -459,7 +464,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
             {
                 int newStickyMetaData;
 
-                if (obj == null) newStickyMetaData = 0; //Ret?
+                if (obj == null) newStickyMetaData = 0; // 给SUB是NULL预留的
                 else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmBaseType)
                 {
                     throw new NotImplementedException();
