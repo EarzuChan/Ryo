@@ -6,3 +6,6 @@ Console.InputEncoding = Encoding.Unicode;
 CommandManager commandManager = new(new ConsoleInfo { Name = "Console Test" });
 
 commandManager.InitConsole();
+
+var sth = CommandApplication.CreateBuilder().Build();
+sth.Run();

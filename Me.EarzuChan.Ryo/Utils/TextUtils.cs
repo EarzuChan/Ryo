@@ -19,5 +19,17 @@
             }
             return str;
         }
+
+        public static string MakeInfoText(string[] args)
+        {
+            var str = $"INFO: {(args.Length == 0 ? "(No Content)" : args.First())}";
+            int index = 1;
+            while (index != args.Length)
+            {
+                str += $"\n\nContents {index}:\n--------------\n{args[index]}";
+                index++;
+            }
+            return str;
+        }
     }
 }

@@ -7,7 +7,7 @@ using System.Xml.Serialization;
 using Me.EarzuChan.Ryo.Core.Formations.PipeDream;
 using Me.EarzuChan.Ryo.Exceptions;
 
-namespace Me.EarzuChan.Ryo.Core.Utils
+namespace Me.EarzuChan.Ryo.Extensions.Utils
 {
     public static class FormatUtils
     {

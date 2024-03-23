@@ -18,7 +18,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.ConsoleTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.DesktopTest", "Me.EarzuChan.Ryo.DesktopTest\Me.EarzuChan.Ryo.DesktopTest.csproj", "{2AEF1B58-BEDF-47A9-ADC3-2A2AF0D9F79D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.WPFTest", "Me.EarzuChan.Ryo.WPFTest\Me.EarzuChan.Ryo.WPFTest.csproj", "{88095FD6-06A4-4E6B-A150-30CD41886C80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.WPFTest", "Me.EarzuChan.Ryo.WPFTest\Me.EarzuChan.Ryo.WPFTest.csproj", "{88095FD6-06A4-4E6B-A150-30CD41886C80}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.Extensions", "Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj", "{9570D98F-F51A-48E4-BA1F-3C29097763E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -162,6 +164,22 @@ Global
 		{88095FD6-06A4-4E6B-A150-30CD41886C80}.Release|x64.Build.0 = Release|Any CPU
 		{88095FD6-06A4-4E6B-A150-30CD41886C80}.Release|x86.ActiveCfg = Release|Any CPU
 		{88095FD6-06A4-4E6B-A150-30CD41886C80}.Release|x86.Build.0 = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|x64.Build.0 = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Debug|x86.Build.0 = Debug|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|ARM64.Build.0 = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|x64.ActiveCfg = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|x64.Build.0 = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|x86.ActiveCfg = Release|Any CPU
+		{9570D98F-F51A-48E4-BA1F-3C29097763E8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

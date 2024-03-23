@@ -30,18 +30,48 @@ using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 
 namespace Me.EarzuChan.Ryo.DesktopTest
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
+    public class ShitNativeUtils
+    {
+        const int LOGPIXELSX = 88;
+
+        [DllImport("gdi32.dll")]
+        static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        public static double GetScale()
+        {
+            IntPtr hdc = GetDC(IntPtr.Zero);
+            int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+            ReleaseDC(IntPtr.Zero, hdc);
+
+            return dpi / 96.0;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] //导入user32.dll函数库
+        public static extern bool GetCursorPos(out System.Drawing.Point lpPoint);//获取鼠标坐标
+
+        public static Point GetMousePosition()
+        {
+            double scale = GetScale();
+            GetCursorPos(out System.Drawing.Point mp);
+            return new Point(mp.X / scale, mp.Y / scale);
+        }
+    }
+
     public partial class WPFWindow : Window
     {
-        public MassServer MassServer = new();
+        public ServiceHandler handler;
 
         public WPFWindow()
         {
             InitializeComponent();
 
-            // FIXME:窗口白条问题
+            handler = new(this);
 
             InitWebView();
         }
@@ -68,7 +98,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             // 当浏览器加载好
 
             // 注入对象 互操作
-            MyWebView2.CoreWebView2.AddHostObjectToScript("massServer", MassServer);
+            MyWebView2.CoreWebView2.AddHostObjectToScript("handler", handler);
             // Trace.WriteLine(MassServer.GetMasses());
 
 #if DEBUG
@@ -81,8 +111,16 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
     }
 
-    public class MassServer
+    public class ServiceHandler
     {
+        private WPFWindow myWindow;
+        private bool isDragging = false;
+
+        public ServiceHandler(WPFWindow window)
+        {
+            myWindow = window;
+        }
+
         public class FileBean
         {
             [JsonProperty("label")]
@@ -225,5 +263,64 @@ namespace Me.EarzuChan.Ryo.DesktopTest
                 Trace.WriteLine($"关闭文件爆了：\n{ex}");
             }
         }
+
+        public void DragResizeWindow()
+        {
+            throw new NotImplementedException("To Do");
+        }
+
+        /*public void DragNewMore()
+        {
+            Trace.WriteLine("楽");
+            if (Mouse.LeftButton == MouseButtonState.Pressed)
+            {
+                Trace.WriteLine("太美丽");
+                myWindow.DragMove();
+            }
+        }*/
+
+        public void DragWindow()
+        {
+            isDragging = true;
+            Point oriWindow = new(myWindow.Left, myWindow.Top); // 获取鼠标当前位置
+            Point before = ShitNativeUtils.GetMousePosition();
+            // Trace.WriteLine($"开始：{oriWindow}、{before}");
+            int times = 0;
+
+            Task.Run(() =>
+            {
+                Trace.WriteLine("移动喵");
+
+                while (isDragging)
+                {
+                    Point now = ShitNativeUtils.GetMousePosition();
+                    Point delta = new(now.X - before.X, now.Y - before.Y);
+                    // Trace.WriteLine($"现在：{now}、{delta}");
+
+                    // 处理移动
+                    myWindow.Dispatcher.Invoke(() =>
+                    {
+                        // 更新窗口位置
+                        myWindow.Left = oriWindow.X + delta.X;
+                        myWindow.Top = oriWindow.Y + delta.Y;
+                    });
+
+                    times++;
+                    if (times >= 1500) isDragging = false;
+
+                    Task.Delay(10);
+                }
+
+                Trace.WriteLine("移动牛魔");
+            });
+        }
+
+        public void DragWindowOver() => isDragging = false;
+
+        public void MaximizeWindow() => myWindow.WindowState = WindowState.Maximized;
+
+        public void MinimizeWindow() => myWindow.WindowState = WindowState.Minimized;
+
+        public void RestoreWindow() => myWindow.WindowState = WindowState.Normal;
     }
 }

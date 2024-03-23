@@ -15,7 +15,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd
         {
             Console.InputEncoding = Encoding.Unicode;
 
-            LogUtils.SetLogger(str => Console.WriteLine(str)); // 重定向日志输出_使用缺省
+            LogUtils.Logger += str => Console.WriteLine(str); // 重定向日志输出_使用缺省
 
 #if DEBUG
             CommandManager.IsDev = true;

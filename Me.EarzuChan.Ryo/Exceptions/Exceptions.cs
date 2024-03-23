@@ -16,7 +16,23 @@ namespace Me.EarzuChan.Ryo.Exceptions
     {
         public class NoSuchFileException : Exception
         {
-            public NoSuchFileException(string fileName) : base($"Please review your input as the file {fileName} could not be located.") { }
+            public NoSuchFileException(string fileName) : base($"No such a file: {fileName}") { }
+        }
+
+        public class EmptyFileException : Exception
+        {
+            public EmptyFileException(string fileName) : base("An empty file was encountered: {fileName}") { }
+        }
+
+        public class RestrictedFileAccessException : Exception
+        {
+            public enum RestrictedFileAccess
+            {
+                Read,
+                Write
+            }
+
+            public RestrictedFileAccessException(string fileName, RestrictedFileAccess permission) : base($"No {permission} permission for file: {fileName}") { }
         }
     }
 }

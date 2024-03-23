@@ -11,6 +11,7 @@ using SixLabors.ImageSharp;
 using System.Text;
 using static Me.EarzuChan.Ryo.ConsoleSystem.Commands.ICommand;
 using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
+using Me.EarzuChan.Ryo.Extensions.Utils;
 
 namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 {
