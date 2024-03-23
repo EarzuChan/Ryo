@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Me.EarzuChan.Ryo.ConsoleSystem\Me.EarzuChan.Ryo.ConsoleSystem.csproj" />
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj" />
     <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
   </ItemGroup>
 

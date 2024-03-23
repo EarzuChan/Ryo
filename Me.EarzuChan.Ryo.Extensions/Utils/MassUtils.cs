@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.Core.Utils
+namespace Me.EarzuChan.Ryo.Exceptions.Utils
 {
     public static class MassUtils
     {

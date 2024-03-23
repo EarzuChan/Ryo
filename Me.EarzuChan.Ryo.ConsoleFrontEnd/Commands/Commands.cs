@@ -4,6 +4,7 @@ using Me.EarzuChan.Ryo.Core.Formations;
 using Me.EarzuChan.Ryo.Core.Formations.PipeDream;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
+using Me.EarzuChan.Ryo.Exceptions.Utils;
 using Me.EarzuChan.Ryo.Exceptions;
 using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 using Me.EarzuChan.Ryo.Utils;
@@ -115,9 +116,9 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
                 var item = mass.Get<object>(Id);
                 var itemName = mass.IdStrPairs.Where(pair => pair.Value == Id).Select(pair => pair.Key).FirstOrDefault();
 
-                string newtonJson = FormatUtils.NewtonsoftItemToJson(item);
+                string newtonJson = SerializationUtils.NewtonsoftItemToJson(item);
 
-                commandFrame.PrintLine($"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{FormatUtils.InsidedItemToJson(item)}\n\nNewtonsoft reader:\n{newtonJson}");
+                commandFrame.PrintLine($"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{SerializationUtils.InsidedItemToJson(item)}\n\nNewtonsoft reader:\n{newtonJson}");
 
                 bool dump = commandFrame.ReadYesOrNo("\nHaha, do you want to dump");
                 if (dump)
@@ -278,7 +279,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
                             foreach (var item in textureFile.ItemAdaptions) commandFrame.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
 
                             commandFrame.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
-                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{FormatUtils.NewtonsoftItemToJson(textureFile.ImageIDsArray[i])}]");
+                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{SerializationUtils.NewtonsoftItemToJson(textureFile.ImageIDsArray[i])}]");
 
                             if (textureFile.ImageIDsArray.Count == 0) return;
 
@@ -297,7 +298,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 
                                     if (imageBlob != null && imageBlob.ClipSize != 0)
                                     {
-                                        commandFrame.PrintLine($"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{FormatUtils.NewtonsoftItemToJson(imageBlob.LevelHeights)}] 层级宽：[{FormatUtils.NewtonsoftItemToJson(imageBlob.LevelWidths)}] 层级数：{imageBlob.RyoPixmaps.Length}");
+                                        commandFrame.PrintLine($"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{SerializationUtils.NewtonsoftItemToJson(imageBlob.LevelHeights)}] 层级宽：[{SerializationUtils.NewtonsoftItemToJson(imageBlob.LevelWidths)}] 层级数：{imageBlob.RyoPixmaps.Length}");
                                         string pathName = FileName + $" No_{piece} Dumps";
                                         commandFrame.PrintLine("-- 该图片的相关资源将被写出在：" + pathName);
                                         if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
@@ -425,7 +426,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 
                 string msgText = File.ReadAllText(JsonFilePath);
 
-                var msg = FormatUtils.NewtonsoftJsonToItem<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+                var msg = SerializationUtils.NewtonsoftJsonToItem<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
 
                 var result = mass.Add(ItemName, msg);
 
@@ -478,7 +479,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
                     int no = 1;
                     foreach (var conv in dialogue.ConversationList)
                     {
-                        commandFrame.PrintLine($"--------\nDialogue Part {no}:\nTags: {FormatUtils.NewtonsoftItemToJson(conv.Tags)}\nTags to lock: {FormatUtils.NewtonsoftItemToJson(conv.TagsToLock)}\nTags to unlock: {FormatUtils.NewtonsoftItemToJson(conv.TagsToUnlock)}\nStatus: {conv.Status} Unread: {conv.StateOfDiswatch} Trigger: {conv.Trigger}");
+                        commandFrame.PrintLine($"--------\nDialogue Part {no}:\nTags: {SerializationUtils.NewtonsoftItemToJson(conv.Tags)}\nTags to lock: {SerializationUtils.NewtonsoftItemToJson(conv.TagsToLock)}\nTags to unlock: {SerializationUtils.NewtonsoftItemToJson(conv.TagsToUnlock)}\nStatus: {conv.Status} Unread: {conv.StateOfDiswatch} Trigger: {conv.Trigger}");
                         int all = conv.SenderMessagers.Count;
                         commandFrame.PrintLine($"\nSender's Conversation Count: {all}");
                         int no2 = 1;
