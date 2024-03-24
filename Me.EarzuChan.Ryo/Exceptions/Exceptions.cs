@@ -21,7 +21,7 @@ namespace Me.EarzuChan.Ryo.Exceptions
 
         public class EmptyFileException : Exception
         {
-            public EmptyFileException(string fileName) : base("An empty file was encountered: {fileName}") { }
+            public EmptyFileException(string fileName) : base($"An empty file was encountered: {fileName}") { }
         }
 
         public class RestrictedFileAccessException : Exception

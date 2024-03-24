@@ -26,11 +26,12 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
             public Inner[] Wlgd;
             public List<Inner> Wlgbd;
             public AdaptableFormat Wlgsg;
+            public AdaptableFormat[] Wlgdw;
         }
 
         public void Execute(CommandFrame commandFrame)
         {
-            commandFrame.PrintLine(SerializationUtils.MakeAdaptableFormatStructure(typeof(骚纲)));
+            commandFrame.PrintLine(SerializationUtils.GenerateAdaptableFormatStructure(typeof(骚纲), TsTypeUtils.NonAdaptableFormatHandling.Error));
         }
     }
 }

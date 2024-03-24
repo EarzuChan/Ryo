@@ -27,6 +27,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Path = System.IO.Path;
 using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
+using Me.EarzuChan.Ryo.Extensions.Utils;
 
 namespace Me.EarzuChan.Ryo.DesktopTest
 {
@@ -155,7 +156,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
         // public MassServer() => LogUtils.PrintInfo("MassServer Inited");
 
-        public string GetFileTreeData() => FormatUtils.NewtonsoftItemToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
+        public string GetFileTreeData() => SerializationUtils.NewtonsoftItemToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
 
         public void OpenFile()
         {
@@ -186,7 +187,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             {
                 var mass = MassManager.MassFiles[fileName];
 
-                return FormatUtils.NewtonsoftItemToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
+                return SerializationUtils.NewtonsoftItemToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
             }
             catch (Exception ex)
             {
@@ -211,7 +212,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
                 Trace.WriteLine(dataRyoType);
 
-                MethodInfo tempMethod = typeof(FormatUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.BaseType);
+                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.BaseType);
                 object value = tempMethod.Invoke(null, new[] { json });
 
                 mass.Add(itemName, value);

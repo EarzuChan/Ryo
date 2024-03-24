@@ -7,6 +7,7 @@ using static Me.EarzuChan.Ryo.ConsoleSystem.Commands.ICommand;
 
 namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
 {
+    [Obsolete("推荐使用ConsoleApplication")]
     public class CommandManager
     {
         public readonly Dictionary<CommandAttribute, Type> commands = new();

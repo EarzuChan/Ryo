@@ -15,14 +15,14 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
     {
         public static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new()
         {
-            TypeNameHandling = TypeNameHandling.Auto,
-            ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
-            //PreserveReferencesHandling = PreserveReferencesHandling.All,
+            TypeNameHandling = TypeNameHandling.None, // 处理类名：Auto时如给哺乳动物类字段分配狗的实例时标注一个元数据 而哥们有类型系统，这这不采用
+            ReferenceLoopHandling = ReferenceLoopHandling.Serialize, // A类的成员a类型是A时采取的操作
+            // PreserveReferencesHandling = PreserveReferencesHandling.All,
+            // TODO: Null管不管
             Converters = new JsonConverter[] { new ExpandoObjectConverter() }
         };
 
-
-
+        [Obsolete("老哥不建议使用这个")]
         public static string InsidedItemToJson(object item, string typeName = "无类名")
         {
             // 我希望写出变量名
@@ -50,9 +50,7 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
 
             }
             else if (typeof(ICtorAdaptable).IsAssignableFrom(type))
-            {
                 return InsidedItemToJson(((ICtorAdaptable)item).GetAdaptedArray(), type.Name);
-            }
             else
             {
                 string? str = item.ToString()!.Replace("\n", "\\n").Replace("\"", "\\\"");
@@ -62,11 +60,11 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
 
         public static string NewtonsoftItemToJson(object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
 
-        public static object? NewtonsoftJsonToItem<T>(string json) => JsonConvert.DeserializeObject<T>(json);// ?? throw new RyoException("Can't restore object from json");
+        public static object? NewtonsoftJsonToItem<T>(string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
 
-        public static string MakeAdaptableFormatStructure(Type type) // 获得一个一个喵
+        public static string GenerateAdaptableFormatStructure(Type type, TsTypeUtils.NonAdaptableFormatHandling notParsable = TsTypeUtils.NonAdaptableFormatHandling.Ignore) // 获得一个一个喵
         {
-            var name = MapToTsType(type);
+            var name = type.ParseToTsType(notParsable);
             var members = new List<Dictionary<string, string>>();
 
             foreach (var field in type.GetFields())
@@ -74,7 +72,7 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
                 members.Add(new Dictionary<string, string>
                 {
                     { "name", field.Name.MakeFirstCharLower() },
-                    { "type", MapToTsType(field.FieldType) }
+                    { "type", field.FieldType.ParseToTsType(notParsable) }
                 });
             }
 
@@ -85,38 +83,6 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             };
 
             return JsonConvert.SerializeObject(serializedObject);
-        }
-
-        public static string MapToTsType(Type csharpType)
-        {
-            // Check for custom attribute
-            var adaptableFormat = csharpType.GetCustomAttribute<AdaptableFormat>();
-            if (adaptableFormat != null)
-            {
-                return adaptableFormat.FormatName;
-            }
-
-            // Directly check the type using 'is' and pattern matching
-            if (csharpType == typeof(int) || csharpType == typeof(long) ||
-                csharpType == typeof(double) || csharpType == typeof(decimal) ||
-                csharpType == typeof(float)) // 其他的如Short、Byte等
-            {
-                return "number";
-            }
-            else if (csharpType == typeof(string))
-            {
-                return "string";
-            }
-            else if (csharpType == typeof(bool))
-            {
-                return "boolean";
-            }
-            else
-            {
-                // 列表、数组等等
-                // For other types or non-primitive types, return "any"
-                return "未解析";
-            }
         }
     }
 }

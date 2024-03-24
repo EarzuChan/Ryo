@@ -1,4 +1,5 @@
-﻿using Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement;
+﻿using Me.EarzuChan.Ryo.ConsoleSystem;
+using Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement;
 using System.Text;
 
 Console.InputEncoding = Encoding.Unicode;
@@ -7,5 +8,4 @@ CommandManager commandManager = new(new ConsoleInfo { Name = "Console Test" });
 
 commandManager.InitConsole();
 
-var sth = CommandApplication.CreateBuilder().Build();
-sth.Run();
+CommandApplication.CreateBuilder().UseDefaultConsoleBackend().Build().Run();

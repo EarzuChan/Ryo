@@ -22,6 +22,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
+		<ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj" />
 		<ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
 	</ItemGroup>
 
