@@ -31,7 +31,7 @@ using Me.EarzuChan.Ryo.Extensions.Utils;
 
 namespace Me.EarzuChan.Ryo.DesktopTest
 {
-    public class ShitNativeUtils
+    public static class ShitNativeUtils
     {
         const int LOGPIXELSX = 88;
 
@@ -82,8 +82,10 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             // 注册回调
             MyWebView2.CoreWebView2InitializationCompleted += OnWebViewInited;
 
-            // 加载核心
-            await MyWebView2.EnsureCoreWebView2Async();
+            var webView2Environment = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = "--enable-features=msWebView2EnableDraggableRegions" });
+
+            // 加载核心 
+            await MyWebView2.EnsureCoreWebView2Async(webView2Environment);
 
             // 加载资源
             MyWebView2.CoreWebView2.SetVirtualHostNameToFolderMapping("ryo_web_frontend", "WebResources", CoreWebView2HostResourceAccessKind.Deny);

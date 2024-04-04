@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement;
+﻿using Me.EarzuChan.Ryo.ConsoleSystem.OldCommandManagement;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Utils;
 using System.Text;
@@ -7,7 +7,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd
 {
     public static class StartUp
     {
-        public static CommandManager CommandManager = new();
+        public static OldCommandManager CommandManager = new();
 
         public static MassManager MassManager = new();
 

@@ -37,5 +37,9 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.Utils
 
             return arguments.ToArray();
         }
+
+        public static string SolveKeyName(string oriKeyName) => oriKeyName.StartsWith('D') && oriKeyName.Length == 2 ? oriKeyName[1..] : oriKeyName == "DownArrow" ? "↓" : oriKeyName == "UpArrow" ? "↑" : oriKeyName;
+
+        public static ConsoleKey SolveSecondKey(ConsoleKey oriKey) => oriKey == ConsoleKey.D1 ? ConsoleKey.NumPad1 : oriKey == ConsoleKey.D0 ? ConsoleKey.NumPad0 : oriKey;
     }
 }

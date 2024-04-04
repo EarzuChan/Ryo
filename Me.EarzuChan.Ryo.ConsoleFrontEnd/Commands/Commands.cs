@@ -1,4 +1,4 @@
-using Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement;
+using Me.EarzuChan.Ryo.ConsoleSystem.OldCommandManagement;
 using Me.EarzuChan.Ryo.Core.Adaptions;
 using Me.EarzuChan.Ryo.Core.Formations;
 using Me.EarzuChan.Ryo.Core.Formations.PipeDream;
@@ -10,14 +10,14 @@ using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 using Me.EarzuChan.Ryo.Utils;
 using SixLabors.ImageSharp;
 using System.Text;
-using static Me.EarzuChan.Ryo.ConsoleSystem.Commands.ICommand;
-using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
+using static Me.EarzuChan.Ryo.ConsoleSystem.OldCommands.IOldCommand;
+using Me.EarzuChan.Ryo.ConsoleSystem.OldCommands;
 using Me.EarzuChan.Ryo.Extensions.Utils;
 
 namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 {
-    [Command("Open", "Open a file from path")]
-    public class OpenCommand : ICommand
+    [OldCommand("Open", "Open a file from path")]
+    public class OpenCommand : IOldCommand
     {
         public string PathString;
         public string? CustomFileName;
@@ -40,8 +40,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("Info", "Show the info of a file")]
-    public class InfoCommand : ICommand
+    [OldCommand("Info", "Show the info of a file")]
+    public class InfoCommand : IOldCommand
     {
         public string FileName;
 
@@ -57,8 +57,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("New", "Create a new empty file")]
-    public class NewCommand : ICommand
+    [OldCommand("New", "Create a new empty file")]
+    public class NewCommand : IOldCommand
     {
         public string FileName;
         public NewCommand(string fileName)
@@ -78,8 +78,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("Close", "Close a file by its name")]
-    public class CloseCommand : ICommand
+    [OldCommand("Close", "Close a file by its name")]
+    public class CloseCommand : IOldCommand
     {
         public string FileName;
         public CloseCommand(string fileName)
@@ -94,8 +94,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 
     }
 
-    [Command("View", "View the item of your given id in a file")]
-    public class ViewCommand : ICommand
+    [OldCommand("View", "View the item of your given id in a file")]
+    public class ViewCommand : IOldCommand
     {
         public string FileName;
         public int Id;
@@ -176,8 +176,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("Search", "Search the target item in a file")]
-    public class SearchCommand : ICommand
+    [OldCommand("Search", "Search the target item in a file")]
+    public class SearchCommand : IOldCommand
     {
         public string FileName;
         public string SearchName;
@@ -205,8 +205,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("Save", "Save the file to the path you given")]
-    public class WriteCommand : ICommand
+    [OldCommand("Save", "Save the file to the path you given")]
+    public class WriteCommand : IOldCommand
     {
         public string FileName;
         public string PathName;
@@ -231,8 +231,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("UnpackImage", "Unpack the images from a texture file.")]
-    public class UpackImageCommand : ICommand
+    [OldCommand("UnpackImage", "Unpack the images from a texture file.")]
+    public class UpackImageCommand : IOldCommand
     {
         public enum MODE
         {
@@ -365,8 +365,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("PackImage", "Pack a image to a texture file and save it")]
-    public class PackImageCommand : ICommand
+    [OldCommand("PackImage", "Pack a image to a texture file and save it")]
+    public class PackImageCommand : IOldCommand
     {
         public string FileName;
         public string ImgPath;
@@ -402,8 +402,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
-    public class ImportDialogueTreeCommand : ICommand
+    [OldCommand("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
+    public class ImportDialogueTreeCommand : IOldCommand
     {
         public string FileName;
         public string JsonFilePath;
@@ -435,8 +435,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         }
     }
 
-    [Command("OperateDialogueTree", "Only for PipeDreams now")]
-    public class OperateDialogueTreeCommand : ICommand
+    [OldCommand("OperateDialogueTree", "Only for PipeDreams now")]
+    public class OperateDialogueTreeCommand : IOldCommand
     {
         public string FileName;
         public int Id;
@@ -512,8 +512,8 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
     }
 
     // Mass那边是否配合完了项目压缩
-    [Command("Inflate", "Inflate a file")]
-    public class InflateCommand : ICommand
+    [OldCommand("Inflate", "Inflate a file")]
+    public class InflateCommand : IOldCommand
     {
         public enum FILETYPE
         {

@@ -2,8 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.MaterialForYou", "Me.EarzuChan.MaterialForYou\Me.EarzuChan.MaterialForYou.csproj", "{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.WPFImageConverter", "Me.EarzuChan.Ryo.WPFImageConverter\Me.EarzuChan.Ryo.WPFImageConverter.csproj", "{303592A5-C115-4146-9C00-C3D12C701104}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.ConsoleFrontEnd", "Me.EarzuChan.Ryo.ConsoleFrontEnd\Me.EarzuChan.Ryo.ConsoleFrontEnd.csproj", "{80A96100-E16D-48CD-B0CC-17E2C8F571FE}"
@@ -20,7 +18,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.DesktopTes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.WPFTest", "Me.EarzuChan.Ryo.WPFTest\Me.EarzuChan.Ryo.WPFTest.csproj", "{88095FD6-06A4-4E6B-A150-30CD41886C80}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.Extensions", "Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj", "{9570D98F-F51A-48E4-BA1F-3C29097763E8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.Extensions", "Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj", "{9570D98F-F51A-48E4-BA1F-3C29097763E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,16 +32,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|x64.ActiveCfg = Release|Any CPU
-		{FE1EB993-E0A9-47F8-900F-DDDFD78E0906}.Release|x86.ActiveCfg = Release|Any CPU
 		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|ARM64.ActiveCfg = Debug|Any CPU
 		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|x64.ActiveCfg = Debug|Any CPU

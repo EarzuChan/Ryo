@@ -30,9 +30,10 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             else if (type.IsTsListType()) return $"{type.GetTsListElementType().ParseToTsType()}[]"; // 包含的类型
             else if (nonAdaptable == NonAdaptableFormatHandling.Ignore) return $"{{Non Adaptable Format: {type.FullName}}}";
             else throw new TsTypeParsingException($"Type {type} is not a Adaptable Format");
+            // Byte、Char怎么办
         }
 
-        public static bool IsTsNumberType(this Type type) => type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(decimal) || type == typeof(float); // TODO: What's more?
+        public static bool IsTsNumberType(this Type type) => type == typeof(int) || type == typeof(short) || type == typeof(double) || type == typeof(long) || type == typeof(float);
 
         public static bool IsTsListType(this Type type) => type.IsArray || type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>);
 

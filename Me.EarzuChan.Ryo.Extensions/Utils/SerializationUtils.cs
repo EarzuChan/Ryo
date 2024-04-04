@@ -62,27 +62,29 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
 
         public static object? NewtonsoftJsonToItem<T>(string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
 
-        public static string GenerateAdaptableFormatStructure(Type type, TsTypeUtils.NonAdaptableFormatHandling notParsable = TsTypeUtils.NonAdaptableFormatHandling.Ignore) // 获得一个一个喵
+        public static string GenerateAdaptableFormatStructure(Type csharpType, TsTypeUtils.NonAdaptableFormatHandling notParsable = TsTypeUtils.NonAdaptableFormatHandling.Ignore) // 获得一个一个喵
         {
-            var name = type.ParseToTsType(notParsable);
+            var type = csharpType.ParseToTsType(notParsable);
             var members = new List<Dictionary<string, string>>();
 
-            foreach (var field in type.GetFields())
+            if (csharpType.IsPrimitive) return JsonConvert.SerializeObject(new { type });
+            else
             {
-                members.Add(new Dictionary<string, string>
+                foreach (var field in csharpType.GetFields())
+                {
+                    members.Add(new Dictionary<string, string>
                 {
                     { "name", field.Name.MakeFirstCharLower() },
                     { "type", field.FieldType.ParseToTsType(notParsable) }
                 });
+                }
+
+                return JsonConvert.SerializeObject(new
+                {
+                    type,
+                    members
+                });
             }
-
-            var serializedObject = new
-            {
-                name,
-                members
-            };
-
-            return JsonConvert.SerializeObject(serializedObject);
         }
     }
 }

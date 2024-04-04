@@ -1,16 +1,16 @@
-﻿using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
+﻿using Me.EarzuChan.Ryo.ConsoleSystem.OldCommands;
 using Me.EarzuChan.Ryo.ConsoleSystem.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using System;
 using System.Reflection;
-using static Me.EarzuChan.Ryo.ConsoleSystem.Commands.ICommand;
+using static Me.EarzuChan.Ryo.ConsoleSystem.OldCommands.IOldCommand;
 
-namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
+namespace Me.EarzuChan.Ryo.ConsoleSystem.OldCommandManagement
 {
     [Obsolete("推荐使用ConsoleApplication")]
-    public class CommandManager
+    public class OldCommandManager
     {
-        public readonly Dictionary<CommandAttribute, Type> commands = new();
+        public readonly Dictionary<OldCommandAttribute, Type> commands = new();
 
         // 开发者模式
         public bool IsDev
@@ -29,10 +29,10 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
         private bool isDev = false;
 
         // 控制台实现
-        public readonly IConsoleImplement ConsoleImplement;
+        public readonly IOldConsoleImplement ConsoleImplement;
 
         // 控制台信息
-        public readonly ConsoleInfo ConsoleInfo;
+        public readonly OldConsoleInfo ConsoleInfo;
 
         // 全局命令调用帧
         public readonly CommandFrame CommandFrame;
@@ -45,8 +45,8 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
             var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
             foreach (var type in types)
             {
-                var attribute = type.GetCustomAttribute<CommandAttribute>();
-                if (attribute != null && typeof(ICommand).IsAssignableFrom(type))
+                var attribute = type.GetCustomAttribute<OldCommandAttribute>();
+                if (attribute != null && typeof(IOldCommand).IsAssignableFrom(type))
                 {
                     if (attribute.IsDev && !isDev) continue;
                     // DEBUG逻辑
@@ -56,10 +56,10 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
             }
         }
 
-        public CommandManager(ConsoleInfo? consoleInfo = null, IConsoleImplement? consoleImplement = null)
+        public OldCommandManager(OldConsoleInfo? consoleInfo = null, IOldConsoleImplement? consoleImplement = null)
         {
             ConsoleInfo = consoleInfo ?? new();
-            ConsoleImplement = consoleImplement ?? new DefaultConsoleImplement();
+            ConsoleImplement = consoleImplement ?? new DefaultOldConsoleImplement();
 
             RegCmds();
             CommandFrame = new(this);
@@ -95,7 +95,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
                         {
                             try
                             {
-                                var command = (ICommand)constructor.Invoke(cmdArgs);
+                                var command = (IOldCommand)constructor.Invoke(cmdArgs);
 
                                 // TODO:可选参数Builder
 
@@ -135,7 +135,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
         }
     }
 
-    public interface IConsoleImplement
+    public interface IOldConsoleImplement
     {
         public void PrintLine(string text);
         public string ReadLine();
@@ -143,7 +143,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
         public ConsoleKey ReadKey();
     }
 
-    public class DefaultConsoleImplement : IConsoleImplement
+    public class DefaultOldConsoleImplement : IOldConsoleImplement
     {
         public void PrintLine(string text) => Console.WriteLine(text);
 
@@ -164,7 +164,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem.CommandManagement
         public void Print(string text) => Console.Write(text);
     }
 
-    public class ConsoleInfo
+    public class OldConsoleInfo
     {
         public string Name { get; set; } = "Ryo Console";
         public string Version { get; set; } = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown Version";
