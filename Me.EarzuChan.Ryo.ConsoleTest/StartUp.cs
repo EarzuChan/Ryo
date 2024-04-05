@@ -12,13 +12,7 @@ OldCommandManager commandManager = new(new OldConsoleInfo { Name = "Console Test
 commandManager.InitConsole();*/
 
 ConsoleApplication
-    .CreateBuilder(new()
-    {
-        CommandRegistrationStrategy = CommandRegistrationStrategy.RegisterManually
-    })
-    .ProvideDependency<MassManager>()
+    .CreateBuilder()
     .UseDefaultConsoleBackend()
-    .RegisterCmd(new("太美丽"), typeof(TsCsCommand))
-    // 操你妈C#不支持匿名类继承，不能秀一波优雅注册了
     .Build()
     .Run();

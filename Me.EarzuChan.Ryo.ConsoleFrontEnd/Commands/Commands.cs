@@ -52,7 +52,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 
         public void Execute(CommandFrame commandFrame)
         {
-            ControlFlowUtils.TryCatchingThenThrow("Couldn't show file info", () => commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + StartUp.MassManager.GetInfo(StartUp.MassManager.GetMassFileOrThrow(FileName)))
+            ControlFlowUtils.TryCatchingThenThrow("Couldn't show file info", () => commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + MassUtils.GetInfo(StartUp.MassManager.GetMassFileOrThrow(FileName)))
             );
         }
     }

@@ -100,16 +100,9 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem
             Context = new(this);
         }
 
-        public static ConsoleApplicationBuilder CreateBuilder(ConsoleApplicationProfile profile)
-        {
-            ConsoleApplicationBuilder builder = new(profile);
-            return builder;
-        }
+        public static ConsoleApplicationBuilder CreateBuilder(ConsoleApplicationProfile profile) => new(profile);
 
-        public static ConsoleApplicationBuilder CreateBuilder()
-        {
-            return CreateBuilder(new());
-        }
+        public static ConsoleApplicationBuilder CreateBuilder() => CreateBuilder(new());
     }
 
     public class ConsoleApplicationBuilder
