@@ -1,9 +1,7 @@
-﻿using Me.EarzuChan.Ryo.Core.Formations;
-using Me.EarzuChan.Ryo.Core.Formations.WeakPipe;
+﻿using Me.EarzuChan.Ryo.Core.Formations.HelperFormations;
 using Me.EarzuChan.Ryo.Core.IO;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
-using System;
 using System.Reflection;
 
 namespace Me.EarzuChan.Ryo.Core.Adaptions.AdapterFactories
@@ -282,7 +280,7 @@ namespace Me.EarzuChan.Ryo.Core.Adaptions.AdapterFactories
         {
             // 需要内联吗？
             // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsUnidentifiedType)
+            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsCsTypeUnidentified)
             {
                 foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return (IAdapter)Activator.CreateInstance(item.Value.BaseType!)!;
             }
@@ -292,7 +290,7 @@ namespace Me.EarzuChan.Ryo.Core.Adaptions.AdapterFactories
         public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
         {
             // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsUnidentifiedType)
+            if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsCsTypeUnidentified)
             {
                 foreach (var item in DataAdapterRyoTypePairs) if (ryoType.BaseType == item.Key) return item.Value;
             }

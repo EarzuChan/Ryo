@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Extensions.Exceptions
 {
-    namespace TsTypeExceptions
+    namespace DataTypeSchemaExceptions
     {
-        public class TsTypeParsingException : Exception
+        public class DataTypeSchemaParsingException : Exception
         {
-            public TsTypeParsingException(string reason) : base($"Parsing Ts Type error: {reason}") { }
+            public DataTypeSchemaParsingException(string reason) : base($"Parsing Ts Type error: {reason}") { }
         }
     }
 }

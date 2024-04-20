@@ -9,7 +9,7 @@ public class StartUp
             .CreateBuilder(new()
             {
 #if DEBUG
-                IsDev = true
+                IsDev = true,
 #endif
             })
             .Build()

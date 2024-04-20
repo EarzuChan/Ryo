@@ -1,5 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Exceptions;
-using Me.EarzuChan.Ryo.Core.Formations;
+﻿using Me.EarzuChan.Ryo.Core.Formations.HelperFormations;
 using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Core.Utils

@@ -4,29 +4,29 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers
+namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.WebEventHandlers
 {
-    public enum HandlerRegistrationStrategy
+    public enum WebEventHandlerRegistrationStrategy
     {
         ScanAndRegisterAutomatically,
         RegisterManually,
     }
 
-    public interface IHandler
+    public interface IWebEventHandler
     {
         public void Handle(WinWebAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class HandlerAttribute : Attribute
+    public class WebEventHandlerAttribute : Attribute
     {
         public readonly bool Scannable;
-        private readonly bool IsDev;
+        public readonly bool IsDev;
         public readonly string EventName;
 
         // TODO:HandlerType
 
-        public HandlerAttribute(string name, bool scannable = true, bool isDev = false)
+        public WebEventHandlerAttribute(string name, bool scannable = true, bool isDev = false)
         {
             EventName = name;
             Scannable = scannable;

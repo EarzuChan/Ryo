@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
-using Me.EarzuChan.Ryo.Core.Formations.PipeDream;
+using Me.EarzuChan.Ryo.Core.Formations.DataFormations.PipeDream;
 using Me.EarzuChan.Ryo.Exceptions;
 using System.Reflection;
 using Me.EarzuChan.Ryo.Utils;
@@ -23,7 +23,7 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
         };
 
         [Obsolete("老哥不建议使用这个")]
-        public static string InsidedItemToJson(object item, string typeName = "无类名")
+        public static string InsidedItemToJson(this object item, string typeName = "无类名")
         {
             // 我希望写出变量名
 
@@ -58,33 +58,8 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             }
         }
 
-        public static string NewtonsoftItemToJson(object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
+        public static string NewtonsoftItemToJson(this object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
 
-        public static object? NewtonsoftJsonToItem<T>(string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
-
-        public static string GenerateAdaptableFormatStructure(Type csharpType, TsTypeUtils.NonAdaptableFormatHandling notParsable = TsTypeUtils.NonAdaptableFormatHandling.Ignore) // 获得一个一个喵
-        {
-            var type = csharpType.ParseToTsType(notParsable);
-            var members = new List<Dictionary<string, string>>();
-
-            if (csharpType.IsPrimitive) return JsonConvert.SerializeObject(new { type });
-            else
-            {
-                foreach (var field in csharpType.GetFields())
-                {
-                    members.Add(new Dictionary<string, string>
-                {
-                    { "name", field.Name.MakeFirstCharLower() },
-                    { "type", field.FieldType.ParseToTsType(notParsable) }
-                });
-                }
-
-                return JsonConvert.SerializeObject(new
-                {
-                    type,
-                    members
-                });
-            }
-        }
+        public static object? NewtonsoftJsonToItem<T>(this string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
     }
 }

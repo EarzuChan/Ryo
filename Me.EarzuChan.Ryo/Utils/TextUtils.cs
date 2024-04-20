@@ -20,9 +20,9 @@
             return str;
         }
 
-        public static string MakeInfoText(string[] args)
+        public static string MakeMsgText(string prefix , string[] args)
         {
-            var str = $"Info: {(args.Length == 0 ? "(No Content)" : args.First())}";
+            var str = $"{prefix}: {(args.Length == 0 ? "(No Content)" : args.First())}";
             int index = 1;
             while (index != args.Length)
             {

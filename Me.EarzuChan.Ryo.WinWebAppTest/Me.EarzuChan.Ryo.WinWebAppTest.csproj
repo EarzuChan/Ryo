@@ -8,6 +8,12 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+	<ItemGroup>
+		<Content Include="WebResources\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Me.EarzuChan.Ryo.WinWebAppSystem\Me.EarzuChan.Ryo.WinWebAppSystem.csproj" />
   </ItemGroup>

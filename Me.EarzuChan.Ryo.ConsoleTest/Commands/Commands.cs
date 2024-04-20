@@ -1,25 +1,17 @@
 ﻿using Me.EarzuChan.Ryo.ConsoleSystem;
 using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
-using Me.EarzuChan.Ryo.ConsoleSystem.OldCommands;
 using Me.EarzuChan.Ryo.Core.Adaptions;
-using Me.EarzuChan.Ryo.Core.Formations.Universe;
-using Me.EarzuChan.Ryo.Core.Formations.WeakPipe;
+using Me.EarzuChan.Ryo.Core.Formations.DataFormations.WeakPipe;
 using Me.EarzuChan.Ryo.Core.Masses;
-using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 using Me.EarzuChan.Ryo.Extensions.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Me.EarzuChan.Ryo.ConsoleSystem.OldCommands.IOldCommand;
+using System.Reflection;
 
 namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
 {
-    [Command("TsCc", "4T0")]
+    [Command("TsCc")]
     public class TsCsCommand : ICommand
     {
-        [AdaptableFormat("我勒个骚纲")]
+        [AdaptableFormationAttribute("我勒个骚纲")]
         public class 骚纲
         {
             public int Inner;
@@ -34,12 +26,31 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
 
         public void Execute(ConsoleApplicationContext ctx)
         {
-            ctx.PrintLine(SerializationUtils.GenerateAdaptableFormatStructure(typeof(骚纲), TsTypeUtils.NonAdaptableFormatHandling.Error));
-            ctx.PrintLine(SerializationUtils.GenerateAdaptableFormatStructure(typeof(bool), TsTypeUtils.NonAdaptableFormatHandling.Error));
+            /*var hdl = DataTypeSchemaUtils.NonDataTypeHandling.Error;*/
 
-            var mng = ctx.Inject<MassManager>();
-            mng.AddMassFile(new(), "Babe");
-            ctx.PrintLine($"爷爷：{mng.MassFiles.Count}");
+            ctx.PrintLine(typeof(骚纲).ToRyoType().GetDataTypeSchema().NewtonsoftItemToJson());
+            ctx.PrintLine(typeof(bool).ToRyoType().GetDataTypeSchema().NewtonsoftItemToJson());
+            ctx.PrintLine(typeof(bool[][]).ToRyoType().GetDataTypeSchema().NewtonsoftItemToJson());
+        }
+    }
+
+    [Command("GaDt")]
+    public class GaDtCommand : ICommand
+    {
+        public void Execute(ConsoleApplicationContext context)
+        {
+            // 第一步：遍历源集合，调用GetDataTypeSchema方法
+            var sourceSchemas = AdaptionManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes())
+                                          .Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            var combinedSchemas = sourceSchemas.Union(adaptableSchemas);
+
+            context.PrintLine(SerializationUtils.NewtonsoftItemToJson(combinedSchemas));
         }
     }
 }

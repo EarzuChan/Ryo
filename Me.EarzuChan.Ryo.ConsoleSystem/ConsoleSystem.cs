@@ -186,13 +186,13 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem
     public class ConsoleApplicationProfile
     {
 
-        public string Name = "Ryo Console";
-        public string Description = "©2024 Earzu Chan";
-        public string Version = "1.0.0.0";
-        public Encoding Encoding = Encoding.UTF8;
+        public string Name { get; init; } = "Ryo Console";
+        public string Description { get; init; } = "©2024 Earzu Chan";
+        public string Version { get; init; } = "1.0.0.0";
+        public Encoding Encoding { get; init; } = Encoding.UTF8;
 
-        public CommandRegistrationStrategy CommandRegistrationStrategy = CommandRegistrationStrategy.ScanAndRegisterAutomatically;
-        public bool IsDev = false;
+        public CommandRegistrationStrategy CommandRegistrationStrategy { get; init; } = CommandRegistrationStrategy.ScanAndRegisterAutomatically;
+        public bool IsDev { get; init; } = false;
     }
 
     public class ConsoleApplicationContext

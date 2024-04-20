@@ -10,6 +10,8 @@ namespace Me.EarzuChan.Ryo.Utils
 
         public static void PrintError(String info, Exception e, bool printStack = true) => Logger?.Invoke(TextUtils.MakeErrorText(info, e, printStack));
 
-        public static void PrintInfo(params string[] args) => Logger?.Invoke(TextUtils.MakeInfoText(args));
+        public static void PrintWarning(params string[] args) => Logger?.Invoke(TextUtils.MakeMsgText("Warning", args));
+
+        public static void PrintInfo(params string[] args) => Logger?.Invoke(TextUtils.MakeMsgText("Info", args));
     }
 }

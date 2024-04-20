@@ -465,7 +465,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
                 int newStickyMetaData;
 
                 if (obj == null) newStickyMetaData = 0; // 给SUB是NULL预留的
-                else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmBaseType)
+                else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmPrimitive)
                 {
                     throw new NotImplementedException();
                     // 序列化基本类型，然后写注册ID+2给4
