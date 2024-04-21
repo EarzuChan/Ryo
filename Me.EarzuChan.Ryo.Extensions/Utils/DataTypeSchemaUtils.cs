@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Extensions.Exceptions.DataTypeSchemaExceptions;
 using Me.EarzuChan.Ryo.Utils;
 using Newtonsoft.Json;
@@ -14,52 +15,43 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
     // 如果要支持外挂类型，是不是也通过这玩意来生成动态类型？
     public static class DataTypeSchemaUtils
     {
-        /*public enum NonDataTypeHandling
+        public static string ResolveDataTypeName(this RyoType ryoType)
         {
-            Ignore,
-            Error
-        }*/
-
-        public static string ParseDataTypeName(this RyoType type/*, NonDataTypeHandling nonAdaptable = NonDataTypeHandling.Ignore*/)
-        {
-            // Core那边要相应修改DataType吗
-            LogUtils.PrintInfo($"解析：{type}");
+            LogUtils.PrintInfo($"Resolve Data Type Name for: {ryoType}");
 
             var typeNameSuffix = new StringBuilder();
-            while (type.IsArray)
+            while (ryoType.IsArray)
             {
                 typeNameSuffix.Append("[]");
-                type = type.GetArrayElementRyoType();
-                LogUtils.PrintInfo($"爷爷，下一层：{type}");
+                ryoType = ryoType.GetArrayElementRyoType();
+                LogUtils.PrintInfo($"Array sublevel: {ryoType}");
             }
 
-            if (type.JavaClassName == null) throw new DataTypeSchemaParsingException($"{type}怎么没名呢");
+            // if (ryoType.JavaClassName == null) throw new DataTypeSchemaParsingException($"When resolving Data Type Name, a Ryo Type without Java Class Name was found: {ryoType}");
 
-            /*if (type.IsAdaptableCustom || type.IsJvmPrimitive)*/
-            return type.JavaClassName + typeNameSuffix.ToString();
-
-            /*else if (nonAdaptable == NonDataTypeHandling.Ignore) return $"{{Non Adaptable Format: {type}}}";
-            else throw new TsTypeParsingException($"Type {type} is not a Adaptable Format");*/
-            // Byte、Char怎么办
+            return ryoType.JavaClassName + typeNameSuffix.ToString();
         }
 
-        public static object GetDataTypeSchema(this RyoType ryoType/*, NonDataTypeHandling notParsable = NonDataTypeHandling.Ignore*/) // 获得一个一个喵
+        public static object GetDataTypeSchema(this RyoType ryoType)
         {
+            if (ryoType.IsArray) throw new DataTypeSchemaParsingException($"Data Type Schema should not be generated for Array Type: {ryoType}");
+
             var csType = ryoType.ToCsType();
-            if (csType == null) LogUtils.PrintWarning("获取数据类型架构时发现一个没有C#类型的Ryo类型");
+            if (csType == null) LogUtils.PrintWarning($"When getting Data Type Schema, a Ryo Type without C# Type was found: {ryoType}");
 
-            var type = ryoType.ParseDataTypeName();
-            var members = new List<Dictionary<string, string>>();
+            var type = ryoType.ResolveDataTypeName();
 
-            if (ryoType.IsJvmBasicType || csType == null || ryoType.IsArray) return new { type };
+            if (ryoType.IsJvmBasicType || csType == null || csType.GetFields().Length == 0 || ryoType.IsArray) return new { type };
             else
             {
+                var members = new List<Dictionary<string, string>>();
+
                 foreach (var field in csType.GetFields())
                 {
                     members.Add(new Dictionary<string, string>
                 {
                     { "name", field.Name.MakeFirstCharLower() },
-                    { "type", field.FieldType.ToRyoType().ParseDataTypeName() }
+                    { "type", field.FieldType.ToRyoType().ResolveDataTypeName() }
                 });
                 }
 
@@ -69,6 +61,19 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
                     members
                 };
             }
+        }
+
+        public static object GetAllDataTypeSchemas()
+        {
+            // 第一步：遍历源集合，调用GetDataTypeSchema方法
+            var sourceSchemas = AdaptationUtils.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            return sourceSchemas.Concat(adaptableSchemas);
         }
     }
 }

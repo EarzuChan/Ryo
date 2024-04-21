@@ -79,7 +79,7 @@ namespace Me.EarzuChan.Ryo.ConsoleSystem
                             }
                             catch (Exception e)
                             {
-                                Context.PrintLine(TextUtils.MakeErrorText("An unhandled exception occurred during command execution.", e, true));
+                                Context.PrintLine(TextUtils.MakeErrorMsgText("An unhandled exception occurred during command execution.", e, true));
                             }
                             return;
                         }

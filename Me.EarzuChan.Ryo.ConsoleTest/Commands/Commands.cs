@@ -2,6 +2,7 @@
 using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
 using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Core.Formations.DataFormations.WeakPipe;
+using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Extensions.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using System.Reflection;
@@ -17,8 +18,6 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         public Inner Dinner;
         public Inner[] Wlgd;
         public List<Inner> Wlgbd;
-        /*public AdaptableFormat Wlgsg;
-        public AdaptableFormat[] Wlgdw;*/
     }
 
     [Command("TsCs")]
@@ -31,7 +30,7 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
 
             ctx.PrintLine(typeof(骚纲).ToRyoType().GetDataTypeSchema().ToJsonWithNewtonJson());
             ctx.PrintLine(typeof(bool).ToRyoType().GetDataTypeSchema().ToJsonWithNewtonJson());
-            ctx.PrintLine(typeof(bool[][]).ToRyoType().GetDataTypeSchema().ToJsonWithNewtonJson());
+            ctx.PrintLine(typeof(List<List<int>[][]>[]).ToRyoType().ToCsType()!.ToString());
         }
     }
 
@@ -40,17 +39,7 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
     {
         public void Execute(ConsoleApplicationContext context)
         {
-            // 第一步：遍历源集合，调用GetDataTypeSchema方法
-            var sourceSchemas = AdaptationManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
-
-            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
-            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
-                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
-
-            // 第三步：合并两个列表
-            var combinedSchemas = sourceSchemas.Concat(adaptableSchemas);
-
-            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(combinedSchemas));
+            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(DataTypeSchemaUtils.GetAllDataTypeSchemas().ToJsonWithNewtonJson()));
         }
     }
 
@@ -68,7 +57,8 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         {
             var ryoType = JavaClz.JavaClassToRyoType();
             context.PrintLine(ryoType.ToString());
-            context.PrintLine($"Java:{ryoType.ToJavaClass()}, C#:{ryoType.ToCsType()}");
+            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
+            context.PrintLine($"C#:{ryoType.ToCsType()}");
         }
     }
 
@@ -86,7 +76,37 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         {
             var ryoType = CsType.ToRyoType();
             context.PrintLine(ryoType.ToString());
-            context.PrintLine($"Java:{ryoType.ToJavaClass()}, C#:{ryoType.ToCsType()}");
+            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
+            context.PrintLine($"C#:{ryoType.ToCsType()}");
+        }
+    }
+
+    [Command("Ff")]
+    public class ForFunCommand : ICommand
+    {
+
+        public void Execute(ConsoleApplicationContext context)
+        {
+            var ts = new Ts();
+            context.PrintLine(ts.str);
+            ts.GaiTs();
+            context.PrintLine(ts.str);
+        }
+    }
+
+
+    public class Ts
+    {
+        public string str = "Ok";
+    }
+
+    public static class TsUtils
+    {
+        public static void GaiTs(this Ts ts)
+        {
+            var temp = ts;
+            temp.str = "太美丽";
+            ts = new Ts { str = "只有为你感慨" };
         }
     }
 }

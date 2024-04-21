@@ -93,13 +93,13 @@ namespace Me.EarzuChan.Ryo.Core.Masses
         public int FindAdaptionIdForDataRyoType(RyoType ryoType)
         {
             // 查找一手好活
-            var javaClz = AdaptationManager.INSTANCE.GetJavaClzByRyoType(ryoType)!;
+            var javaClz = ryoType.ToJavaClass()!;
             var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
             if (result != null) return ItemAdaptions.IndexOf(result);
 
-            var adapterRyoType = AdaptationManager.INSTANCE.FindAdapterRyoTypeForDataRyoType(ryoType) ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
+            var adapterRyoType = ryoType.DataRyoTypeFindAdapterRyoType() ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
 
-            var adapterJavaClz = AdaptationManager.INSTANCE.GetJavaClzByRyoType(adapterRyoType)!;
+            var adapterJavaClz = adapterRyoType.ToJavaClass()!;
             var itemAdaption = new ItemAdaption(javaClz, adapterJavaClz);
             ItemAdaptions.Add(itemAdaption);
 
@@ -135,14 +135,14 @@ namespace Me.EarzuChan.Ryo.Core.Masses
                     object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
                     // LogUtils.PrintInfo($"主Id：{id} 本Id：{nowId}");
 
-                    RyoType dataRyoType = AdaptationManager.INSTANCE.GetRyoTypeByCsClz(nowObj.GetType());
+                    RyoType dataRyoType = nowObj.GetType().ToRyoType();
 
                     var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
                     var adaption = ItemAdaptions[adaptionId];
 
                     // LogUtils.PrintInfo($"Id：{adaptionId} 类型：{dataRyoType} {adaption.AdapterJavaClz}");
 
-                    var adapter = AdaptationManager.INSTANCE.CreateAdapter(AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+                    var adapter = AdaptationUtils.CreateAdapter(adaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
 
                     using var writer = new RyoWriter(new MemoryStream());
                     adapter.To(nowObj, this, writer);
@@ -175,13 +175,13 @@ namespace Me.EarzuChan.Ryo.Core.Masses
             var itemAdaption = ItemAdaptions[itemBlob.AdaptionId];
 
             // 获取适配项
-            var dataRyoType = AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
+            var dataRyoType = itemAdaption.DataJavaClz.JavaClassToRyoType();
             // LogUtils.INSTANCE.PrintInfo("项目类型：" + dataRyoType);
             IAdapter adapter;
             try
             {
                 // LogUtil.INSTANCE.PrintInfo("修正：" + dataRyoType);
-                adapter = AdaptationManager.INSTANCE.CreateAdapter(AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.AdapterJavaClz), dataRyoType);
+                adapter = AdaptationUtils.CreateAdapter(itemAdaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
             }
             catch (Exception ex)
             {
@@ -259,6 +259,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
         {
             throw new NotSupportedException("暂不支持！");
 
+            // 以前的可能可以不要了，我的评价是新增，然后把原来的空荡图图了，然后改粘连数据
             try
             {
                 if (obj == null) throw new NullReferenceException("对象为Null");
@@ -266,12 +267,12 @@ namespace Me.EarzuChan.Ryo.Core.Masses
                 //int id = ItemBlobs.Count;
                 bool doSthLess = !IsPutting;
 
-                RyoType dataRyoType = AdaptationManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType());
+                RyoType dataRyoType = obj.GetType().ToRyoType();
                 var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
                 var adaption = ItemAdaptions[adaptionId];
                 // if(dataRyoType!=AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.DataJavaClz)) 
 
-                var adapter = AdaptationManager.INSTANCE.CreateAdapter(AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(adaption.AdapterJavaClz), dataRyoType);
+                var adapter = AdaptationUtils.CreateAdapter(adaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
 
                 int stickyId = ItemBlobs[id].StickyIndex;
                 SavedItemBlobStickyId = stickyId;
@@ -465,7 +466,7 @@ namespace Me.EarzuChan.Ryo.Core.Masses
                 int newStickyMetaData;
 
                 if (obj == null) newStickyMetaData = 0; // 给SUB是NULL预留的
-                else if (AdaptationManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJavaPrimitiveType)
+                else if (obj.GetType().ToRyoType().IsJavaPrimitiveType)
                 {
                     throw new NotImplementedException();
                     // 序列化基本类型，然后写注册ID+2给4
