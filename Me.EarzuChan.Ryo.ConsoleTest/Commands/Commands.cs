@@ -39,7 +39,47 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
     {
         public void Execute(ConsoleApplicationContext context)
         {
-            context.PrintLine(DataTypeSchemaUtils.GetAllDataTypeSchemas().ToJsonWithNewtonJson());
+            // 第一步：遍历源集合，调用GetDataTypeSchema方法
+            var sourceSchemas = AdaptationManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            var combinedSchemas = sourceSchemas.Concat(adaptableSchemas);
+
+            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(combinedSchemas));
+            var sourceSchemas = AdaptationManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            var combinedSchemas = sourceSchemas.Concat(adaptableSchemas);
+
+            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(combinedSchemas));
+            var sourceSchemas = AdaptationManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            var combinedSchemas = sourceSchemas.Concat(adaptableSchemas);
+
+            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(combinedSchemas));
+            var sourceSchemas = AdaptationManager.INSTANCE.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+
+            // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
+            var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+
+            // 第三步：合并两个列表
+            var combinedSchemas = sourceSchemas.Concat(adaptableSchemas);
+
+            context.PrintLine(SerializationUtils.ToJsonWithNewtonJson(combinedSchemas));
         }
     }
 
