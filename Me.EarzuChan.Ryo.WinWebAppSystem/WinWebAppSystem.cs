@@ -74,7 +74,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
                             }
                             catch (Exception e)
                             {
-                                Trace.WriteLine(TextUtils.MakeErrorText("执行事件失败", e, true));
+                                Trace.WriteLine(TextUtils.MakeErrorMsgText("执行事件失败", e, true));
                             }
                             return;
                         }

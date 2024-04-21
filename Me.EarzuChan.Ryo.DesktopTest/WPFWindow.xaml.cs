@@ -210,11 +210,11 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
                 var itemAdaption = mass.ItemAdaptions[itemBlob.AdaptionId];
 
-                var dataRyoType = AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
+                var dataRyoType = itemAdaption.DataJavaClz.JavaClassToRyoType();
 
                 Trace.WriteLine(dataRyoType);
 
-                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.CsType);
+                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("JsonToObjectWithNewtonJson").MakeGenericMethod(dataRyoType.CsType);
                 object value = tempMethod.Invoke(null, new[] { json });
 
                 mass.Add(itemName, value);

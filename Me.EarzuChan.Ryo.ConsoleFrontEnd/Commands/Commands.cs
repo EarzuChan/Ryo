@@ -111,7 +111,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
             {
                 var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
 
-                var typename = AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(mass.ItemAdaptions[mass.ItemBlobs[Id].AdaptionId].DataJavaClz);
+                var typename = mass.ItemAdaptions[mass.ItemBlobs[Id].AdaptionId].DataJavaClz.JavaClassToRyoType();
                 var item = mass.Get<object>(Id);
                 var itemName = mass.IdStrPairs.Where(pair => pair.Value == Id).Select(pair => pair.Key).FirstOrDefault();
 

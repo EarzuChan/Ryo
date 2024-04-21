@@ -210,7 +210,7 @@ namespace Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories
         {
             if (!type.IsAdaptableCustom) throw new FormatException("非可适配自定义类型：" + type);
 
-            var formatType = AdaptationManager.INSTANCE.GetCsClzByRyoType(type) ?? throw new NotSupportedException("不支持解析不了的自定义类型：" + type);
+            var formatType = type.ToCsType() ?? throw new NotSupportedException("不支持解析不了的自定义类型：" + type);
 
             try
             {
@@ -383,7 +383,7 @@ namespace Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories
             {
                 // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
-                var oriItemType = AdaptationManager.INSTANCE.GetCsClzByRyoType(ryoType)?.GetElementType();
+                var oriItemType = ryoType.ToCsType()?.GetElementType();
                 // LogUtils.INSTANCE.PrintInfo($"这是类型：{ryoType} 这是结果：{ryoType.IsAdaptableCustom}");
                 Type itemType = oriItemType ?? typeof(object);
 

@@ -6,7 +6,7 @@
 
         public static string MakeFirstCharUpper(this string text) => char.ToUpper(text[0]) + text[1..];
 
-        public static string MakeErrorText(string info, Exception? e, bool withStack = false)
+        public static string MakeErrorMsgText(string info, Exception? e, bool withStack = false)
         {
             var str = $"Error: {info}";
             int eNum = 1;
