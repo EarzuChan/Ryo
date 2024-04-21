@@ -126,7 +126,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         {
             // Commands.Clear();
 
-            var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(asm => asm.GetTypes());
+            var types = TypeUtils.GetAppAllTypes();
             foreach (var type in types)
             {
                 var attribute = type.GetCustomAttribute<WebEventHandlerAttribute>();

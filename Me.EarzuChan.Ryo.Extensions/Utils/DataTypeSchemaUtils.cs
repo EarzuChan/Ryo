@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptions;
+﻿using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Extensions.Exceptions.DataTypeSchemaExceptions;
 using Me.EarzuChan.Ryo.Utils;
 using Newtonsoft.Json;
@@ -33,10 +33,10 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
                 LogUtils.PrintInfo($"爷爷，下一层：{type}");
             }
 
-            if (type.Name == null) throw new DataTypeSchemaParsingException($"{type}怎么没名呢");
+            if (type.JavaClassName == null) throw new DataTypeSchemaParsingException($"{type}怎么没名呢");
 
             /*if (type.IsAdaptableCustom || type.IsJvmPrimitive)*/
-            return type.Name + typeNameSuffix.ToString();
+            return type.JavaClassName + typeNameSuffix.ToString();
 
             /*else if (nonAdaptable == NonDataTypeHandling.Ignore) return $"{{Non Adaptable Format: {type}}}";
             else throw new TsTypeParsingException($"Type {type} is not a Adaptable Format");*/
@@ -45,13 +45,13 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
 
         public static object GetDataTypeSchema(this RyoType ryoType/*, NonDataTypeHandling notParsable = NonDataTypeHandling.Ignore*/) // 获得一个一个喵
         {
-            var csType = ryoType.ToType();
+            var csType = ryoType.ToCsType();
             if (csType == null) LogUtils.PrintWarning("获取数据类型架构时发现一个没有C#类型的Ryo类型");
 
             var type = ryoType.ParseDataTypeName();
             var members = new List<Dictionary<string, string>>();
 
-            if (ryoType.IsBasicType || csType == null || ryoType.IsArray) return new { type };
+            if (ryoType.IsJvmBasicType || csType == null || ryoType.IsArray) return new { type };
             else
             {
                 foreach (var field in csType.GetFields())

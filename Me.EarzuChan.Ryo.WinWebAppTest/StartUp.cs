@@ -1,18 +1,21 @@
 ﻿using Me.EarzuChan.Ryo.WinWebAppSystem;
 
-public class StartUp
+namespace Me.EarzuChan.Ryo.WinWebAppTest
 {
-    [STAThread]
-    private static void Main(string[] args)
+    public class StartUp
     {
-        WinWebApp
-            .CreateBuilder(new()
-            {
+        [STAThread]
+        private static void Main(string[] args)
+        {
+            WinWebApp
+                .CreateBuilder(new()
+                {
 #if DEBUG
-                IsDev = true,
+                    IsDev = true,
 #endif
-            })
-            .Build()
-            .Run();
+                })
+                .Build()
+                .Run();
+        }
     }
 }

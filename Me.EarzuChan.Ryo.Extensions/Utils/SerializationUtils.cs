@@ -1,5 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Core.IO;
-using Me.EarzuChan.Ryo.Core.Adaptions;
+using Me.EarzuChan.Ryo.Core.Adaptations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -13,9 +13,9 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
 {
     public static class SerializationUtils
     {
-        public static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new()
+        private static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new()
         {
-            TypeNameHandling = TypeNameHandling.None, // 处理类名：Auto时如给哺乳动物类字段分配狗的实例时标注一个元数据 而哥们有类型系统，这这不采用
+            TypeNameHandling = TypeNameHandling.None, // suan处理类名：Auto时如给哺乳动物类字段分配狗的实例时标注一个元数据 而哥们有类型系统，这这不采用
             ReferenceLoopHandling = ReferenceLoopHandling.Serialize, // A类的成员a类型是A时采取的操作
             // PreserveReferencesHandling = PreserveReferencesHandling.All,
             // TODO: Null管不管
@@ -23,7 +23,7 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
         };
 
         [Obsolete("老哥不建议使用这个")]
-        public static string InsidedItemToJson(this object item, string typeName = "无类名")
+        public static string ToJsonWithInternalAlgorithm(this object item, string typeName = "无类名")
         {
             // 我希望写出变量名
 
@@ -44,13 +44,13 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
                 var strList = new List<string>();
                 foreach (var elem in (Array)item)
                 {
-                    strList.Add(InsidedItemToJson(elem));
+                    strList.Add(ToJsonWithInternalAlgorithm(elem));
                 }
                 return $"{{\"{type.GetElementType()?.Name}数组:{strList.Count}\":[{string.Join(',', strList)}]}}";
 
             }
             else if (typeof(ICtorAdaptable).IsAssignableFrom(type))
-                return InsidedItemToJson(((ICtorAdaptable)item).GetAdaptedArray(), type.Name);
+                return ToJsonWithInternalAlgorithm(((ICtorAdaptable)item).GetAdaptedArray(), type.Name);
             else
             {
                 string? str = item.ToString()!.Replace("\n", "\\n").Replace("\"", "\\\"");
@@ -58,8 +58,8 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             }
         }
 
-        public static string NewtonsoftItemToJson(this object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
+        public static string ToJsonWithNewtonJson(this object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
 
-        public static object? NewtonsoftJsonToItem<T>(this string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
+        public static object? JsonToObjectWithNewtonJson<T>(this string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
     }
 }

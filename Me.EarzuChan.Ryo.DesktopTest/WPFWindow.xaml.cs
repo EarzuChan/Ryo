@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptions;
+﻿using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Utils;
@@ -158,7 +158,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
         // public MassServer() => LogUtils.PrintInfo("MassServer Inited");
 
-        public string GetFileTreeData() => SerializationUtils.NewtonsoftItemToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
+        public string GetFileTreeData() => SerializationUtils.ToJsonWithNewtonJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
 
         public void OpenFile()
         {
@@ -189,7 +189,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             {
                 var mass = MassManager.MassFiles[fileName];
 
-                return SerializationUtils.NewtonsoftItemToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
+                return SerializationUtils.ToJsonWithNewtonJson(mass.Get<object>(mass.IdStrPairs[itemName]));
             }
             catch (Exception ex)
             {
@@ -210,11 +210,11 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
                 var itemAdaption = mass.ItemAdaptions[itemBlob.AdaptionId];
 
-                var dataRyoType = AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
+                var dataRyoType = AdaptationManager.INSTANCE.GetRyoTypeByJavaClz(itemAdaption.DataJavaClz);
 
                 Trace.WriteLine(dataRyoType);
 
-                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.BaseType);
+                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("NewtonsoftJsonToItem").MakeGenericMethod(dataRyoType.CsType);
                 object value = tempMethod.Invoke(null, new[] { json });
 
                 mass.Add(itemName, value);

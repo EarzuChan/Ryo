@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptions;
+﻿using Me.EarzuChan.Ryo.Core.Adaptations;
 
 namespace Me.EarzuChan.Ryo.Core.Formations
 {
