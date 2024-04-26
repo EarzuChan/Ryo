@@ -28,9 +28,8 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         {
             /*var hdl = DataTypeSchemaUtils.NonDataTypeHandling.Error;*/
 
-            ctx.PrintLine(typeof(骚纲).ToRyoType().GetDataTypeSchema().ToJsonWithNewtonJson());
-            ctx.PrintLine(typeof(bool).ToRyoType().GetDataTypeSchema().ToJsonWithNewtonJson());
             ctx.PrintLine(typeof(List<List<int>[][]>[]).ToRyoType().ToCsType()!.ToString());
+            ctx.PrintLine("[[[[[L我勒个骚纲;".JavaClassToRyoType().ToCsType()!.ToString());
         }
     }
 
@@ -57,8 +56,8 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         {
             var ryoType = JavaClz.JavaClassToRyoType();
             context.PrintLine(ryoType.ToString());
-            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
             context.PrintLine($"C#:{ryoType.ToCsType()}");
+            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
         }
     }
 
@@ -76,37 +75,8 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
         {
             var ryoType = CsType.ToRyoType();
             context.PrintLine(ryoType.ToString());
-            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
             context.PrintLine($"C#:{ryoType.ToCsType()}");
-        }
-    }
-
-    [Command("Ff")]
-    public class ForFunCommand : ICommand
-    {
-
-        public void Execute(ConsoleApplicationContext context)
-        {
-            var ts = new Ts();
-            context.PrintLine(ts.str);
-            ts.GaiTs();
-            context.PrintLine(ts.str);
-        }
-    }
-
-
-    public class Ts
-    {
-        public string str = "Ok";
-    }
-
-    public static class TsUtils
-    {
-        public static void GaiTs(this Ts ts)
-        {
-            var temp = ts;
-            temp.str = "太美丽";
-            ts = new Ts { str = "只有为你感慨" };
+            context.PrintLine($"Java:{ryoType.ToJavaClass()}");
         }
     }
 }

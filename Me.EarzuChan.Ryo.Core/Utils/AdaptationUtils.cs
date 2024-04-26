@@ -87,22 +87,29 @@ namespace Me.EarzuChan.Ryo.Core.Utils
         }
 
         // GetRyoByJava
+        // FIXME:貌似非法输入如“[[Ljava.lang.Byte”，没有“;”，会还原出时死循环
+        // 貌似解决了
         public static RyoType JavaClassToRyoType(this string clzName)
         {
             LogUtils.PrintInfo($"Resolve Ryo Type by Java Class: {clzName}");
+
 
             // 是否是列表
             bool isArray = clzName.StartsWith('[');
 
             // 先拨弄短名，只有是数组下才以短名示人
             string? shortName = isArray ? clzName[1..] : null;
-            if (clzName.StartsWith("[[")) clzName = clzName[1..]; // 是嵌套Java类名，保留原始类名
+            if (clzName.StartsWith("[[")) clzName = clzName[1..]; // 是嵌套Java类名，保留去一层的原始类名
 
             // 是否是基本类型
-            if (isArray && shortName!.StartsWith('L') && clzName.EndsWith(';'))
+            if (isArray && !shortName!.StartsWith('['))
             {
-                clzName = clzName[2..^1];
-                shortName = null;
+                if (shortName.StartsWith('L') && clzName.EndsWith(';'))
+                {
+                    clzName = clzName[2..^1];
+                    shortName = null;
+                }
+                else if (shortName.Length != 1) throw new RyoTypeParsingException($"Illegal Java Class input: {clzName}"); // 但是开头没有L怎么办
             }
 
             // 初始化
@@ -144,7 +151,7 @@ namespace Me.EarzuChan.Ryo.Core.Utils
             var typeNamePrefix = new StringBuilder("");
             while (ryoType.IsArray)
             {
-                typeNamePrefix.Append('[');
+                typeNamePrefix.Append('['); //HACK:老实说这个是倒着来的，不过无伤大雅？按理说应为Insert 0 [
                 ryoType = ryoType.GetArrayElementRyoType();
                 LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
             }
@@ -168,9 +175,6 @@ namespace Me.EarzuChan.Ryo.Core.Utils
                 LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
             }
             arrayLevelAndTypes.Reverse();
-
-            // 额外查询，这个对于合法的RyoType不可能
-            // if (baseType == null && ryoType.IsAdaptableCustom) baseType = AdaptationUtils.SearchAdaptableFormations(ryoType.JavaClzName!);
 
             if (ryoType.CsType == null) return null;
             Type baseType = ryoType.CsType;
