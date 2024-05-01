@@ -1,6 +1,7 @@
-﻿using Me.EarzuChan.Ryo.WinWebAppSystem;
+﻿using Me.EarzuChan.Ryo.Extensions.Utils;
+using Me.EarzuChan.Ryo.WinWebAppSystem;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.WebEventHandlers;
+using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
 using System.Collections;
 using System.Diagnostics;
 
@@ -13,7 +14,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
 
         public TestHandler(string msg) { Msg = msg; }
 
-        /*public TestHandler(int num) { Msg = "这这不能"; } // 呃呃确实不能*/
+        /*public TestHandler(int num) { Msg = "这这不能"; } // 现在不能，以后有得你能*/
 
         public TestHandler() { Msg = "Members out!"; }
 
@@ -24,21 +25,38 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
     }
 
     [WebEventHandler("CallBack")]
-    public class CallBackHandler : IWebEventHandler
+    public class CallBackHandler : IWebEventHandlerForCallBack
     {
-        public void Handle(WinWebAppContext context)
+        public object[] Handle(WinWebAppContext context)
         {
             Trace.WriteLine("Copied that, sir!");
-            context.EmitWebEvent(new WebEvent { Name = "太美丽", Args = new object[] { "What", "Can", 0, false } });
+            return new object[] { "What", "Can", 0, false };
         }
     }
 
     [WebEventHandler("GetAllDataTypes")]
-    public class GetAllDataTypesHandler : IWebEventHandler
+    public class GetAllDataTypesHandler : IWebEventHandlerForCallBack
+    {
+        public object[] Handle(WinWebAppContext context) => DataTypeSchemaUtils.GetAllDataTypeSchemas();
+    }
+
+    [WebEventHandler("StopApp")]
+    public class StopAppHandler : IWebEventHandler
     {
         public void Handle(WinWebAppContext context)
         {
-            context.EmitWebEvent(new() { Name = "PushAllDataTypes", Args = new object[] { new ArrayList() { } } });
+            Trace.WriteLine("结束应用程序");
+            context.StopApp();
         }
+    }
+
+    [WebEventHandler("Zdh")]
+    public class ZdhHandler : IWebEventHandler
+    {
+        private readonly bool State;
+
+        public ZdhHandler(bool state) => State = state;
+
+        public void Handle(WinWebAppContext context) => context.SetAppMaximized(State);
     }
 }

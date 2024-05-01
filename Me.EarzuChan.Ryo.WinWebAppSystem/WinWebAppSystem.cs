@@ -12,12 +12,15 @@ using Me.EarzuChan.Ryo.Utils;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.WebEventHandlers;
+using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using System.Xml.Linq;
 using Me.EarzuChan.Ryo.WinWebAppSystem.Utils;
 using System.Runtime.InteropServices;
 using Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions;
+using Me.EarzuChan.Ryo.Extensions.Utils;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Me.EarzuChan.Ryo.WinWebAppSystem
 {
@@ -27,17 +30,20 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         internal readonly WinWebAppProfile Profile;
         internal readonly ArrayList Dependencies;
         internal readonly Dictionary<WebEventHandlerAttribute, Type> Handlers;
-        internal readonly WinWebAppWindow WpfWindow;
+        internal readonly Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> AppEventListeners;
+        internal readonly WinWebAppWindow WpfWindow; // 解耦这个
         internal readonly WebView2 WebView;
 
-        private readonly Application WpfApp;
+        private readonly Application WpfApp; // 解耦这个
 
-        private readonly WinWebAppContext Context;
+        internal readonly WinWebAppContext Context;
 
-        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers)
+        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers, Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> appEventListeners)
         {
             Profile = profile;
             Dependencies = dependencies;
+            AppEventListeners = appEventListeners;
+
             Handlers = handlers;
 
             WpfApp = new Application();
@@ -48,6 +54,11 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         }
 
         public void Run() => WpfApp.Run(WpfWindow);
+
+        public void Stop()
+        {
+            WpfApp.Shutdown();
+        }
 
         public void HandleWebEvent(string str) => HandleWebEvent(WebEventUtils.ParseWebEventJson(str));
 
@@ -63,14 +74,24 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
                     foreach (var constructor in constructors)
                     {
                         var parameters = constructor.GetParameters();
-                        // 以后要验证参数类型匹配情况
+                        // TODO:以后要验证参数类型匹配情况
                         if (model.Args.Length == parameters.Length)
                         {
                             try
                             {
-                                var command = (IWebEventHandler)constructor.Invoke(model.Args);
+                                // 为支持快速回调的
+                                if (typeof(IWebEventHandler).IsAssignableFrom(hdl.Value))
+                                {
+                                    var command = (IWebEventHandler)constructor.Invoke(model.Args);
 
-                                command.Handle(Context);
+                                    command.Handle(Context);
+                                }
+                                else
+                                {
+                                    var command = (IWebEventHandlerForCallBack)constructor.Invoke(model.Args);
+
+                                    EmitWebEvent(new() { Name = $"CallBack{hdl.Key.EventName}", Args = command.Handle(Context) });
+                                }
                             }
                             catch (Exception e)
                             {
@@ -89,7 +110,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public void EmitWebEvent(WebEvent model)
         {
             // TODO:可能需要验证、解耦（转文本 发送层）
-            WebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(model));
+            WebView.CoreWebView2.PostWebMessageAsJson(SerializationUtils.ToJson(model));
         }
 
         public static WinWebAppBuilder CreateBuilder(WinWebAppProfile profile) => new(profile);
@@ -102,6 +123,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         private readonly WinWebAppProfile Profile;
         private readonly ArrayList Dependencies = new();
         private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
+        private readonly Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> AppEventListeners = new();
         private bool IsBuilt = false;
 
         internal WinWebAppBuilder(WinWebAppProfile profile)
@@ -113,9 +135,9 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         {
             if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
 
-            if (Profile.HandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
+            if (Profile.WebEventHandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
 
-            WinWebApp application = new(Profile, Dependencies, WebEventHandlers);
+            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventListeners);
 
             IsBuilt = true;
 
@@ -130,7 +152,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             foreach (var type in types)
             {
                 var attribute = type.GetCustomAttribute<WebEventHandlerAttribute>();
-                if (attribute != null && typeof(IWebEventHandler).IsAssignableFrom(type))
+                if (attribute != null && (typeof(IWebEventHandler).IsAssignableFrom(type) || typeof(IWebEventHandlerForCallBack).IsAssignableFrom(type)))
                 {
                     if (!attribute.Scannable) continue;
 
@@ -141,7 +163,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
         public WinWebAppBuilder RegisterWebEventHandler(WebEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute == null || !typeof(IWebEventHandler).IsAssignableFrom(handler)) throw new WinWebAppBuildingException("检查你注册处理器时提供的参数");
+            if (handlerAttribute == null || (!typeof(IWebEventHandler).IsAssignableFrom(handler) && typeof(IWebEventHandlerForCallBack).IsAssignableFrom(handler))) throw new WinWebAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebEventHandlerDirectly(handlerAttribute, handler);
 
@@ -150,7 +172,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
         private void RegisterWebEventHandlerDirectly(WebEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute.IsDev && !Profile.IsDev) return; // Throw?
+            if (handlerAttribute.IsDev && !Profile.DebugMode) return;
 
             WebEventHandlers.Add(handlerAttribute, handler);
         }
@@ -162,27 +184,41 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
             return this;
         }
+
+
+        public WinWebAppBuilder AddAppEventHandler(WinWebAppEvent appEvent, Action<object, WinWebAppContext> listener)
+        {
+            AppEventListeners.Add(appEvent, listener);
+
+            return this;
+        }
+    }
+
+    public enum WinWebAppEvent
+    {
+        AppMaximizationChanged
     }
 
     public class WinWebAppProfile
     {
-
+        // Basic Profile
         public string Name { get; init; } = "Ryo App";
+        public string Icon { get; init; } = "AppResources/icon_ryo_app.ico";
+        public bool UseIcon { get; init; } = true;
         public string Version { get; init; } = "1.0.0.0";
-
-        public string DevStartUpUrl { get; init; } = "http://127.0.0.1:5173/";
         public string VirtualHostNameName { get; init; } = "ryo_web_frontend";
         public string StartUpUrl { get; init; } = "https://ryo_web_frontend/index.html";
         public string WebResourcePath { get; init; } = "WebResources";
-
+        public bool WindowBorderless { get; init; } = true;
         public int WindowWidth { get; init; } = 1200;
         public int WindowHeight { get; init; } = 800;
+        public WebEventHandlerRegistrationStrategy WebEventHandlerRegistrationStrategy { get; init; } = WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
 
-        public bool IsDev { get; init; } = false;
-
-        public WebEventHandlerRegistrationStrategy HandlerRegistrationStrategy { get; init; } = WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
-
-        public bool WindowBorderless { get; init; } = true;
+        // Debug Profile
+        public bool DebugStartUpWithDebugUrl { get; init; } = true;
+        public bool DebugAutomaticOpenDevTool { get; init; } = true;
+        public string DebugStartUpUrl { get; init; } = "http://localhost:5173/";
+        public bool DebugMode { get; init; } = false;
     }
 
     internal class WinWebAppWindow : Window
@@ -196,6 +232,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             Title = App.Profile.Name;
             Width = App.Profile.WindowWidth;
             Height = App.Profile.WindowHeight;
+            if (App.Profile.UseIcon) Icon = new BitmapImage(new Uri(App.Profile.Icon, UriKind.RelativeOrAbsolute));
 
             Content = App.WebView;
 
@@ -205,8 +242,14 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
                 CaptionHeight = 0,
             });
 
+            StateChanged += OnStateChanged;
             Loaded += InitWebView;
             App.WebView.CoreWebView2InitializationCompleted += InitWebApp;
+        }
+
+        private void OnStateChanged(object? _, EventArgs __)
+        {
+            App.AppEventListeners[WinWebAppEvent.AppMaximizationChanged](WindowState == WindowState.Maximized, App.Context);
         }
 
         private async void InitWebView(object _, RoutedEventArgs __)
@@ -227,7 +270,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             App.WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(App.Profile.VirtualHostNameName, App.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
 
             // TODO:FIX BABE
-            App.WebView.CoreWebView2.Navigate(App.Profile.IsDev ? App.Profile.DevStartUpUrl : App.Profile.StartUpUrl);
+            App.WebView.CoreWebView2.Navigate(App.Profile.DebugMode && App.Profile.DebugStartUpWithDebugUrl ? App.Profile.DebugStartUpUrl : App.Profile.StartUpUrl);
 
             // 提供对象 互操作
             // MyWebView2.CoreWebView2.AddHostObjectToScript("handler", handler);
@@ -238,7 +281,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             App.WebView.CoreWebView2.WebMessageReceived += (_, e) => App.HandleWebEvent(e.WebMessageAsJson);
 
             // 打开控制台
-            if (App.Profile.IsDev) App.WebView.CoreWebView2.OpenDevToolsWindow();
+            if (App.Profile.DebugMode && App.Profile.DebugAutomaticOpenDevTool) App.WebView.CoreWebView2.OpenDevToolsWindow();
         }
     }
 
@@ -256,6 +299,18 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             // TODO:Unstable Babe
             App.EmitWebEvent(model);
         }
+
+        public bool IsAppMaximized => App.WpfWindow.WindowState == WindowState.Maximized;
+
+        public void SetAppMaximized(bool value)
+        {
+            /*if (App.WpfWindow.WindowState != WindowState.Minimized)*/
+            App.WpfWindow.WindowState = value ? WindowState.Maximized : WindowState.Normal;
+        }
+
+        public void MinimizeApp() => App.WpfWindow.WindowState = WindowState.Minimized;
+
+        public void StopApp() => App.Stop();
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口

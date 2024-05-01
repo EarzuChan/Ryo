@@ -63,17 +63,17 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             }
         }
 
-        public static object GetAllDataTypeSchemas()
+        public static object[] GetAllDataTypeSchemas()
         {
             // 第一步：遍历源集合，调用GetDataTypeSchema方法
-            var sourceSchemas = AdaptationUtils.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema()).ToArray();
+            var sourceSchemas = AdaptationUtils.BasicRyoTypes.Select(ryoType => ryoType.GetDataTypeSchema());
 
             // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
             var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
-                                          .Select(type => type.ToRyoType().GetDataTypeSchema()).ToArray();
+                                          .Select(type => type.ToRyoType().GetDataTypeSchema());
 
             // 第三步：合并两个列表
-            return sourceSchemas.Concat(adaptableSchemas);
+            return sourceSchemas.Concat(adaptableSchemas).ToArray();
         }
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.WebEventHandlers
+namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers
 {
     public enum WebEventHandlerRegistrationStrategy
     {
@@ -15,6 +15,11 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.WebEventHandlers
     public interface IWebEventHandler
     {
         public void Handle(WinWebAppContext context);
+    }
+
+    public interface IWebEventHandlerForCallBack
+    {
+        public object[] Handle(WinWebAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

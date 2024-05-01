@@ -8,6 +8,7 @@ using Me.EarzuChan.Ryo.Core.Formations.DataFormations.PipeDream;
 using Me.EarzuChan.Ryo.Exceptions;
 using System.Reflection;
 using Me.EarzuChan.Ryo.Utils;
+using Newtonsoft.Json.Serialization;
 
 namespace Me.EarzuChan.Ryo.Extensions.Utils
 {
@@ -16,9 +17,11 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
         private static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new()
         {
             TypeNameHandling = TypeNameHandling.None, // suan处理类名：Auto时如给哺乳动物类字段分配狗的实例时标注一个元数据 而哥们有类型系统，这这不采用
-            ReferenceLoopHandling = ReferenceLoopHandling.Serialize, // A类的成员a类型是A时采取的操作
+            ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
+            // A类的成员a类型是A时采取的操作
             // PreserveReferencesHandling = PreserveReferencesHandling.All,
             // TODO: Null管不管
+            ContractResolver = new CamelCasePropertyNamesContractResolver(),
             Converters = new JsonConverter[] { new ExpandoObjectConverter() }
         };
 
@@ -58,8 +61,8 @@ namespace Me.EarzuChan.Ryo.Extensions.Utils
             }
         }
 
-        public static string ToJsonWithNewtonJson(this object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
+        public static string ToJson(this object item) => JsonConvert.SerializeObject(item, DefaultJsonSerializerSettings);
 
-        public static object? JsonToObjectWithNewtonJson<T>(this string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
+        public static object? JsonToObject<T>(this string json) => JsonConvert.DeserializeObject<T>(json); // 要不要设置？
     }
 }

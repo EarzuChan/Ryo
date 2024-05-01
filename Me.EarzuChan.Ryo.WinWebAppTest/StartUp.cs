@@ -1,4 +1,6 @@
 ﻿using Me.EarzuChan.Ryo.WinWebAppSystem;
+using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
+using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.WinWebAppTest
 {
@@ -11,8 +13,15 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest
                 .CreateBuilder(new()
                 {
 #if DEBUG
-                    IsDev = true,
+                    DebugMode = true,
+                    UseIcon = false,
+                    /*DebugAutomaticOpenDevTool = false,
+                    DebugStartUpWithDebugUrl = false,*/
 #endif
+                })
+                .AddAppEventHandler(WinWebAppEvent.AppMaximizationChanged, (state, ctx) =>
+                {
+                    ctx.EmitWebEvent(new WebEvent { Name = "AppMaximizationChanged", Args = new object[] { state } });
                 })
                 .Build()
                 .Run();

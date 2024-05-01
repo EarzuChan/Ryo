@@ -38,7 +38,7 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands
     {
         public void Execute(ConsoleApplicationContext context)
         {
-            context.PrintLine(DataTypeSchemaUtils.GetAllDataTypeSchemas().ToJsonWithNewtonJson());
+            context.PrintLine(DataTypeSchemaUtils.GetAllDataTypeSchemas().ToJson());
         }
     }
 

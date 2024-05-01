@@ -8,11 +8,15 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj" />
     <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="WebCalls\Responders\" />
   </ItemGroup>
 
 </Project>

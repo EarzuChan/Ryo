@@ -151,7 +151,7 @@ namespace Me.EarzuChan.Ryo.Core.Utils
             var typeNamePrefix = new StringBuilder("");
             while (ryoType.IsArray)
             {
-                typeNamePrefix.Append('['); //HACK:老实说这个是倒着来的，不过无伤大雅？按理说应为Insert 0 [
+                typeNamePrefix.Append('[');
                 ryoType = ryoType.GetArrayElementRyoType();
                 LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
             }

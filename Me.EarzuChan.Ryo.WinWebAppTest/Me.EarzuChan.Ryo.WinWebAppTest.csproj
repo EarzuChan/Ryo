@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>AppResources\icon_ryo_app.ico</ApplicationIcon>
   </PropertyGroup>
 
 	<ItemGroup>
@@ -15,7 +16,14 @@
 	</ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj" />
     <ProjectReference Include="..\Me.EarzuChan.Ryo.WinWebAppSystem\Me.EarzuChan.Ryo.WinWebAppSystem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <Content Include="AppResources\**">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
   </ItemGroup>
 
 </Project>
