@@ -11,5 +11,12 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents
         public string Name;
 
         public object[] Args;
+
+        public WebEvent(string name, object[]? args = null)
+        {
+            args ??= Array.Empty<object>();
+            Name = name;
+            Args = args;
+        }
     }
 }

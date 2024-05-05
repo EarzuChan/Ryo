@@ -2,6 +2,7 @@
 using Me.EarzuChan.Ryo.WinWebAppSystem;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
+using Me.EarzuChan.Ryo.WinWebAppSystem.Windows;
 using System.Collections;
 using System.Diagnostics;
 
@@ -50,13 +51,13 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
         }
     }
 
-    [WebEventHandler("Zdh")]
+    [WebEventHandler("SetAppWindowState")]
     public class ZdhHandler : IWebEventHandler
     {
-        private readonly bool State;
+        private readonly WinWebAppWindowState State;
 
-        public ZdhHandler(bool state) => State = state;
+        public ZdhHandler(Int64 state) => State = (WinWebAppWindowState)state;
 
-        public void Handle(WinWebAppContext context) => context.SetAppMaximized(State);
+        public void Handle(WinWebAppContext context) => context.SetAppWindowState(State);
     }
 }

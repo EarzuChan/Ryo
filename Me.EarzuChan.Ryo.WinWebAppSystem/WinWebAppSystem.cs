@@ -21,6 +21,7 @@ using Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions;
 using Me.EarzuChan.Ryo.Extensions.Utils;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Me.EarzuChan.Ryo.WinWebAppSystem.Windows;
 
 namespace Me.EarzuChan.Ryo.WinWebAppSystem
 {
@@ -30,15 +31,14 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         internal readonly WinWebAppProfile Profile;
         internal readonly ArrayList Dependencies;
         internal readonly Dictionary<WebEventHandlerAttribute, Type> Handlers;
-        internal readonly Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> AppEventListeners;
-        internal readonly WinWebAppWindow WpfWindow; // 解耦这个
-        internal readonly WebView2 WebView;
+        internal readonly Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> AppEventListeners;
+        internal readonly IWinWebAppWindow AppWindow; // 解耦这个
 
-        private readonly Application WpfApp; // 解耦这个
+        // private readonly Application WpfApp; // 解耦这个
 
-        internal readonly WinWebAppContext Context;
+        private readonly WinWebAppContext Context;
 
-        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers, Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> appEventListeners)
+        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers, Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> appEventListeners, IWinWebAppWindow appWindow)
         {
             Profile = profile;
             Dependencies = dependencies;
@@ -46,18 +46,20 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
             Handlers = handlers;
 
-            WpfApp = new Application();
-            WebView = new WebView2();
-            WpfWindow = new WinWebAppWindow(this);
+            appWindow.Init(this);
+            AppWindow = appWindow;
 
             Context = new(this);
         }
 
-        public void Run() => WpfApp.Run(WpfWindow);
+        public void Run()
+        {
+            AppWindow.Show();
+        }
 
         public void Stop()
         {
-            WpfApp.Shutdown();
+            AppWindow.Close();
         }
 
         public void HandleWebEvent(string str) => HandleWebEvent(WebEventUtils.ParseWebEventJson(str));
@@ -68,13 +70,14 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
             foreach (var hdl in Handlers)
             {
-                if (model.Name == hdl.Key.EventName.ToLower())
+                if (model.Name == hdl.Key.EventName)
                 {
                     var constructors = hdl.Value.GetConstructors();
                     foreach (var constructor in constructors)
                     {
                         var parameters = constructor.GetParameters();
                         // TODO:以后要验证参数类型匹配情况
+                        // Int64阿弥诺斯
                         if (model.Args.Length == parameters.Length)
                         {
                             try
@@ -90,7 +93,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
                                 {
                                     var command = (IWebEventHandlerForCallBack)constructor.Invoke(model.Args);
 
-                                    EmitWebEvent(new() { Name = $"CallBack{hdl.Key.EventName}", Args = command.Handle(Context) });
+                                    EmitWebEvent(new($"CallBack{hdl.Key.EventName}", command.Handle(Context)));
                                 }
                             }
                             catch (Exception e)
@@ -110,7 +113,16 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public void EmitWebEvent(WebEvent model)
         {
             // TODO:可能需要验证、解耦（转文本 发送层）
-            WebView.CoreWebView2.PostWebMessageAsJson(SerializationUtils.ToJson(model));
+            AppWindow.EmitWebEvent(model);
+        }
+
+        internal void TriggerAppEvent(WinWebAppEvent appEvent, object? arg = null)
+        {
+            if (!AppEventListeners.ContainsKey(appEvent)) return;
+
+            AppEventListeners[appEvent].Invoke(Context, arg);
+
+            // TODO:可能需要弄一个数据类型，允许一事件多监听器挂载
         }
 
         public static WinWebAppBuilder CreateBuilder(WinWebAppProfile profile) => new(profile);
@@ -123,7 +135,8 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         private readonly WinWebAppProfile Profile;
         private readonly ArrayList Dependencies = new();
         private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
-        private readonly Dictionary<WinWebAppEvent, Action<object, WinWebAppContext>> AppEventListeners = new();
+        private readonly Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> AppEventListeners = new();
+        private IWinWebAppWindow? AppWindow = null;
         private bool IsBuilt = false;
 
         internal WinWebAppBuilder(WinWebAppProfile profile)
@@ -135,13 +148,22 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         {
             if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
 
+            if (AppWindow == null) throw new WinWebAppBuildingException("没有使用的窗口");
+
             if (Profile.WebEventHandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
 
-            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventListeners);
+            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventListeners, AppWindow);
 
             IsBuilt = true;
 
             return application;
+        }
+
+        public WinWebAppBuilder UseWpfWindow()
+        {
+            if (AppWindow != null) throw new InvalidOperationException("不允许重复使用窗口");
+            AppWindow = new WinWebAppWpfWindow();
+            return this;
         }
 
         private void ScanWebEventHandlers()
@@ -186,7 +208,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         }
 
 
-        public WinWebAppBuilder AddAppEventHandler(WinWebAppEvent appEvent, Action<object, WinWebAppContext> listener)
+        public WinWebAppBuilder RegisterAppEventListener(WinWebAppEvent appEvent, Action<WinWebAppContext, object?> listener) // TODO:想起Immediately
         {
             AppEventListeners.Add(appEvent, listener);
 
@@ -196,7 +218,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
 
     public enum WinWebAppEvent
     {
-        AppMaximizationChanged
+        AppWindowStateChanged
     }
 
     public class WinWebAppProfile
@@ -212,6 +234,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public bool WindowBorderless { get; init; } = true;
         public int WindowWidth { get; init; } = 1200;
         public int WindowHeight { get; init; } = 800;
+        public WinWebAppWindowState StartUpWindowState { get; init; } = WinWebAppWindowState.Normal;
         public WebEventHandlerRegistrationStrategy WebEventHandlerRegistrationStrategy { get; init; } = WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
 
         // Debug Profile
@@ -219,70 +242,6 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public bool DebugAutomaticOpenDevTool { get; init; } = true;
         public string DebugStartUpUrl { get; init; } = "http://localhost:5173/";
         public bool DebugMode { get; init; } = false;
-    }
-
-    internal class WinWebAppWindow : Window
-    {
-        private readonly WinWebApp App;
-
-        internal WinWebAppWindow(WinWebApp app)
-        {
-            App = app;
-
-            Title = App.Profile.Name;
-            Width = App.Profile.WindowWidth;
-            Height = App.Profile.WindowHeight;
-            if (App.Profile.UseIcon) Icon = new BitmapImage(new Uri(App.Profile.Icon, UriKind.RelativeOrAbsolute));
-
-            Content = App.WebView;
-
-            if (App.Profile.WindowBorderless) WindowChrome.SetWindowChrome(this, new System.Windows.Shell.WindowChrome()
-            {
-                ResizeBorderThickness = new Thickness(8),
-                CaptionHeight = 0,
-            });
-
-            StateChanged += OnStateChanged;
-            Loaded += InitWebView;
-            App.WebView.CoreWebView2InitializationCompleted += InitWebApp;
-        }
-
-        private void OnStateChanged(object? _, EventArgs __)
-        {
-            App.AppEventListeners[WinWebAppEvent.AppMaximizationChanged](WindowState == WindowState.Maximized, App.Context);
-        }
-
-        private async void InitWebView(object _, RoutedEventArgs __)
-        {
-            // 当窗口加载好
-
-            var webView2Environment = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = "--enable-features=msWebView2EnableDraggableRegions" });
-
-            // 加载核心 
-            await App.WebView.EnsureCoreWebView2Async(webView2Environment);
-        }
-
-        private void InitWebApp(object? _, CoreWebView2InitializationCompletedEventArgs __)
-        {
-            // 当浏览器加载好
-
-            // 资源拨弄成虚拟主机
-            App.WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(App.Profile.VirtualHostNameName, App.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
-
-            // TODO:FIX BABE
-            App.WebView.CoreWebView2.Navigate(App.Profile.DebugMode && App.Profile.DebugStartUpWithDebugUrl ? App.Profile.DebugStartUpUrl : App.Profile.StartUpUrl);
-
-            // 提供对象 互操作
-            // MyWebView2.CoreWebView2.AddHostObjectToScript("handler", handler);
-            // Trace.WriteLine(MassServer.GetMasses());
-            // 其实在Js侧写个包也可以做到"Request"，还需要提供专门的Request接口吗
-
-            // 回调接受消息
-            App.WebView.CoreWebView2.WebMessageReceived += (_, e) => App.HandleWebEvent(e.WebMessageAsJson);
-
-            // 打开控制台
-            if (App.Profile.DebugMode && App.Profile.DebugAutomaticOpenDevTool) App.WebView.CoreWebView2.OpenDevToolsWindow();
-        }
     }
 
     public class WinWebAppContext
@@ -294,23 +253,17 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public T Inject<T>() where T : class =>
             ControlFlowUtils.TryCatchingThenThrow<T>("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 
+        // AppService
         public void EmitWebEvent(WebEvent model)
         {
             // TODO:Unstable Babe
             App.EmitWebEvent(model);
         }
 
-        public bool IsAppMaximized => App.WpfWindow.WindowState == WindowState.Maximized;
-
-        public void SetAppMaximized(bool value)
-        {
-            /*if (App.WpfWindow.WindowState != WindowState.Minimized)*/
-            App.WpfWindow.WindowState = value ? WindowState.Maximized : WindowState.Normal;
-        }
-
-        public void MinimizeApp() => App.WpfWindow.WindowState = WindowState.Minimized;
-
         public void StopApp() => App.Stop();
+
+        // AppWindowService
+        public void SetAppWindowState(WinWebAppWindowState state) => App.AppWindow.SetWindowState(state);
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口

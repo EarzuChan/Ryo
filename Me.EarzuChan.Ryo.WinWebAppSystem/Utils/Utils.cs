@@ -34,7 +34,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.Utils
             if (model == null) throw new WebEventParsingException($"无效消息：{str}\nModel仍为Null");
             if (model.Name == null) throw new IllegalWebEventException($"无效消息：{str}\nModel的Name为Null");
 
-            model.Name = model.Name.Trim().ToLower();
+            model.Name = model.Name.Trim();
             model.Args ??= Array.Empty<object>();
 
             return model;

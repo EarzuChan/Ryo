@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.WinWebAppTest
 {
-    public class StartUp
+    public static class StartUp
     {
         [STAThread]
         private static void Main(string[] args)
@@ -19,9 +19,10 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest
                     DebugStartUpWithDebugUrl = false,*/
 #endif
                 })
-                .AddAppEventHandler(WinWebAppEvent.AppMaximizationChanged, (state, ctx) =>
+                .UseWpfWindow()
+                .RegisterAppEventListener(WinWebAppEvent.AppWindowStateChanged, (ctx, state) =>
                 {
-                    ctx.EmitWebEvent(new WebEvent { Name = "AppMaximizationChanged", Args = new object[] { state } });
+                    ctx.EmitWebEvent(new WebEvent("AppWindowStateChanged", new object[] { state! }));
                 })
                 .Build()
                 .Run();
