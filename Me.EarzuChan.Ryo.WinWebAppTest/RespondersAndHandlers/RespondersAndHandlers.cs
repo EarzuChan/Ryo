@@ -3,7 +3,6 @@ using Me.EarzuChan.Ryo.WinWebAppSystem;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
 using Me.EarzuChan.Ryo.WinWebAppSystem.Windows;
-using System.Collections;
 using System.Diagnostics;
 
 namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers

@@ -19,7 +19,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest
                     DebugStartUpWithDebugUrl = false,*/
 #endif
                 })
-                .UseWpfWindow()
+                .UseDefaultWindowBackend()
                 .RegisterAppEventListener(WinWebAppEvent.AppWindowStateChanged, (ctx, state) =>
                 {
                     ctx.EmitWebEvent(new WebEvent("AppWindowStateChanged", new object[] { state! }));

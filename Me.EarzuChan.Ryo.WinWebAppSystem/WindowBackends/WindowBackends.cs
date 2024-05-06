@@ -1,12 +1,6 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
 using System.Windows.Shell;
 using System.Windows;
 using Microsoft.Web.WebView2.Wpf;
@@ -22,14 +16,14 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.Windows
         Minimized
     }
 
-    internal class WinWebAppWpfWindow : IWinWebAppWindow
+    internal class WinWebAppWpfWindowBackend : IWinWebAppWindowBackend
     {
         private WinWebApp App;
-        private WebView2 WebView = new();
-        private Application WpfApp = new();
-        private Window WpfWindow = new();
+        private readonly WebView2 WebView = new();
+        private readonly Application WpfApp = new();
+        private readonly Window WpfWindow = new();
 
-        internal WinWebAppWpfWindow() { }
+        internal WinWebAppWpfWindowBackend() { }
 
         private void OnStateChanged(object? _, EventArgs __)
         {
@@ -81,7 +75,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.Windows
 
             WpfWindow.Content = WebView;
 
-            if (App.Profile.WindowBorderless) WindowChrome.SetWindowChrome(WpfWindow, new System.Windows.Shell.WindowChrome()
+            if (App.Profile.WindowBorderless) WindowChrome.SetWindowChrome(WpfWindow, new WindowChrome()
             {
                 ResizeBorderThickness = new Thickness(8),
                 CaptionHeight = 0,
@@ -105,7 +99,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.Windows
         }
     }
 
-    public interface IWinWebAppWindow
+    public interface IWinWebAppWindowBackend
     {
         public void SetWindowState(WinWebAppWindowState state);
 

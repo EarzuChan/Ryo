@@ -32,13 +32,11 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         internal readonly ArrayList Dependencies;
         internal readonly Dictionary<WebEventHandlerAttribute, Type> Handlers;
         internal readonly Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> AppEventListeners;
-        internal readonly IWinWebAppWindow AppWindow; // 解耦这个
-
-        // private readonly Application WpfApp; // 解耦这个
+        internal readonly IWinWebAppWindowBackend AppWindowBackend;
 
         private readonly WinWebAppContext Context;
 
-        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers, Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> appEventListeners, IWinWebAppWindow appWindow)
+        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> handlers, Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> appEventListeners, IWinWebAppWindowBackend appWindow)
         {
             Profile = profile;
             Dependencies = dependencies;
@@ -47,19 +45,19 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             Handlers = handlers;
 
             appWindow.Init(this);
-            AppWindow = appWindow;
+            AppWindowBackend = appWindow;
 
             Context = new(this);
         }
 
         public void Run()
         {
-            AppWindow.Show();
+            AppWindowBackend.Show();
         }
 
         public void Stop()
         {
-            AppWindow.Close();
+            AppWindowBackend.Close();
         }
 
         public void HandleWebEvent(string str) => HandleWebEvent(WebEventUtils.ParseWebEventJson(str));
@@ -113,7 +111,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public void EmitWebEvent(WebEvent model)
         {
             // TODO:可能需要验证、解耦（转文本 发送层）
-            AppWindow.EmitWebEvent(model);
+            AppWindowBackend.EmitWebEvent(model);
         }
 
         internal void TriggerAppEvent(WinWebAppEvent appEvent, object? arg = null)
@@ -136,7 +134,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         private readonly ArrayList Dependencies = new();
         private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
         private readonly Dictionary<WinWebAppEvent, Action<WinWebAppContext, object?>> AppEventListeners = new();
-        private IWinWebAppWindow? AppWindow = null;
+        private IWinWebAppWindowBackend? AppWindowBackend = null;
         private bool IsBuilt = false;
 
         internal WinWebAppBuilder(WinWebAppProfile profile)
@@ -148,21 +146,23 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         {
             if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
 
-            if (AppWindow == null) throw new WinWebAppBuildingException("没有使用的窗口");
+            if (AppWindowBackend == null) throw new WinWebAppBuildingException("没有可使用的窗口后端");
 
             if (Profile.WebEventHandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
 
-            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventListeners, AppWindow);
+            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventListeners, AppWindowBackend);
 
             IsBuilt = true;
 
             return application;
         }
 
-        public WinWebAppBuilder UseWpfWindow()
+        public WinWebAppBuilder UseDefaultWindowBackend() => UseWindowBackend(new WinWebAppWpfWindowBackend());
+
+        public WinWebAppBuilder UseWindowBackend(IWinWebAppWindowBackend windowBackend)
         {
-            if (AppWindow != null) throw new InvalidOperationException("不允许重复使用窗口");
-            AppWindow = new WinWebAppWpfWindow();
+            if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口");
+            AppWindowBackend = windowBackend;
             return this;
         }
 
@@ -263,7 +263,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public void StopApp() => App.Stop();
 
         // AppWindowService
-        public void SetAppWindowState(WinWebAppWindowState state) => App.AppWindow.SetWindowState(state);
+        public void SetAppWindowState(WinWebAppWindowState state) => App.AppWindowBackend.SetWindowState(state);
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口
