@@ -1,4 +1,6 @@
-﻿using Me.EarzuChan.Ryo.WinWebAppSystem;
+﻿using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.WinWebAppSystem;
+using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using System.Diagnostics;
 
@@ -20,10 +22,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest
 #endif
                 })
                 .UseDefaultWindowBackend()
-                .RegisterAppEventListener(WinWebAppEvent.AppWindowStateChanged, (ctx, state) =>
-                {
-                    ctx.EmitWebEvent(new WebEvent("AppWindowStateChanged", new object[] { state! }));
-                })
+                .ProvideDependency<MassManager>()
                 .Build()
                 .Run();
         }

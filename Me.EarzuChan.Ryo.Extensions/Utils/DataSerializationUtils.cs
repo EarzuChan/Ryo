@@ -12,7 +12,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Me.EarzuChan.Ryo.Extensions.Utils
 {
-    public static class SerializationUtils
+    public static class DataSerializationUtils
     {
         private static readonly JsonSerializerSettings DefaultJsonSerializerSettings = new()
         {

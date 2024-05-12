@@ -4,37 +4,36 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers
+namespace Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents.Handlers
 {
-    public enum WebEventHandlerRegistrationStrategy
+    public enum AppEventHandlerRegistrationStrategy
     {
         ScanAndRegisterAutomatically,
         RegisterManually,
     }
 
-    public interface IWebEventHandler
+    public interface IAppEventHandler
     {
         public void Handle(WinWebAppContext context);
     }
 
-    [Obsolete]
-    public interface IWebEventHandlerForCallBack
+    public interface IAppEventHandlerForCallBack
     {
         public object[] Handle(WinWebAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class WebEventHandlerAttribute : Attribute
+    public class AppEventHandlerAttribute : Attribute
     {
         public readonly bool Scannable;
         public readonly bool IsDev;
-        public readonly string EventName;
+        public readonly AppEventType EventType;
 
         // TODO:HandlerType
 
-        public WebEventHandlerAttribute(string name, bool scannable = true, bool isDev = false)
+        public AppEventHandlerAttribute(AppEventType eventType, bool scannable = true, bool isDev = false)
         {
-            EventName = name;
+            EventType = eventType;
             Scannable = scannable;
             IsDev = isDev;
         }

@@ -15,8 +15,4 @@
 		<ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="WebCalls\Responders\" />
-	</ItemGroup>
-
 </Project>

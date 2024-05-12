@@ -6,12 +6,22 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls
 {
-    public class WebCall
+    public class WebResponse
     {
-        public string Name;
+        public WebResponseState State;
+        public object[] ReturnValues;
 
-        public object[] Args;
+        public WebResponse(WebResponseState state, params object[] returnValues)
+        {
+            returnValues ??= Array.Empty<object>();
 
-        // 返回值类型标注？
+            State = state;
+            ReturnValues = returnValues;
+        }
+    }
+
+    public enum WebResponseState
+    {
+        Failure, Success
     }
 }

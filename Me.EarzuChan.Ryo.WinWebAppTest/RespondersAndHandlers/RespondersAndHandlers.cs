@@ -1,43 +1,21 @@
 ﻿using Me.EarzuChan.Ryo.Extensions.Utils;
 using Me.EarzuChan.Ryo.WinWebAppSystem;
+using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
+using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents.Handlers;
+using Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls;
+using Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls.Responders;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
 using Me.EarzuChan.Ryo.WinWebAppSystem.Windows;
 using System.Diagnostics;
+using System.Windows;
 
 namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
 {
-    [WebEventHandler("Test")]
-    public class TestHandler : IWebEventHandler
+    [WebCallResponder("GetAllDataTypes")]
+    public class GetAllDataTypesResponder : IWebCallResponder
     {
-        private readonly string Msg;
-
-        public TestHandler(string msg) { Msg = msg; }
-
-        /*public TestHandler(int num) { Msg = "这这不能"; } // 现在不能，以后有得你能*/
-
-        public TestHandler() { Msg = "Members out!"; }
-
-        public void Handle(WinWebAppContext context)
-        {
-            Trace.WriteLine($"What can he say? {Msg}");
-        }
-    }
-
-    [WebEventHandler("CallBack")]
-    public class CallBackHandler : IWebEventHandlerForCallBack
-    {
-        public object[] Handle(WinWebAppContext context)
-        {
-            Trace.WriteLine("Copied that, sir!");
-            return new object[] { "What", "Can", 0, false };
-        }
-    }
-
-    [WebEventHandler("GetAllDataTypes")]
-    public class GetAllDataTypesHandler : IWebEventHandlerForCallBack
-    {
-        public object[] Handle(WinWebAppContext context) => DataTypeSchemaUtils.GetAllDataTypeSchemas();
+        public WebResponse Respond(WinWebAppContext context) => new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
     }
 
     [WebEventHandler("StopApp")]
@@ -51,12 +29,28 @@ namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
     }
 
     [WebEventHandler("SetAppWindowState")]
-    public class ZdhHandler : IWebEventHandler
+    public class SetAppWindowStateHandler : IWebEventHandler
     {
         private readonly WinWebAppWindowState State;
 
-        public ZdhHandler(Int64 state) => State = (WinWebAppWindowState)state;
+        public SetAppWindowStateHandler(long state) => State = (WinWebAppWindowState)state;
 
         public void Handle(WinWebAppContext context) => context.SetAppWindowState(State);
+    }
+
+    [AppEventHandler(AppEventType.AppWindowStateChanged)]
+    public class AppWindowStateChangedHandler : IAppEventHandler
+    {
+        private readonly WinWebAppWindowState AppWindowState;
+
+        public AppWindowStateChangedHandler(WinWebAppWindowState state) => AppWindowState = state;
+
+        public void Handle(WinWebAppContext context) => context.EmitWebEvent(new WebLetter("AppWindowStateChanged", AppWindowState));
+    }
+
+    [WebEventHandler("NotifyAppWindowState")]
+    public class NotifyAppWindowStateHandler : IWebEventHandler
+    {
+        public void Handle(WinWebAppContext context) => context.EmitWebEvent(new WebLetter("AppWindowStateChanged", context.GetAppWindowState()));
     }
 }
