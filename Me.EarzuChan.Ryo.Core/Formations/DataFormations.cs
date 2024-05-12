@@ -1,4 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+using System;
 
 namespace Me.EarzuChan.Ryo.Core.Formations
 {
@@ -82,7 +83,51 @@ namespace Me.EarzuChan.Ryo.Core.Formations
 
         namespace PipeDream
         {
-            [AdaptableFormationAttribute("game31.DialogueTree$DialogueTreeDescriptor")]
+            [AdaptableFormation("game31.model.PhoneAppModel")]
+            public class PhoneAppModel
+            {
+                public ContactModel[] contacts;
+                public string default_ringtone;
+                public string[] favourites;
+                public PhoneRecentModel[] recents = Array.Empty<PhoneRecentModel>();
+                public string[] emergency_numbers = Array.Empty<string>();
+
+            }
+
+            [AdaptableFormation("game31.model.PhoneAppModel$PhoneRecentModel")]
+            public class PhoneRecentModel
+            {
+                public string name;
+                public string time;
+                public string type;
+            }
+
+            [AdaptableFormation("game31.model.ContactModel")]
+            public class ContactModel
+            {
+                public string device;
+                public string dialogue_tree_path;
+                public string google_sheet_url;
+                public bool is_hidden;
+                public string name;
+                public string number;
+                public string trigger;
+                public string profile_pic_path = "system/profile.png";
+                public string big_profile_pic_path = "system/profile-big.png";
+                public ContactAttributeModel[] attributes = new ContactAttributeModel[0];
+            }
+
+            [AdaptableFormation("game31.model.ContactModel$ContactAttributeModel")]
+            public class ContactAttributeModel
+            {
+                public string action;
+                public string attribute;
+                public string value;
+            }
+
+
+
+            [AdaptableFormation("game31.DialogueTree$DialogueTreeDescriptor")]
             public class DialogueTreeDescriptor : ICtorAdaptable
             {
                 public string DialogueNameSpace;

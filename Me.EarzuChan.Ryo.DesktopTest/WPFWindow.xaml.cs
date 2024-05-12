@@ -158,7 +158,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
         // public MassServer() => LogUtils.PrintInfo("MassServer Inited");
 
-        public string GetFileTreeData() => SerializationUtils.ToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
+        public string GetFileTreeData() => DataSerializationUtils.ToJson(MassManager.MassFiles.Select(oneMass => new FileBean(oneMass.Key, oneMass.Value.IdStrPairs.Select(pair => new ItemBean(pair.Value, pair.Key/*, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].DataJavaClz, oneMass.Value.ItemAdaptions[oneMass.Value.ItemBlobs[pair.Value].AdaptionId].AdapterJavaClz*/)).ToArray())).ToArray());
 
         public void OpenFile()
         {
@@ -189,7 +189,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
             {
                 var mass = MassManager.MassFiles[fileName];
 
-                return SerializationUtils.ToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
+                return DataSerializationUtils.ToJson(mass.Get<object>(mass.IdStrPairs[itemName]));
             }
             catch (Exception ex)
             {
@@ -214,7 +214,7 @@ namespace Me.EarzuChan.Ryo.DesktopTest
 
                 Trace.WriteLine(dataRyoType);
 
-                MethodInfo tempMethod = typeof(SerializationUtils).GetMethod("JsonToObjectWithNewtonJson").MakeGenericMethod(dataRyoType.CsType);
+                MethodInfo tempMethod = typeof(DataSerializationUtils).GetMethod("JsonToObjectWithNewtonJson").MakeGenericMethod(dataRyoType.CsType);
                 object value = tempMethod.Invoke(null, new[] { json });
 
                 mass.Add(itemName, value);

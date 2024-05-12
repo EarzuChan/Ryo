@@ -4,27 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers
+namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls.Responders
 {
-    public enum WebEventHandlerRegistrationStrategy
+    public enum WebCallResponderRegistrationStrategy
     {
         ScanAndRegisterAutomatically,
         RegisterManually,
     }
 
-    public interface IWebEventHandler
+    public interface IWebCallResponder
     {
-        public void Handle(WinWebAppContext context);
-    }
-
-    [Obsolete]
-    public interface IWebEventHandlerForCallBack
-    {
-        public object[] Handle(WinWebAppContext context);
+        public WebResponse Respond(WinWebAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class WebEventHandlerAttribute : Attribute
+    public class WebCallResponderAttribute : Attribute
     {
         public readonly bool Scannable;
         public readonly bool IsDev;
@@ -32,7 +26,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers
 
         // TODO:HandlerType
 
-        public WebEventHandlerAttribute(string name, bool scannable = true, bool isDev = false)
+        public WebCallResponderAttribute(string name, bool scannable = true, bool isDev = false)
         {
             EventName = name;
             Scannable = scannable;

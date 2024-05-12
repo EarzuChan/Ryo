@@ -115,9 +115,9 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
                 var item = mass.Get<object>(Id);
                 var itemName = mass.IdStrPairs.Where(pair => pair.Value == Id).Select(pair => pair.Key).FirstOrDefault();
 
-                string newtonJson = SerializationUtils.ToJson(item);
+                string newtonJson = DataSerializationUtils.ToJson(item);
 
-                commandFrame.PrintLine($"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{SerializationUtils.ToJsonWithInternalAlgorithm(item)}\n\nNewtonsoft reader:\n{newtonJson}");
+                commandFrame.PrintLine($"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{DataSerializationUtils.ToJsonWithInternalAlgorithm(item)}\n\nNewtonsoft reader:\n{newtonJson}");
 
                 bool dump = commandFrame.ReadYesOrNo("\nHaha, do you want to dump");
                 if (dump)
@@ -278,7 +278,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
                             foreach (var item in textureFile.ItemAdaptions) commandFrame.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
 
                             commandFrame.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
-                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{SerializationUtils.ToJson(textureFile.ImageIDsArray[i])}]");
+                            for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{DataSerializationUtils.ToJson(textureFile.ImageIDsArray[i])}]");
 
                             if (textureFile.ImageIDsArray.Count == 0) return;
 
@@ -425,7 +425,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
 
                 string msgText = File.ReadAllText(JsonFilePath);
 
-                var msg = SerializationUtils.JsonToObject<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+                var msg = DataSerializationUtils.JsonToObject<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
 
                 var result = mass.Add(ItemName, msg);
 
