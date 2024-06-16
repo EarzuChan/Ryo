@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latestmajor</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.ConsoleSystem\Me.EarzuChan.Ryo.ConsoleSystem.csproj" />
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj" />
+    <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
+  </ItemGroup>
+
+</Project>

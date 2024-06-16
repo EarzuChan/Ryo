@@ -1,0 +1,53 @@
+/*Colors*/
+:root {
+  /*colors*/
+  --ryo-color-tertiary-container: #F8E520;
+  --ryo-color-on-tertiary-container: #1F1C00;
+}
+
+:root .ryo-dark {
+  /*dark-colors*/
+  --ryo-color-primary: #A9C7FF;
+  --ryo-color-on-primary: #003063;
+  --ryo-color-primary-container: #00468B;
+  --ryo-color-on-primary-container: #D6E3FF;
+  --ryo-color-secondary: #FFB1C8;
+  --ryo-color-on-secondary: #5E1133;
+  --ryo-color-surface: #121316;
+  --ryo-color-on-surface-variant: #C4C6CF;
+  --ryo-color-on-surface: #C7C6CA;
+  --ryo-color-on-background: #E3E2E6;
+  --ryo-color-surface-container-high: #292A2D;
+  --ryo-color-surface-container-highest: #343538;
+  --ryo-color-surface-container-low: #1A1B1E;
+  --ryo-color-surface-container: #1E2023;
+  --ryo-color-tertiary: #DAC900;
+  --ryo-color-on-tertiary: #363100;
+  --ryo-color-error-container: #930015;
+  --ryo-color-on-secondary-container: #FFD9E2;
+  --ryo-color-secondary-container: #7B2949;
+  --ryo-color-outline-varient: #43474E;
+}
+
+/*Composable State Layers*/
+:root {
+  /*opacities*/
+  --ryo-opacity-state-layers-008: 0.08;
+  --ryo-opacity-state-layers-012: 0.12;
+  --ryo-opacity-state-layers-016: 0.16;
+
+  --ryo-opacity-040: 0.4;
+
+  /*colors*/
+  --ryo-color-scrim: 0, 0, 0;
+  --ryo-color-shadow: 0, 0, 0;
+}
+
+:root .ryo-dark {
+  /*dark-color*/
+  --ryo-color-state-layers-on-surface-variant: 202, 196, 208;
+  --ryo-color-state-layers-primary: 208, 188, 255;
+  --ryo-color-state-layers-on-primary: 56, 30, 114;
+  --ryo-color-state-layers-on-primary-container: 234, 221, 255;
+  --ryo-color-state-layers-on-surface: 230, 224, 233;
+}

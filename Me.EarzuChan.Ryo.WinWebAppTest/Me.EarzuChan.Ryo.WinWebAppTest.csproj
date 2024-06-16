@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+        <ApplicationIcon>AppResources\icon_ryo_app.ico</ApplicationIcon>
+        <LangVersion>latestmajor</LangVersion>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj"/>
+        <ProjectReference Include="..\Me.EarzuChan.Ryo.WinWebAppSystem\Me.EarzuChan.Ryo.WinWebAppSystem.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- 定义一个 ItemGroup 来包含所有需要复制的文件 -->
+        <DistFiles Include="..\Me.EarzuChan.Ryo.Nxt\dist\**\*" />
+    </ItemGroup>
+
+    <Target Name="PreBuild" BeforeTargets="Build">
+        <!-- 执行 npm build -->
+        <Exec Command="npm install" WorkingDirectory="..\Me.EarzuChan.Ryo.Nxt" />
+        <Exec Command="npm run build" WorkingDirectory="..\Me.EarzuChan.Ryo.Nxt" />
+    </Target>
+
+    <Target Name="PostBuild" AfterTargets="Build">
+        <!-- 删除目标文件夹中的所有文件 -->
+        <RemoveDir Directories="$(OutputPath)WebResources" />
+        <!-- 创建目标文件夹 -->
+        <MakeDir Directories="$(OutputPath)WebResources" />
+        <!-- 拷贝新的文件到目标文件夹 -->
+        <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(OutputPath)WebResources\%(DistFiles.RecursiveDir)" />
+    </Target>
+</Project>

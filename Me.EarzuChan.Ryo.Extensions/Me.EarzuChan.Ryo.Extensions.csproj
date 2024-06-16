@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
+    <ProjectReference Include="..\Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
+  </ItemGroup>
+
+</Project>

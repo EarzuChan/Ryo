@@ -1,0 +1,63 @@
+-- Id.0 sengine.graphics2d.Sprite 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.1 [F 适配器：sengine.mass.serializers.DefaultArraySerializers$FloatArraySerializer
+实现 -- Id.2 [S 适配器：sengine.mass.serializers.DefaultArraySerializers$ShortArraySerializer
+正在实现 -- Id.3 sengine.materials.SimpleMaterial 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.4 [Lsengine.graphics2d.MaterialAttribute; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+正在实现 -- Id.5 sengine.graphics2d.TextureZERO 适配器：sengine.mass.serializers.MassSerializableSerializer
+正在实现 -- Id.6 sengine.graphics2d.Shader 适配器：sengine.graphics2d.Shader$ShaderSerializer
+实现 -- Id.7 com.badlogic.gdx.graphics.Texture$TextureFilter 适配器：sengine.mass.serializers.DefaultSerializers$EnumSerializer
+实现 -- Id.8 com.badlogic.gdx.graphics.Texture$TextureWrap 适配器：sengine.mass.serializers.DefaultSerializers$EnumSerializer
+正在实现 -- Id.9 sengine.materials.ColorAttribute 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.10 com.badlogic.gdx.graphics.Pixmap 适配器：sengine.kryo.PixmapKryoSerializer
+-- Id.11 com.badlogic.gdx.graphics.Color 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.12 game31.DialogueTree$DialogueTreeDescriptor 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.13 [Lgame31.DialogueTree$Conversation; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+实现 -- Id.14 game31.DialogueTree$Conversation 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.15 [Ljava.lang.String; 适配器：sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer
+实现 -- Id.16 [Lgame31.DialogueTree$UserMessage; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+实现 -- Id.17 [Lgame31.DialogueTree$SenderMessage; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+实现 -- Id.18 game31.DialogueTree$SenderMessage 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.19 game31.renderer.NoiseMaterial 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.20 game31.VoiceProfile 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.21 [B 适配器：sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer
+-- Id.22 sengine.utils.Config 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.23 java.util.HashMap 适配器：sengine.mass.serializers.MapSerializer
+-- Id.24 java.lang.Float 适配器：sengine.mass.serializers.DefaultSerializers$FloatSerializer
+-- Id.25 java.lang.Boolean 适配器：sengine.mass.serializers.DefaultSerializers$BooleanSerializer
+-- Id.26 java.lang.String 适配器：sengine.mass.serializers.DefaultSerializers$StringSerializer
+-- Id.27 game31.DialogueTree$UserMessage 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.28 game31.model.SubtitlesModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.29 [Lgame31.model.SubtitlesModel$FileModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.30 game31.model.SubtitlesModel$FileModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.31 [Lgame31.model.SubtitlesModel$TextModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.32 game31.model.SubtitlesModel$TextModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.33 game31.model.MailModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.34 [Lgame31.model.MailModel$ConversationModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.35 game31.model.MailModel$ConversationModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.36 game31.app.restore.RestoreImageModel 适配器：sengine.mass.serializers.MassSerializableSerializer
+实现 -- Id.37 [I 适配器：sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer
+-- Id.38 game31.model.WhatsupModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.39 [Lgame31.model.WhatsupModel$ContactModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.40 game31.model.WhatsupModel$ContactModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.41 game31.app.restore.RestorePhraseModel 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.42 game31.model.PhotoAppModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.43 [Lgame31.model.MediaModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.44 game31.model.MediaModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.45 java.lang.Integer 适配器：sengine.mass.serializers.DefaultSerializers$IntSerializer
+-- Id.46 game31.app.restore.RestorePhraseConfig 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.47 game31.app.restore.RestoreImageConfig 适配器：sengine.mass.serializers.MassSerializableSerializer
+-- Id.48 game31.model.FriendsAppModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.49 [Lgame31.model.FriendsAppModel$PostModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+实现 -- Id.50 [Lgame31.model.FriendsAppModel$ProfileModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.51 game31.model.FriendsAppModel$ProfileModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.52 game31.model.FriendsAppModel$PostModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.53 [Lgame31.model.FriendsAppModel$CommentModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.54 game31.model.FriendsAppModel$FromModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.55 game31.model.FriendsAppModel$LikesModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.56 game31.model.FriendsAppModel$CommentModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.57 game31.model.PhoneAppModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.58 [Lgame31.model.ContactModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+实现 -- Id.59 [Lgame31.model.PhoneAppModel$PhoneRecentModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
+-- Id.60 game31.model.ContactModel 适配器：sengine.mass.serializers.FieldSerializer
+-- Id.61 game31.model.PhoneAppModel$PhoneRecentModel 适配器：sengine.mass.serializers.FieldSerializer
+实现 -- Id.62 [Lgame31.model.ContactModel$ContactAttributeModel; 适配器：sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer
