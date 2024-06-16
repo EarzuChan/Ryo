@@ -1,0 +1,104 @@
+/*Ryo Default Profiles*/
+
+/*Motions*/
+:root {
+  --ryo-motion-emphasized: 500ms ease; /*Begin and end on screen*/
+  --ryo-motion-emphasized-decelerate: 400ms ease-in; /*Enter the screen*/
+  --ryo-motion-emphasized-accelerate: 200ms ease-out; /*Exit the screen*/
+  --ryo-motion-standard: 300ms ease; /*Begin and end on screen*/
+  --ryo-motion-standard-decelerate: 250ms ease-in; /*Enter the screen*/
+  --ryo-motion-standard-accelerate: 200ms ease-out; /*Exit the screen*/
+}
+
+/*Misc*/
+.ryo-align-center {
+  align-self: center;
+}
+
+/*Typographies*/
+.ryo-typography-headline-large {
+  font-size: 32px;
+}
+
+.ryo-typography-headline-medium {
+  font-size: 28px;
+}
+
+.ryo-typography-headline-small {
+  font-size: 24px;
+}
+
+.ryo-typography-title-large {
+  font-size: 22px;
+}
+
+.ryo-typography-title-medium {
+  font-size: 16px;
+}
+
+.ryo-typography-title-small {
+  font-size: 14px;
+}
+
+.ryo-typography-body-large {
+  font-size: 16px;
+}
+
+.ryo-typography-body-medium {
+  font-size: 14px;
+}
+
+.ryo-typography-body-small {
+  font-size: 12px;
+}
+
+.ryo-typography-label-large-prominent {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ryo-typography-label-large {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ryo-typography-label-medium-prominent {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ryo-typography-label-medium {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ryo-typography-label-small {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/*Elevations*/
+:root {
+}
+
+:root .ryo-dark {
+  --ryo-elevation-2: 0px 1px 2px 0px rgba(var(--ryo-color-shadow), 0.30), 0px 2px 6px 2px rgba(var(--ryo-color-shadow), 0.15);
+
+  --ryo-elevation-3: 0px 4px 8px 3px rgba(var(--ryo-color-shadow), 0.15), 0px 1px 3px rgba(var(--ryo-color-shadow), 0.3);
+}
+
+/*Css resetting*/
+* {
+  user-select: none;
+
+  transition: background-color var(--ryo-motion-standard), color var(--ryo-motion-standard);
+}
+
+*:focus {
+  outline: none;
+}
+
+body {
+  padding: 0;
+  margin: 0;
+}

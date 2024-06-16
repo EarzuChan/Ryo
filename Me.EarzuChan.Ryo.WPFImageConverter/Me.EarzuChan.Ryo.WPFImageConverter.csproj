@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>ic_logo.ico</ApplicationIcon>
+    <UseWindowsForms>False</UseWindowsForms>
+    <LangVersion>latestmajor</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="button_open.png" />
+    <None Remove="button_save.png" />
+    <None Remove="checkbox_checked.png" />
+    <None Remove="checkbox_unchecked.png" />
+    <None Remove="empty_shows.jpg" />
+    <None Remove="radio_selected.png" />
+    <None Remove="radio_unselected.png" />
+    <None Remove="window_bg.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="ic_logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="button_open.png" />
+    <Resource Include="button_save.png" />
+    <Resource Include="checkbox_checked.png" />
+    <Resource Include="checkbox_unchecked.png" />
+    <Resource Include="empty_shows.jpg" />
+    <Resource Include="radio_selected.png" />
+    <Resource Include="radio_unselected.png" />
+    <Resource Include="window_bg.png" />
+  </ItemGroup>
+
+</Project>
