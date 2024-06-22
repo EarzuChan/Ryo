@@ -29,7 +29,7 @@
 <script setup lang="ts">
 import {computed, type PropType, ref} from "vue";
 import type {ItemModel} from "@/models/Models"
-import {arrayToText, boolToText} from "@/utils/UsefulUtils"
+import {arrayToText, boolToText, getSfcName} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import FieldEditor from "@/components/Editors/FieldEditor.vue"
 import IconButton from "@/components/IconButton.vue"
@@ -49,10 +49,7 @@ const props = defineProps({
 const supportedEditors = computed(() => {
   const type = props.data.type
   if (type) {
-    return appState.getEditorsByRyoType(type).map(et => {
-      const fileName: string = et.__file! as string
-      return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
-    })
+    return appState.getEditorsByRyoType(type).map(et => getSfcName(et))
   }
 
   return ["TODO"]

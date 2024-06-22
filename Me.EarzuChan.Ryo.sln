@@ -21,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.Extensions
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.WinWebAppSystem", "Me.EarzuChan.Ryo.WinWebAppSystem\Me.EarzuChan.Ryo.WinWebAppSystem.csproj", "{3D634C47-5743-4A66-89A2-3F0154B98992}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.WinWebAppTest", "Me.EarzuChan.Ryo.WinWebAppTest\Me.EarzuChan.Ryo.WinWebAppTest.csproj", "{EED76752-BE8F-4835-8FE6-890CA66C367B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Me.EarzuChan.Ryo.Editor", "Me.EarzuChan.Ryo.Editor\Me.EarzuChan.Ryo.Editor.csproj", "{EED76752-BE8F-4835-8FE6-890CA66C367B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{9C74C3E4-56BB-4EDE-BD59-0A000C9DFBA6} = {9C74C3E4-56BB-4EDE-BD59-0A000C9DFBA6}
 		{C8509C38-12F0-4EBD-9116-762B5D6A94C7} = {C8509C38-12F0-4EBD-9116-762B5D6A94C7}

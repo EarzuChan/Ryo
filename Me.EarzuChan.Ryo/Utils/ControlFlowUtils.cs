@@ -1,10 +1,4 @@
 ﻿using Me.EarzuChan.Ryo.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Me.EarzuChan.Ryo.Utils;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Utils
 {

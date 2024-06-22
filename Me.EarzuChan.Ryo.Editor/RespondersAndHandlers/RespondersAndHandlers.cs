@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Windows;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends;
 
-namespace Me.EarzuChan.Ryo.WinWebAppTest.RespondersAndHandlers
+namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers
 {
     [WebCallResponder("GetAllDataTypes")]
     public class GetAllDataTypesResponder : IWebCallResponder

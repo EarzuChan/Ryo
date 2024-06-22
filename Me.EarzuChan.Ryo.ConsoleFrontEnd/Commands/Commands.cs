@@ -231,7 +231,7 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
     }
 
     [Command("UnpackImage", "Unpack the images from a texture file.")]
-    public class UpackImageCommand : ICommand
+    public class UnpackImageCommand : ICommand
     {
         public enum MODE
         {
@@ -242,12 +242,12 @@ namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands
         public string FileName;
         public MODE Mode = MODE.HighestComposed;
 
-        public UpackImageCommand(string fileName)
+        public UnpackImageCommand(string fileName)
         {
             FileName = fileName;
         }
 
-        public UpackImageCommand(string fileName, string mode)
+        public UnpackImageCommand(string fileName, string mode)
         {
             FileName = fileName;
             Mode = (MODE)int.Parse(mode);

@@ -9,6 +9,7 @@
         <ApplicationIcon>AppResources\icon_ryo_app.ico</ApplicationIcon>
         <LangVersion>latestmajor</LangVersion>
         <IsPackable>false</IsPackable>
+        <RootNamespace>Me.EarzuChan.Ryo.Editor</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,11 +22,11 @@
         <DistFiles Include="..\Me.EarzuChan.Ryo.Nxt\dist\**\*" />
     </ItemGroup>
 
-    <Target Name="PreBuild" BeforeTargets="Build">
-        <!-- 执行 npm build -->
+    <!--<Target Name="PreBuild" BeforeTargets="Build">
+        &lt;!&ndash; 执行 npm build &ndash;&gt;
         <Exec Command="npm install" WorkingDirectory="..\Me.EarzuChan.Ryo.Nxt" />
         <Exec Command="npm run build" WorkingDirectory="..\Me.EarzuChan.Ryo.Nxt" />
-    </Target>
+    </Target>-->
 
     <Target Name="PostBuild" AfterTargets="Build">
         <!-- 删除目标文件夹中的所有文件 -->
