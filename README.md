@@ -1,4 +1,4 @@
-# Ryo (Package Name: Me.EarzuChan.Ryo)
+# Ryo (Me.EarzuChan.Ryo)
 
 ## Overview
 
@@ -6,6 +6,10 @@ Ryo is a comprehensive solution designed for browsing and editing game resources
 SEngine. The solution supports various types of game data, including game stories, save files, models, configurations,
 and in-game audio-visual resources. The development stack consists mainly of .NET C# for the backend and TypeScript +
 Vue3 for the front-end user interface.
+
+The name "Ryo" is derived from the Japanese character "鿌" (Ryo), actually Ryo is a character from the anime [Bocchi the Rock!](https://en.wikipedia.org/wiki/Bocchi_the_Rock!).
+
+The chinese version of this document is [here](README_CN.md).
 
 ## Features
 
@@ -18,7 +22,7 @@ Vue3 for the front-end user interface.
 ## Usage
 
 If you are a general user looking to immediately edit game resources, please
-download [Ryo Editor](https://github.com/earzuchan/ryo/releases). For support and updates, join the official Discord
+download Ryo Editor at [Release Page](https://github.com/earzuchan/ryo/releases). For support and updates, join the official Discord
 community at [Hello Simulacra](https://discord.gg/KBhhVy2s).
 
 ## Core Projects
@@ -114,7 +118,7 @@ WebEvent (bidirectional communication).
 
 A small WPF application for users to convert textures and images bidirectionally.
 
-## Future Projects
+## Future Sister Solutions
 
 - **Teio**: A launcher for Simulacra series games (using SEngine) across Windows and Android. It will support mods, use
   any game resource package, and include various modded resources markets.
