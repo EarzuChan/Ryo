@@ -84,3 +84,33 @@ export interface DialogModel {
     onOpened?: () => void
     onOpen?: () => void
 }
+
+export interface MenuItem {
+    name: string
+    action?: () => void
+    children?: MenuItem[]
+}
+
+export interface MenuModel {
+    items: MenuItem[]
+    onClose?: () => void
+    onClosed?: () => void
+    onCloseOnMenuItem?: () => void
+    top?: number
+    left?: number
+    attachToId?: string
+    attachMethod?: AttachMethod
+    closeOnClickOverlay?: boolean
+}
+
+export enum AttachMethod {
+    UpLeft,
+    UpRight,
+    DownLeft,
+    DownRight
+}
+
+export interface MenuBarItem {
+    name: string
+    id: string
+}

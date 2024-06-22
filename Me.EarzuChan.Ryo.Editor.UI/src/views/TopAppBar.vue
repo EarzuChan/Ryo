@@ -5,11 +5,9 @@
     </div>
     <div id="app-bar">
       <div id="app-bar-menu">
-        <TextButton :padding-vertical="8" :padding-horizontal="8" @click="testDialog">文件
-        </TextButton>
-        <TextButton :padding-vertical="8" :padding-horizontal="8">编辑</TextButton>
-        <TextButton :padding-vertical="8" :padding-horizontal="8">视图</TextButton>
-        <TextButton :padding-vertical="8" :padding-horizontal="8" @click="toggleErr">帮助
+        <TextButton v-for="item in menuBarItems" :padding-vertical="8" :padding-horizontal="8"
+                    @mouseenter="hoverMenuButton(item)"
+                    @click="clickMenuButton(item)" :id="item.id">{{ item.name }}
         </TextButton>
       </div>
       <div id="app-bar-window-controls">
@@ -24,17 +22,121 @@
 <script setup lang="ts">
 import IconButton from "@/components/IconButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
-import {WinWebAppWindowState} from "@/models/Models"
+import {AttachMethod, type MenuBarItem, WinWebAppWindowState} from "@/models/Models"
 import Icon from "@/components/Icon.vue"
 import TextButton from "@/components/TextButton.vue"
-import {useDialogStateStore} from "@/stores/DialogState";
+import {useDialogStateStore} from "@/stores/DialogState"
+import {menu} from "@/utils/MenuUtils"
+import {ref} from "vue";
+import {delayExecution} from "@/utils/UsefulUtils"
 
+const TAG = 'TopAppBar'
+
+const nowMenu = ref<any>(null)
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 
+const menuBarItems: MenuBarItem[] = [
+  {id: 'file', name: '文件'},
+  {id: 'edit', name: '编辑'},
+  {id: 'view', name: '视图'},
+  {id: 'help', name: '帮助'}
+]
+
 function toggleErr() {
   throw new Error('You ordered an error')
+}
+
+function clickMenuButton(menuType: MenuBarItem) {
+  console.log(TAG, 'clickMenuButton', menuType)
+
+  if (nowMenu.value === null) {
+    showMenu(menuType)
+  } else {
+    nowMenu.value.closeMenu()
+    nowMenu.value = null
+  }
+}
+
+const showMenuTask = ref<any>(null)
+
+function hoverMenuButton(menuType: MenuBarItem) {
+  console.log(TAG, 'hoverMenuButton', menuType)
+
+  /*if (showMenuTask.value) {
+    showMenuTask.value.cancel()
+  } else*/ if (nowMenu.value !== null) {
+    nowMenu.value.closeMenu()
+    nowMenu.value = null
+
+    showMenu(menuType)
+
+    /*showMenuTask.value = delayExecution(100, () => {
+      
+      showMenuTask.value = null
+    })*/
+  }
+}
+
+function showMenu(menuType: MenuBarItem) {
+  switch (menuType.id) {
+    case 'file':
+      nowMenu.value = menu({
+        items: [
+          {name: '新建', action: () => console.log('新建')},
+          {name: '打开', action: () => console.log('打开')},
+          {name: '保存', action: () => console.log('保存')},
+          {name: '另存为', action: () => console.log('另存为')},
+          {name: '关闭', action: () => console.log('关闭')},
+          {name: '全部保存', action: () => console.log('全部保存')},
+          {name: '全部关闭', action: () => console.log('全部关闭')},
+          {name: '添加资源', action: () => console.log('添加资源')},
+          {name: '导出当前资源', action: () => console.log('导出当前资源')},
+          {name: '导入当前资源', action: () => console.log('导入当前资源')},
+          {
+            name: '最近打开', children:
+                [
+                  {name: '文件1', action: () => console.log('文件1')},
+                  {name: '文件2', action: () => console.log('文件2')},
+                  {name: '文件3', action: () => console.log('文件3')},
+                ]
+          },
+          {name: '重启软件', action: () => console.log('重启软件')},
+          {name: '退出', action: () => appState.stopApp()}
+        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
+          nowMenu.value = null
+        },
+      })
+      break
+    case 'edit':
+      nowMenu.value = menu({
+        items: [
+          {name: '撤销', action: () => console.log('撤销')}
+        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
+          nowMenu.value = null
+        },
+      })
+      break
+    case 'view':
+      nowMenu.value = menu({
+        items: [
+          {name: '侧边栏收起', action: () => console.log('侧边栏收起')}
+        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
+          nowMenu.value = null
+        },
+      })
+      break
+    case 'help':
+      nowMenu.value = menu({
+        items: [
+          {name: '显示软件文档', action: () => console.log('显示软件文档')}
+        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
+          nowMenu.value = null
+        },
+      })
+      break
+  }
 }
 
 function testDialog() {

@@ -15,11 +15,11 @@ namespace Me.EarzuChan.Ryo.Utils
 
                 var buffer = new byte[1024];
 
-                List<byte> outputList = new();
+                List<byte> outputList = [];
 
                 while (!inflater.IsFinished)
                 {
-                    int count = inflater.Inflate(buffer);
+                    var count = inflater.Inflate(buffer);
                     outputList.AddRange(buffer.Take(count));
                 }
 
@@ -28,7 +28,7 @@ namespace Me.EarzuChan.Ryo.Utils
             catch (Exception e)
             {
                 LogUtils.PrintError("解压出错", e);
-                return Array.Empty<byte>();
+                return [];
             }
         }
 
@@ -40,13 +40,13 @@ namespace Me.EarzuChan.Ryo.Utils
                 deflater.SetInput(indexBytes, offset, length);
                 deflater.Finish();
 
-                byte[] buffer = new byte[1024];
+                var buffer = new byte[1024];
 
-                List<byte> outputList = new();
+                List<byte> outputList = [];
 
                 while (!deflater.IsFinished)
                 {
-                    int count = deflater.Deflate(buffer);
+                    var count = deflater.Deflate(buffer);
                     outputList.AddRange(buffer.Take(count));
                 }
 
@@ -55,7 +55,7 @@ namespace Me.EarzuChan.Ryo.Utils
             catch (Exception e)
             {
                 LogUtils.PrintError("压缩出错", e);
-                return Array.Empty<byte>();
+                return [];
             }
         }
     }

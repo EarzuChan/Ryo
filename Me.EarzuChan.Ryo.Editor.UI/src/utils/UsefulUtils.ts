@@ -43,3 +43,17 @@ export function arrayToText(arr: any[], empty: string = "数组为空"): string 
     if (arr.length === 0) return empty
     return arr.join(", ")
 }
+
+export function getSfcName(et: any): string {
+    const fileName: string = et.__file! as string
+    return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
+}
+
+export function delayExecution(delay: number, lambda: TimerHandler) {
+    let timeoutId = setTimeout(lambda, delay);
+    return {
+        cancel: function () {
+            clearTimeout(timeoutId);
+        }
+    };
+}

@@ -4,7 +4,7 @@ using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
 using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
 using System.Diagnostics;
 
-namespace Me.EarzuChan.Ryo.WinWebAppTest
+namespace Me.EarzuChan.Ryo.Editor
 {
     public static class StartUp
     {
