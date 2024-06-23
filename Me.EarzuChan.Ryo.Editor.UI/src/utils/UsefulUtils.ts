@@ -50,10 +50,20 @@ export function getSfcName(et: any): string {
 }
 
 export function delayExecution(delay: number, lambda: TimerHandler) {
-    let timeoutId = setTimeout(lambda, delay);
+    let timeoutId = setTimeout(lambda, delay)
     return {
         cancel: function () {
-            clearTimeout(timeoutId);
+            clearTimeout(timeoutId)
         }
-    };
+    }
+}
+
+export function isScrollbarVisible(element: HTMLElement): boolean {
+    return element.scrollHeight > element.clientHeight
+}
+
+export function testArray(text: string, times: number): string[] {
+    let result = []
+    for (let i = 0; i < times; i++) result.push(`${text}-${i}`)
+    return result
 }

@@ -27,12 +27,13 @@ import Icon from "@/components/Icon.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {menu} from "@/utils/MenuUtils"
-import {ref} from "vue";
+import {reactive, ref} from "vue";
 import {delayExecution} from "@/utils/UsefulUtils"
 
 const TAG = 'TopAppBar'
 
-const nowMenu = ref<any>(null)
+const currentMenu = ref<any>(null)
+const lastMenu = ref<MenuBarItem | null>(null)
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
@@ -51,38 +52,27 @@ function toggleErr() {
 function clickMenuButton(menuType: MenuBarItem) {
   console.log(TAG, 'clickMenuButton', menuType)
 
-  if (nowMenu.value === null) {
+  if (currentMenu.value === null) {
     showMenu(menuType)
-  } else {
-    nowMenu.value.closeMenu()
-    nowMenu.value = null
   }
 }
 
-const showMenuTask = ref<any>(null)
-
 function hoverMenuButton(menuType: MenuBarItem) {
-  console.log(TAG, 'hoverMenuButton', menuType)
-
-  /*if (showMenuTask.value) {
-    showMenuTask.value.cancel()
-  } else*/ if (nowMenu.value !== null) {
-    nowMenu.value.closeMenu()
-    nowMenu.value = null
+  console.log(TAG, 'hoverMenuButton', menuType, currentMenu.value)
+  
+  if (currentMenu.value !== null && lastMenu.value!.id !== menuType.id) {
+    currentMenu.value.closeMenu()
 
     showMenu(menuType)
-
-    /*showMenuTask.value = delayExecution(100, () => {
-      
-      showMenuTask.value = null
-    })*/
   }
 }
 
 function showMenu(menuType: MenuBarItem) {
+  lastMenu.value = menuType
+
   switch (menuType.id) {
     case 'file':
-      nowMenu.value = menu({
+      currentMenu.value = menu({
         items: [
           {name: '新建', action: () => console.log('新建')},
           {name: '打开', action: () => console.log('打开')},
@@ -104,35 +94,35 @@ function showMenu(menuType: MenuBarItem) {
           },
           {name: '重启软件', action: () => console.log('重启软件')},
           {name: '退出', action: () => appState.stopApp()}
-        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
-          nowMenu.value = null
+        ], attachToId: menuType.id, onClose() {
+          currentMenu.value = null
         },
       })
       break
     case 'edit':
-      nowMenu.value = menu({
+      currentMenu.value = menu({
         items: [
           {name: '撤销', action: () => console.log('撤销')}
-        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
-          nowMenu.value = null
+        ], attachToId: menuType.id, onClose() {
+          currentMenu.value = null
         },
       })
       break
     case 'view':
-      nowMenu.value = menu({
+      currentMenu.value = menu({
         items: [
           {name: '侧边栏收起', action: () => console.log('侧边栏收起')}
-        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
-          nowMenu.value = null
+        ], attachToId: menuType.id, onClose() {
+          currentMenu.value = null
         },
       })
       break
     case 'help':
-      nowMenu.value = menu({
+      currentMenu.value = menu({
         items: [
           {name: '显示软件文档', action: () => console.log('显示软件文档')}
-        ], attachToId: menuType.id, attachMethod: AttachMethod.DownLeft, onClose() {
-          nowMenu.value = null
+        ], attachToId: menuType.id, onClose() {
+          currentMenu.value = null
         },
       })
       break

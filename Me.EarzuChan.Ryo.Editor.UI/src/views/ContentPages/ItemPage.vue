@@ -19,7 +19,7 @@
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard"/>
-        <EditableLabel id="action-bar-text" editable>太美丽</EditableLabel>
+        <ComboBox id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
         <TextButton button-style="filled" id="save-button">保存</TextButton>
       </div>
     </EditorHolder>
@@ -36,6 +36,7 @@ import IconButton from "@/components/IconButton.vue"
 import EditableLabel from "@/components/EditableLabel.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
+import ComboBox from "@/components/ComboBox.vue";
 
 const appState = useAppStateStore()
 
@@ -61,7 +62,7 @@ const inOutMethods = computed(() => {
   return ["TODO"]
 })
 
-const preferEditor = ref(FieldEditor)
+const preferEditor = ref(0)
 </script>
 
 <style scoped>

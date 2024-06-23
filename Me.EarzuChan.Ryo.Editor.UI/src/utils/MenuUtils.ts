@@ -1,13 +1,12 @@
-﻿import type {DialogModel, MenuModel} from "@/models/Models"
+﻿import type {MenuModel} from "@/models/Models"
 import {createApp, h} from "vue"
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
 import Menu from "@/components/Menu.vue"
 import {AttachMethod} from "@/models/Models"
 
 const TAG = "MenuUtils"
 
 export function menu(config: MenuModel) {
-    if (config.attachToId && (config.attachMethod !== undefined)) {
+    if (config.attachToId) {
         const element = document.getElementById(config.attachToId)
         if (element) {
             const rect = element.getBoundingClientRect()
@@ -15,8 +14,8 @@ export function menu(config: MenuModel) {
             const {top, left} = config
 
             switch (config.attachMethod) {
-                case AttachMethod.DownLeft:
-                    config.top = rect.top + rect.height
+                case AttachMethod.UpLeft:
+                    config.top = rect.top
                     config.left = rect.left
                     break
                 case AttachMethod.UpRight:
@@ -27,8 +26,8 @@ export function menu(config: MenuModel) {
                     config.top = rect.top + rect.height
                     config.left = rect.left + rect.width
                     break
-                default: // AttachMethod.UpLeft
-                    config.top = rect.top
+                default: // AttachMethod.DownLeft
+                    config.top = rect.top + rect.height
                     config.left = rect.left
                     break
             }

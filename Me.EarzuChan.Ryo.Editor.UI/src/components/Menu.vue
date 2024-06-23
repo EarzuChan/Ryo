@@ -1,7 +1,7 @@
 ﻿<template>
   <Teleport to="#ryo-app">
     <Transition name="menu" @after-enter="afterEnter" @after-leave="afterLeave">
-      <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow">
+      <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
         <div id="menu-contents">
           <div v-for="(item,index) in items" :class="{hover: currentHover === index}"
                :id="`${item.name}-${index}`"
@@ -16,13 +16,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, onUnmounted, type PropType, reactive, ref} from "vue"
+import {computed, nextTick, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
 import {AttachMethod, type MenuItem} from "@/models/Models"
 import {menu} from "@/utils/MenuUtils"
-import {delayExecution} from "@/utils/UsefulUtils";
+import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils";
 
 const TAG = 'Menu'
-
+const menuBase = ref<HTMLElement | null>(null)
 const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-item'])
 
 const props = defineProps({
@@ -41,28 +41,34 @@ const props = defineProps({
   closeOnClickOverlay: {
     type: Boolean,
     default: true
+  },
+  locateToIndex: {
+    type: Number,
+    default: -1
   }
 })
 
 const currentHover = ref(-1)
-
+const fix = ref(0)
 const ctrlShow = ref(true)
 
 const menuItemStyle = computed(() => {
   return {
-    top: props.top + 'px',
+    top: fix.value + 'px',
     left: props.left + 'px'
   }
 })
 
-const nowMenu = ref<any>(null)
+const currentMenu = ref<any>(null)
+const menuItemClicked = ref(false)
 
 function invoke(item: MenuItem) {
   if (item.action) {
     item.action()
   }
 
-  closeMenu(true)
+  menuItemClicked.value = true
+  closeMenu()
 }
 
 const delay = ref<any>(null)
@@ -70,11 +76,11 @@ const delay = ref<any>(null)
 function hover(item: MenuItem, index: number) {
   if (index === currentHover.value) return
 
-  console.log(TAG, 'hover', index)
+  // console.log(TAG, 'hover', index)
   currentHover.value = index
 
-  if (nowMenu.value) {
-    nowMenu.value.closeMenu()
+  if (currentMenu.value) {
+    currentMenu.value.closeMenu()
   } else if (delay.value) {
     delay.value.cancel()
   }
@@ -82,11 +88,11 @@ function hover(item: MenuItem, index: number) {
   if (item.children) {
     let babe = item.children
     delay.value = delayExecution(100, () => {
-      nowMenu.value = menu({
+      currentMenu.value = menu({
         items: babe,
         attachToId: `${item.name}-${index}`, attachMethod: AttachMethod.UpRight,
         onClose() {
-          nowMenu.value = null
+          currentMenu.value = null
         },
         onCloseOnMenuItem() {
           closeMenu()
@@ -109,15 +115,16 @@ function clickDocument(event: MouseEvent) {
   }
 }
 
-function closeMenu(closeOnMenuItem = false) {
-  console.trace(TAG, 'closeMenu', closeOnMenuItem)
+function closeMenu() {
+  console.trace(TAG, 'closeMenu', menuItemClicked)
 
   emit('close')
-  if (closeOnMenuItem) {
+  if (menuItemClicked.value) {
     emit('close-on-menu-item')
   }
   ctrlShow.value = false
 }
+
 
 function afterEnter() {
   emit('opened')
@@ -129,8 +136,24 @@ function afterLeave() {
 
 defineExpose({closeMenu})
 
-onMounted(() => setTimeout(() => document.addEventListener('click', clickDocument), 0))
-
+onMounted(() => {
+  emit('open')
+  fix.value = props.top
+  if (props.locateToIndex !== -1 && props.locateToIndex < props.items.length) {
+    console.log(TAG, 'locateToIndex', props.locateToIndex)
+    if (isScrollbarVisible(menuBase.value!)) {
+      const item = document.getElementById(`${props.items[props.locateToIndex].name}-${props.locateToIndex}`)
+      if (item) {
+        item.scrollIntoView(false)
+        fix.value += 8 - item.getBoundingClientRect().top
+        console.log(TAG, 'fix', item.getBoundingClientRect().top)
+      }
+    } else {
+      fix.value -= props.locateToIndex * 28
+    }
+  }
+  setTimeout(() => document.addEventListener('click', clickDocument), 0)
+})
 onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 </script>
 
@@ -157,7 +180,11 @@ onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 }
 
 .menu-item {
-  padding: 4px 8px;
+  padding: 0 8px;
+  max-height: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   color: var(--ryo-color-on-surface);
 }

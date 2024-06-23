@@ -101,6 +101,7 @@ export interface MenuModel {
     attachToId?: string
     attachMethod?: AttachMethod
     closeOnClickOverlay?: boolean
+    locateToIndex?: number
 }
 
 export enum AttachMethod {
