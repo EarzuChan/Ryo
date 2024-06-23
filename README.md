@@ -7,7 +7,8 @@ SEngine. The solution supports various types of game data, including game storie
 and in-game audio-visual resources. The development stack consists mainly of .NET C# for the backend and TypeScript +
 Vue3 for the front-end user interface.
 
-The name "Ryo" is derived from the Japanese character "鿌" (Ryo), actually Ryo is a character from the anime [Bocchi the Rock!](https://en.wikipedia.org/wiki/Bocchi_the_Rock!).
+The name "Ryo" is derived from the Japanese character "鿌" (Ryo), actually Ryo is a character from the
+anime [Bocchi the Rock!](https://en.wikipedia.org/wiki/Bocchi_the_Rock!).
 
 The chinese version of this document is [here](README_CN.md).
 
@@ -22,7 +23,8 @@ The chinese version of this document is [here](README_CN.md).
 ## Usage
 
 If you are a general user looking to immediately edit game resources, please
-download Ryo Editor at [Release Page](https://github.com/earzuchan/ryo/releases). For support and updates, join the official Discord
+download Ryo Editor at [Release Page](https://github.com/earzuchan/ryo/releases). For support and updates, join the
+official Discord
 community at [Hello Simulacra](https://discord.gg/KBhhVy2s).
 
 ## Core Projects
@@ -108,11 +110,13 @@ A test application for the Ryo system, also built using the Me.EarzuChan.Ryo.Con
 Provides additional capabilities such as generating schemas for game resource items, converting resource objects to
 JSON, and restoring them from JSON.
 
-### Me.EarzuChan.Ryo.WinWebAppSystem
+### Me.EarzuChan.Ryo.Kurisu
 
 A framework similar to Electron for building desktop web applications. It allows users to write backend code in C# and
 provides many APIs for front-end (Web) and backend (C#) interaction, such as WebCall (similar to RESTful requests) and
 WebEvent (bidirectional communication).
+
+The framework's name is from Makise Kurisu from Steins;Gate, she is my assistant ~~wife~~, no adding Tina Kora!
 
 ### Me.EarzuChan.Ryo.WPFImageConverter
 

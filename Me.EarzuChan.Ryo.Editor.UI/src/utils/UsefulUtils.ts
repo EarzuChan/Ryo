@@ -1,6 +1,4 @@
-import {createApp, h} from "vue"
-import type {DialogModel} from "@/models/Models"
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
+import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils";
 
 const TAG = "UsefulUtils"
 
@@ -45,15 +43,50 @@ export function arrayToText(arr: any[], empty: string = "数组为空"): string 
 }
 
 export function getSfcName(et: any): string {
-    const fileName: string = et.__file! as string
-    return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
+    if (ensure(et.__name)) return et.__name
+    else {
+        const fileName = et.__file
+        return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
+    }
 }
 
 export function delayExecution(delay: number, lambda: TimerHandler) {
-    let timeoutId = setTimeout(lambda, delay);
+    let timeoutId = setTimeout(lambda, delay)
     return {
         cancel: function () {
-            clearTimeout(timeoutId);
+            clearTimeout(timeoutId)
         }
-    };
+    }
+}
+
+export function isScrollbarVisible(element: HTMLElement): boolean {
+    return element.scrollHeight > element.clientHeight
+}
+
+export function makeTestArray(text: string, times: number): string[] {
+    let result = []
+    for (let i = 0; i < times; i++) result.push(`${text}-${i}`)
+    return result
+}
+
+export function ensure(obj?: any): boolean {
+    // console.log(TAG, "确保", obj)
+    return obj !== null && obj !== undefined;
+}
+
+export function ensureObject(obj?: any): boolean {
+    return ensure(obj) && obj instanceof Object
+}
+
+export function generateId(seed: number): number {
+    seed++
+    return Math.floor(Math.random() * seed * 1000 + seed)
+}
+
+export function deepCopy(obj: any): any {
+    return JSON.parse(JSON.stringify(obj))
+}
+
+export function goTo(link: string) {
+    emitWebEvent(makeWebLetter('OpenLink', link))
 }

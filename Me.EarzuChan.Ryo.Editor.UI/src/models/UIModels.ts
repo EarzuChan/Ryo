@@ -1,39 +1,8 @@
-const TAG = "Models"
-
-export interface WebLetter {
-    name: string
-    args: any[]
-}
-
-export enum WinWebAppWindowState {
-    Normal,
-    Maximized,
-    Minimized
-}
-
-export enum WebResponseState {
-    Failure,
-    Success
-}
-
-export interface WebResponse {
-    state: WebResponseState
-    returnValues: any[]
-}
+﻿const TAG: string = 'UIModels'
 
 export interface TreeNodeModel {
     name: string
     children?: TreeNodeModel[]
-}
-
-export interface MassFile {
-    name: string
-    items: MassItem[]
-}
-
-export interface MassItem {
-    id: number,
-    name: string
 }
 
 export interface TabModel {
@@ -41,30 +10,6 @@ export interface TabModel {
     nonResident?: boolean
     unsaved?: boolean
     page?: any
-    data?: any
-}
-
-export interface MemberType {
-    name: string
-    type: string
-}
-
-export interface TypeSchema {
-    type: string
-    members?: MemberType[]
-}
-
-export interface RyoType {
-    baseType?: TypeSchema
-    isArray: boolean
-    typeName: string
-}
-
-export interface ItemModel {
-    id: number
-    name?: string
-    type: RyoType
-    parseSuccess: boolean
     data?: any
 }
 
@@ -101,6 +46,7 @@ export interface MenuModel {
     attachToId?: string
     attachMethod?: AttachMethod
     closeOnClickOverlay?: boolean
+    locateToIndex?: number
 }
 
 export enum AttachMethod {
@@ -113,4 +59,10 @@ export enum AttachMethod {
 export interface MenuBarItem {
     name: string
     id: string
+}
+
+export interface WelcomePageResource {
+    title: string
+    description: string
+    link: string
 }

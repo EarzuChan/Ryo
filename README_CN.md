@@ -102,10 +102,12 @@ Me.EarzuChan.Ryo.Editor 的前端 UI 部分，使用 Vue3 和 TypeScript 构建�
 
 提供额外功能，如生成游戏资源对象的 Schema，将资源对象转换为 JSON，并从 JSON 重建资源对象。
 
-### Me.EarzuChan.Ryo.WinWebAppSystem
+### Me.EarzuChan.Ryo.Kurisu
 
 类似于 Electron 的框架，用于构建桌面 Web 应用程序。允许用户使用 C# 编写后端代码，并提供许多前端（Web）和后端（C#）交互的 API，例如
 WebCall（类似于 RESTful 请求）和 WebEvent（双向通信）。
+
+这个框架的名称来源于命运石之门的牧濑红莉栖，她是我的助手~~老婆~~，不许加上蒂娜啊Kora！
 
 ### Me.EarzuChan.Ryo.WPFImageConverter
 

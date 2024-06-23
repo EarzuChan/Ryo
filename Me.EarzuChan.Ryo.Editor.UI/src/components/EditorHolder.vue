@@ -1,73 +1,86 @@
 <template>
-  <div class="use-flex"
-       :class="{'with-margin':isComplexEditor&&prop.withMargin,'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
-    <!--    <component class="fulfill" :is="editorType" v-if="canShow" :model-value="prop.modelValue"
-                   @update:model-value="(a:any)=>updateData(a)"/>-->
+  <div class="use-flex" :class="{'with-margin':isComplexEditor&&props.withMargin,
+  'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
+    <Component v-if="ready" :even="even" @err="e=>onError(e as string)" :errorMsg="errorMsg"
+               class="fulfill" :is="editorType" v-model="model" :type="type"/>
     <slot/>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {nextTick, onMounted, type PropType, ref, shallowRef, watch} from "vue"
-import type {RyoType} from "@/models/Models"
+import {computed, nextTick, type PropType, ref} from "vue"
+import {ensure, sleepFor} from "@/utils/UsefulUtils"
+import type {RyoType} from "@/models/AppModels"
+import {useAppStateStore} from "@/stores/AppState"
+import ErrorEditor from "@/components/Editors/ErrorEditor.vue"
+import FieldEditor from "@/components/Editors/FieldEditor.vue"
 
-const prop = defineProps({
-  modelValue: {},
+const TAG = "EditorHolder"
+
+const appState = useAppStateStore()
+const props = defineProps({
   withMargin: Boolean,
   cardSurrounded: Boolean,
   notUseCard: Boolean,
-  type: Object as PropType<RyoType>
+  type: Object as PropType<RyoType>,
+  preferEditor: Number,
+  even: Boolean,
 })
-const emit = defineEmits(['update:modelValue'])
 
-function updateData(data: any) {
-  // console.log(data)
-  emit('update:modelValue', data)
-}
-
+const model = defineModel<any>()
+const errorMsg = ref("良好")
+const isError = ref(false)
 const isComplexEditor = ref(false)
-const canShow = ref(false)
+const ready = ref(true)
 
-function getEditorType(item: any) {
-  // console.log(typeof item)
-
+function getError(msg: string) {
   isComplexEditor.value = false
-
-  /*switch (typeof item) {
-    case "string":
-      return StringEditor
-    case "number":
-      return NumberEditor
-    case "boolean":
-      return BooleanEditor
-    default: // Or Array
-      if (Array.isArray(item)) return ArrayEditor
-      isComplexEditor.value = true
-      return FieldEditor
-  }*/
+  console.error(TAG, msg)
+  errorMsg.value = msg
+  return ErrorEditor
 }
 
-const editorType = shallowRef<any>() // 临时解决堆栈爆的权宜之计，太丑了
+const editorType = computed(() => {
+  if (isError.value) return getError("编辑器错误：" + errorMsg.value)
+  else if (!ensure(model.value)) return getError("数据错误：绑定的数据为空")
+  // TODO: 确保提供的类型和实际数据类型一致
+  else if (props.type) {
+    console.log(TAG, "给Ryo类型查找编辑器", props.type)
 
-/*onMounted(() => watch(() => prop.modelValue, async () => {
-  // console.log("Holder 接到新数据")
+    if (!appState.ensureRyoType(props.type, model.value)) return getError("数据错误：数据类型不匹配")
 
-  let nowType = getEditorType(prop.modelValue)
-  // console.log("新：", nowType.__name, "老：", editorType.value?.__name, "相等：", nowType.__name === editorType.value?.__name)
-  if (editorType.value?.__name !== nowType.__name) {
-    canShow.value = false
-    editorType.value = nowType
-    await nextTick()
-    canShow.value = true
-  }
-}, {immediate: true}))*/
+    const editors = appState.getEditorsByRyoType(props.type)
+    if (editors.length === 0) return getError("App错误：没有可用的编辑器")
+
+    const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
+    isComplexEditor.value = chosen === FieldEditor
+    return chosen
+  } else return getError("更多错误：Ryo类型为空？")
+})
+
+function onError(err: string) {
+  console.error(TAG, "检查到错误", err)
+  errorMsg.value = err
+  isError.value = true
+}
+
+async function reload() {
+  isError.value = false
+
+  ready.value = false
+  await nextTick()
+  ready.value = true
+}
+
+defineExpose({reload})
 </script>
 
 <style scoped>
 .editor-holder-card {
   border-radius: 12px;
 
-  border: 1px solid var(--ryo-color-outline-varient);
+  outline: 1px solid var(--ryo-color-outline-varient);
+  outline-offset: -1px;
   background-color: var(--ryo-color-surface);
 
   flex-direction: column;

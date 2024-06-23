@@ -1,8 +1,6 @@
-﻿using Me.EarzuChan.Ryo.Core.Masses;
-using Me.EarzuChan.Ryo.WinWebAppSystem;
-using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Kurisu;
 
 namespace Me.EarzuChan.Ryo.Editor
 {
@@ -11,7 +9,7 @@ namespace Me.EarzuChan.Ryo.Editor
         [STAThread]
         private static void Main(string[] args)
         {
-            WinWebApp
+            KurisuApp
                 .CreateBuilder(new()
                 {
 #if DEBUG

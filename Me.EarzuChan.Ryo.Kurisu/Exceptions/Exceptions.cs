@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions
+namespace Me.EarzuChan.Ryo.Kurisu.Exceptions
 {
     public class WebEventParsingException(string reason) : Exception($"Parsing Web Event error: {reason}");
 
@@ -14,5 +14,5 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions
 
     public class IllegalWebCallException(string reason) : Exception($"An illegal Web Call: {reason}");
 
-    public class WinWebAppBuildingException(string reason) : Exception($"Building your Win Web App error: {reason}");
+    public class KurisuAppBuildingException(string reason) : Exception($"Building your Kurisu App error: {reason}");
 }

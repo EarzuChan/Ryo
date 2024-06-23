@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents.Handlers
+namespace Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers
 {
     public enum AppEventHandlerRegistrationStrategy
     {
@@ -14,12 +14,12 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents.Handlers
 
     public interface IAppEventHandler
     {
-        public void Handle(WinWebAppContext context);
+        public void Handle(KurisuAppContext context);
     }
 
     public interface IAppEventHandlerForCallBack
     {
-        public object[] Handle(WinWebAppContext context);
+        public object[] Handle(KurisuAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

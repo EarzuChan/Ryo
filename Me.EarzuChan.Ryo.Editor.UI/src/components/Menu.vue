@@ -1,9 +1,9 @@
 ﻿<template>
-  <Teleport to="#ryo-app">
+  <Teleport to="#ryo-viewport">
     <Transition name="menu" @after-enter="afterEnter" @after-leave="afterLeave">
-      <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow">
+      <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
         <div id="menu-contents">
-          <div v-for="(item,index) in items" :class="{hover: currentHover === index}"
+          <div v-for="(item,index) in items" :class="{hover: currentHover === index,marked: index === locateToIndex}"
                :id="`${item.name}-${index}`"
                class="menu-item ryo-typography-body-medium"
                @click="invoke(item)" @mouseenter="hover(item,index)">
@@ -16,13 +16,13 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, onUnmounted, type PropType, reactive, ref} from "vue"
-import {AttachMethod, type MenuItem} from "@/models/Models"
-import {menu} from "@/utils/MenuUtils"
-import {delayExecution} from "@/utils/UsefulUtils";
+import {computed, nextTick, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
+import {AttachMethod, type MenuItem} from "@/models/UIModels"
+import {showMenu} from "@/utils/MenuUtils"
+import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils";
 
 const TAG = 'Menu'
-
+const menuBase = ref<HTMLElement | null>(null)
 const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-item'])
 
 const props = defineProps({
@@ -41,28 +41,34 @@ const props = defineProps({
   closeOnClickOverlay: {
     type: Boolean,
     default: true
+  },
+  locateToIndex: {
+    type: Number,
+    default: -1
   }
 })
 
 const currentHover = ref(-1)
-
+const fix = ref(0)
 const ctrlShow = ref(true)
 
 const menuItemStyle = computed(() => {
   return {
-    top: props.top + 'px',
+    top: fix.value + 'px',
     left: props.left + 'px'
   }
 })
 
-const nowMenu = ref<any>(null)
+const currentMenu = ref<any>(null)
+const menuItemClicked = ref(false)
 
 function invoke(item: MenuItem) {
   if (item.action) {
     item.action()
   }
 
-  closeMenu(true)
+  menuItemClicked.value = true
+  closeMenu()
 }
 
 const delay = ref<any>(null)
@@ -70,11 +76,11 @@ const delay = ref<any>(null)
 function hover(item: MenuItem, index: number) {
   if (index === currentHover.value) return
 
-  console.log(TAG, 'hover', index)
+  // console.log(TAG, 'hover', index)
   currentHover.value = index
 
-  if (nowMenu.value) {
-    nowMenu.value.closeMenu()
+  if (currentMenu.value) {
+    currentMenu.value.closeMenu()
   } else if (delay.value) {
     delay.value.cancel()
   }
@@ -82,11 +88,11 @@ function hover(item: MenuItem, index: number) {
   if (item.children) {
     let babe = item.children
     delay.value = delayExecution(100, () => {
-      nowMenu.value = menu({
+      currentMenu.value = showMenu({
         items: babe,
         attachToId: `${item.name}-${index}`, attachMethod: AttachMethod.UpRight,
         onClose() {
-          nowMenu.value = null
+          currentMenu.value = null
         },
         onCloseOnMenuItem() {
           closeMenu()
@@ -109,15 +115,18 @@ function clickDocument(event: MouseEvent) {
   }
 }
 
-function closeMenu(closeOnMenuItem = false) {
-  console.trace(TAG, 'closeMenu', closeOnMenuItem)
+function closeMenu() {
+  console.trace(TAG, 'closeMenu', menuItemClicked)
+
+  if (currentMenu.value) currentMenu.value.closeMenu()
 
   emit('close')
-  if (closeOnMenuItem) {
+  if (menuItemClicked.value) {
     emit('close-on-menu-item')
   }
   ctrlShow.value = false
 }
+
 
 function afterEnter() {
   emit('opened')
@@ -129,8 +138,38 @@ function afterLeave() {
 
 defineExpose({closeMenu})
 
-onMounted(() => setTimeout(() => document.addEventListener('click', clickDocument), 0))
+onMounted(() => {
+  emit('open')
 
+  // In-place
+  fix.value = props.top
+  if (props.locateToIndex !== -1 && props.locateToIndex < props.items.length) {
+    console.log(TAG, 'locateToIndex', props.locateToIndex)
+    if (isScrollbarVisible(menuBase.value!)) {
+      const item = document.getElementById(`${props.items[props.locateToIndex].name}-${props.locateToIndex}`)
+      if (item) {
+        item.scrollIntoView(false)
+        fix.value += 8 - item.getBoundingClientRect().top
+        console.log(TAG, 'fix', item.getBoundingClientRect().top)
+      }
+    } else {
+      fix.value -= props.locateToIndex * 28
+    }
+  }
+
+  // 预防菜单上下超出屏幕
+  const rect = menuBase.value!.getBoundingClientRect()
+  console.log(TAG, 'rect', rect)
+  if (fix.value + rect.height + 12 > window.innerHeight) {
+    fix.value = window.innerHeight - rect.height - 12
+  } else if (fix.value < 12) {
+    fix.value = 12
+  }
+
+
+  // 我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
+  setTimeout(() => document.addEventListener('click', clickDocument))
+})
 onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 </script>
 
@@ -157,13 +196,22 @@ onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 }
 
 .menu-item {
-  padding: 4px 8px;
+  padding: 0 8px;
+  max-height: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   color: var(--ryo-color-on-surface);
 }
 
 .menu-item.hover {
   background-color: rgba(var(--ryo-color-state-layers-on-surface), var(--ryo-opacity-state-layers-008));
+}
+
+/*BUG:不好看，我测你妈*/
+.menu-item.marked {
+  background-color: var(--ryo-color-secondary-container);
 }
 
 .menu-item:active {

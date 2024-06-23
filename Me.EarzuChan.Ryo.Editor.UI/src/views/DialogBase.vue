@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="#ryo-app">
+  <Teleport to="#ryo-viewport">
     <div id="dialog">
       <Transition name="overlay" @after-enter="afterEnter" @after-leave="afterLeave">
         <div id="dialog-overlay" @click="clickOverlay" v-if="showOverlay" v-show="ctrlShow"/>

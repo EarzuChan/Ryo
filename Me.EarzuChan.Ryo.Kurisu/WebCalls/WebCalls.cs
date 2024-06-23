@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls
+namespace Me.EarzuChan.Ryo.Kurisu.WebCalls
 {
     public class WebResponse
     {

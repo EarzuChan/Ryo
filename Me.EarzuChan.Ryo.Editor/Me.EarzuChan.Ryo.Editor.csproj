@@ -14,7 +14,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj"/>
-        <ProjectReference Include="..\Me.EarzuChan.Ryo.WinWebAppSystem\Me.EarzuChan.Ryo.WinWebAppSystem.csproj"/>
+        <ProjectReference Include="..\Me.EarzuChan.Ryo.Kurisu\Me.EarzuChan.Ryo.Kurisu.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,3 @@
-<!-- Dialog.vue -->
 <template>
   <DialogBase @overlay-click="clickOverlay" :ctrl-show="ctrlShow" @opened="opened" @closed="closed">
     <div id="dialog-container">
@@ -23,7 +22,7 @@
 
 <script setup lang="ts">
 import {computed, defineProps, onMounted, type PropType, ref} from 'vue'
-import type {DialogActionButtonModel} from '@/models/Models'
+import type {DialogActionButtonModel} from '@/models/UIModels'
 import DialogBase from "@/views/DialogBase.vue"
 import Icon from "@/components/Icon.vue"
 import TextButton from "@/components/TextButton.vue"

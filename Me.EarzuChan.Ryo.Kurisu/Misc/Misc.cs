@@ -1,14 +1,14 @@
 ﻿using Me.EarzuChan.Ryo.Extensions.Utils;
-using Me.EarzuChan.Ryo.WinWebAppSystem.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Me.EarzuChan.Ryo.Kurisu.Utils;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.Misc
+namespace Me.EarzuChan.Ryo.Kurisu.Misc
 {
-    public class WinWebAppApiBridge(WinWebApp app)
+    public class KurisuAppApiBridge(KurisuApp app)
     {
         public string SendWebCall(string webCallJson)
         {

@@ -1,7 +1,7 @@
 import {defineStore} from "pinia"
-import {createApp, h, ref} from "vue";
-import type {DialogModel} from "@/models/Models";
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue";
+import {createApp, h, ref} from "vue"
+import type {DialogModel} from "@/models/UIModels"
+import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
 
 const TAG = "DialogState"
 export const useDialogStateStore = defineStore("dialog-state", () => {
@@ -10,7 +10,7 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
     let isShowingDialog = ref(false) // 标记是否有对话框正在显示
 
     // 修改原始的 dialog 函数
-    function dialog(config: DialogModel) {
+    function order(config: DialogModel) {
         if (isShowingDialog.value) {
             // 如果有对话框正在显示，将新对话框配置添加到队列的开头
             dialogQueue.value.unshift(config)
@@ -62,5 +62,5 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
         app.mount(div)
     }
 
-    return {dialog, isShowingDialog};
+    return {order, isShowingDialog};
 });
