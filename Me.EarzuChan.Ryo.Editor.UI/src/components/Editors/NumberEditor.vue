@@ -3,7 +3,7 @@
 </script>
 
 <template>
-
+数字
 </template>
 
 <style scoped>

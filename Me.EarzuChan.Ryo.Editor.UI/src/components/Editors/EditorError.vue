@@ -1,10 +1,10 @@
+﻿<template>
+  呃呃
+</template>
+
 <script setup lang="ts">
 
 </script>
-
-<template>
-数组
-</template>
 
 <style scoped>
 
