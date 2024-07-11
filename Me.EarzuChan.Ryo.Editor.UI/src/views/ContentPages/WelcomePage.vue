@@ -7,10 +7,10 @@
 <script setup lang="ts">
 import ComboBox from "@/components/ComboBox.vue"
 import {ref, watch} from "vue"
-import {testArray} from "@/utils/UsefulUtils"
+import {makeTestArray} from "@/utils/UsefulUtils"
 
 const sel2 = ref(-1)
-const man = testArray('太美丽', 100)
+const man = makeTestArray('太美丽', 100)
 </script>
 
 <style scoped>

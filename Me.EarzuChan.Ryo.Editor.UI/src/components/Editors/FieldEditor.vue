@@ -4,7 +4,9 @@
       <div v-for="(item,index) in keys" class="field-list-item" :class="{ 'even': isEven(index) }">
         <div class="item-name">{{ item.name }}</div>
         <div class="item-value-holder" :class="{ 'even': isEven(index) }">
-          <EditorHolder with-margin v-model="modelValue[item.name]" :type="appState.getRyoTypeByName(item.type)"/>
+          <EditorHolder with-margin :model-value="tryGetMember(item.name)"
+                        @update:model-value="a=>trySetMember(item.name,a)"
+                        :type="appState.getRyoTypeByName(item.type)"/>
         </div>
       </div>
     </div>
@@ -13,25 +15,55 @@
 
 <script lang="ts" setup>
 import EditorHolder from "../EditorHolder.vue"
-import {computed, type PropType} from "vue"
+import {computed, type PropType, watch} from "vue"
 import type {RyoType} from "@/models/Models"
 import {useAppStateStore} from "@/stores/AppState"
+import {ensure} from "@/utils/UsefulUtils"
+
+const TAG = "FieldEditor"
 
 const appState = useAppStateStore()
 
 const props = defineProps({
-  modelValue: Object as PropType<any>,
   type: Object as PropType<RyoType>,
 })
 
-defineEmits(['update:modelValue'])
+const model = defineModel<any>()
 
-console.log("编辑器：组件加载")
+// watch(model, v => console.log(TAG, "监测", v), {immediate: true})
+
+// console.log("编辑器：组件加载")
 const keys = computed(() => {
   if (props.type && props.type.baseType) {
     return props.type.baseType.members
   }
 })
+
+function tryGetMember(name: string) {
+  // console.log(TAG, "尝试获取成员", name)
+
+  if (ensure(model.value)) {
+    if (name in model.value) return model.value[name]
+    else {
+      console.error("绑定的数据中没有这个成员")
+      return undefined
+    }
+  } else {
+    console.error("绑定的数据为空")
+    return undefined
+  }
+}
+
+function trySetMember(name: string, value: any) {
+  console.log(TAG, "尝试设置成员", name, value)
+
+  if (ensure(model.value)) {
+    if (!(name in model.value)) console.warn("绑定的数据中没有这个成员，但是我们仍然赋值")
+    model.value[name] = value
+  } else {
+    console.error("绑定的数据为空，不能赋值")
+  }
+}
 
 const isEven = (index: number) => index % 2 != 0
 </script>

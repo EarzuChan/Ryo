@@ -11,7 +11,7 @@ import TextEditor from "@/components/Editors/TextEditor.vue"
 import BooleanEditor from "@/components/Editors/BooleanEditor.vue"
 import EditorHolder from "@/components/EditorHolder.vue"
 import ArrayEditor from "@/components/Editors/ArrayEditor.vue"
-import FieldEditor from "@/components/Editors/FieldEditor.vue";
+import FieldEditor from "@/components/Editors/FieldEditor.vue"
 
 const TAG = "AppState"
 
@@ -65,6 +65,30 @@ export const useAppStateStore = defineStore('app-state', () => {
         return {baseType, isArray, typeName: baseType.type}
     }
 
+    function getInitValue(type: RyoType) {
+        if (type.isArray) {
+            return []
+        } else if (type.baseType) switch (type.baseType.type) {
+            case "java.lang.String":
+            case "java.lang.Character":
+                return ""
+            case "java.lang.Integer":
+            case "java.lang.Long":
+            case "java.lang.Float":
+            case "java.lang.Double":
+            case "java.lang.Short":
+            case "java.lang.Byte":
+                return 0
+            case "java.lang.Void":
+                return null
+            case "java.lang.Boolean":
+                return false
+            default:
+                // 初始化各字段？
+                return {}
+        }
+    }
+
     function setAppWindowState(state: WinWebAppWindowState) {
         emitWebEvent(makeWebLetter("SetAppWindowState", state))
     }
@@ -104,6 +128,7 @@ export const useAppStateStore = defineStore('app-state', () => {
         dataTypeSchemas,
         isAppWindowMaximized,
         fetchDataSchemas,
+        getInitValue,
         getEditorsByRyoType,
         getRyoTypeByName,
         typeSchemaToRyoType,

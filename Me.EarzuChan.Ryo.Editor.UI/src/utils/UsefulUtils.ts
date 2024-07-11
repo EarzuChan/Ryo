@@ -62,8 +62,13 @@ export function isScrollbarVisible(element: HTMLElement): boolean {
     return element.scrollHeight > element.clientHeight
 }
 
-export function testArray(text: string, times: number): string[] {
+export function makeTestArray(text: string, times: number): string[] {
     let result = []
     for (let i = 0; i < times; i++) result.push(`${text}-${i}`)
     return result
+}
+
+export function ensure(obj?: any): boolean {
+    // console.log(TAG, "确保", obj)
+    return obj !== null && obj !== undefined;
 }

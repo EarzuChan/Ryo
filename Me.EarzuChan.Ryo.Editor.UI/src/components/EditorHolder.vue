@@ -1,14 +1,17 @@
 <template>
   <div class="use-flex"
        :class="{'with-margin':isComplexEditor&&props.withMargin,'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
-    <component class="fulfill" :is="editorType" :model-value="props.modelValue"
-               @update:model-value="(a:any)=>updateData(a)" :type="type"/>
+    <component class="fulfill" :is="editorType" v-model="model" :type="type"/>
     <slot/>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {computed, nextTick, onMounted, type PropType, ref, shallowRef, watch} from "vue"
+import {ensure} from "@/utils/UsefulUtils"
+
+const TAG = "EditorHolder"
+
+import {computed, type PropType, ref} from "vue"
 import type {RyoType} from "@/models/Models"
 import {useAppStateStore} from "@/stores/AppState"
 import EditorError from "@/components/Editors/EditorError.vue"
@@ -17,40 +20,42 @@ import FieldEditor from "@/components/Editors/FieldEditor.vue"
 const appState = useAppStateStore()
 
 const props = defineProps({
-  modelValue: {},
   withMargin: Boolean,
   cardSurrounded: Boolean,
   notUseCard: Boolean,
   type: Object as PropType<RyoType>,
   preferEditor: Number,
 })
-const emit = defineEmits(['update:modelValue'])
 
-function updateData(data: any) {
-  // console.log(data)
-  emit('update:modelValue', data)
-}
+const model = defineModel<any>()
 
 const isComplexEditor = ref(false)
 
+// watch(model, v => console.log(TAG, "监测", v), {immediate: true})
+
 const editorType = computed(() => {
-  if (props.type) {
+  if (!ensure(model.value)) {
+    isComplexEditor.value = false
+    console.error(TAG, "绑定的数据为空")
+    return EditorError
+  } else if (props.type) {
+    console.log(TAG, "给Ryo类型查找编辑器", props.type)
+
     const editors = appState.getEditorsByRyoType(props.type)
 
     if (editors.length === 0) {
       isComplexEditor.value = false
+      console.error(TAG, "没有可用编辑器")
       return EditorError
     }
 
-    let chosen = editors[0]
-
-    if (props.preferEditor && props.preferEditor < editors.length) chosen = editors[props.preferEditor]
+    const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
 
     isComplexEditor.value = chosen === FieldEditor
-
     return chosen
   } else {
     isComplexEditor.value = false
+    console.error(TAG, "RyoType为空")
     return EditorError
   }
 })
