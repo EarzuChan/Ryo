@@ -1,6 +1,5 @@
-﻿using Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
+﻿using Me.EarzuChan.Ryo.Kurisu.WebCalls;
+using Me.EarzuChan.Ryo.Kurisu.WebEvents;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -8,8 +7,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Me.EarzuChan.Ryo.Kurisu.Exceptions;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.Utils
+namespace Me.EarzuChan.Ryo.Kurisu.Utils
 {
     public static class DataModelParsingUtils
     {

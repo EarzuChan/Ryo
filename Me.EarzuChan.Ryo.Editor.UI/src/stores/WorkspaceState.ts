@@ -40,8 +40,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     }
                 } as ItemModel
             },
-            {name: "欢迎页", page: markRaw(WelcomePage)},
-            {name: "空页", nonResident: true},
+            {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},
         ])
     const activeTabIndex = ref(0)
     const activeTab = computed(() => openedTabs.value[activeTabIndex.value])

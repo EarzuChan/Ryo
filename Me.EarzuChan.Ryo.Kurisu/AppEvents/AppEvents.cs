@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents
+namespace Me.EarzuChan.Ryo.Kurisu.AppEvents
 {
     public class AppEvent
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls.Responders
+namespace Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders
 {
     public enum WebCallResponderRegistrationStrategy
     {
@@ -14,7 +14,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls.Responders
 
     public interface IWebCallResponder
     {
-        public WebResponse Respond(WinWebAppContext context);
+        public WebResponse Respond(KurisuAppContext context);
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

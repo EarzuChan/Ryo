@@ -3,34 +3,34 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Shell;
 using Me.EarzuChan.Ryo.Extensions.Utils;
-using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
-using Me.EarzuChan.Ryo.WinWebAppSystem.Misc;
-using Me.EarzuChan.Ryo.WinWebAppSystem.Utils;
+using Me.EarzuChan.Ryo.Kurisu.AppEvents;
+using Me.EarzuChan.Ryo.Kurisu.Misc;
+using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends
+namespace Me.EarzuChan.Ryo.Kurisu.WindowBackends
 {
-    public enum WinWebAppWindowState
+    public enum KurisuAppWindowState
     {
         Normal,
         Maximized,
         Minimized
     }
 
-    internal class WinWebAppWpfWindowBackend : IWinWebAppWindowBackend
+    internal class KurisuAppWpfWindowBackend : IKurisuAppWindowBackend
     {
 
-        private WinWebApp App;
+        private KurisuApp App;
         private readonly WebView2 WebView = new();
         private readonly Application WpfApp = new();
         private readonly Window WpfWindow = new();
 
-        internal WinWebAppWpfWindowBackend() { }
+        internal KurisuAppWpfWindowBackend() { }
 
         private void OnStateChanged(object? _, EventArgs __)
         {
-            App.TriggerAppEvent(new(AppEventType.AppWindowStateChanged, WpfWindow.WindowState == WindowState.Maximized ? WinWebAppWindowState.Maximized : WpfWindow.WindowState == WindowState.Minimized ? WinWebAppWindowState.Minimized : WinWebAppWindowState.Normal));
+            App.TriggerAppEvent(new(AppEventType.AppWindowStateChanged, WpfWindow.WindowState == WindowState.Maximized ? KurisuAppWindowState.Maximized : WpfWindow.WindowState == WindowState.Minimized ? KurisuAppWindowState.Minimized : KurisuAppWindowState.Normal));
         }
 
         private async void InitWebView(object _, RoutedEventArgs __)
@@ -54,7 +54,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends
             WebView.CoreWebView2.Navigate(App.Profile.DebugMode && App.Profile.DebugStartUpWithDebugUrl ? App.Profile.DebugStartUpUrl : App.Profile.StartUpUrl);
 
             // 提供对象 互操作
-            WebView.CoreWebView2.AddHostObjectToScript("webApis", new WinWebAppApiBridge(App));
+            WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppApiBridge(App));
             // Trace.WriteLine(MassServer.GetMasses());
             // 其实在Js侧写个包也可以做到"Request"，还需要提供专门的Request接口吗
 
@@ -65,9 +65,9 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends
             if (App.Profile.DebugMode && App.Profile.DebugAutomaticOpenDevTool) WebView.CoreWebView2.OpenDevToolsWindow();
         }
 
-        public void SetWindowState(WinWebAppWindowState state) => WpfWindow.WindowState = state == WinWebAppWindowState.Maximized ? WindowState.Maximized : state == WinWebAppWindowState.Normal ? WindowState.Normal : WindowState.Minimized;
+        public void SetWindowState(KurisuAppWindowState state) => WpfWindow.WindowState = state == KurisuAppWindowState.Maximized ? WindowState.Maximized : state == KurisuAppWindowState.Normal ? WindowState.Normal : WindowState.Minimized;
 
-        public void Init(WinWebApp app)
+        public void Init(KurisuApp app)
         {
             App = app;
 
@@ -101,20 +101,20 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends
             WpfApp.Run(WpfWindow);
         }
 
-        public WinWebAppWindowState GetWindowState() => WpfWindow.WindowState == WindowState.Maximized ? WinWebAppWindowState.Maximized : WpfWindow.WindowState == WindowState.Normal ? WinWebAppWindowState.Normal : WinWebAppWindowState.Minimized;
+        public KurisuAppWindowState GetWindowState() => WpfWindow.WindowState == WindowState.Maximized ? KurisuAppWindowState.Maximized : WpfWindow.WindowState == WindowState.Normal ? KurisuAppWindowState.Normal : KurisuAppWindowState.Minimized;
     }
 
-    public interface IWinWebAppWindowBackend
+    public interface IKurisuAppWindowBackend
     {
-        public void SetWindowState(WinWebAppWindowState state);
+        public void SetWindowState(KurisuAppWindowState state);
 
         public void Close();
 
         public void Show();
 
-        public void Init(WinWebApp app);
+        public void Init(KurisuApp app);
 
         public void EmitWebEvent(WebLetter model);
-        public WinWebAppWindowState GetWindowState();
+        public KurisuAppWindowState GetWindowState();
     }
 }

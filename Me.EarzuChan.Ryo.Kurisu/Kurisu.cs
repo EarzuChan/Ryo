@@ -5,43 +5,35 @@ using System.Linq;
 using System.Reflection;
 using Me.EarzuChan.Ryo.Utils;
 using System.Diagnostics;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents.Handlers;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebEvents;
-using Me.EarzuChan.Ryo.WinWebAppSystem.Utils;
-using Me.EarzuChan.Ryo.WinWebAppSystem.Exceptions;
-using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents;
-using Me.EarzuChan.Ryo.WinWebAppSystem.AppEvents.Handlers;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls.Responders;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WebCalls;
-using Me.EarzuChan.Ryo.WinWebAppSystem.WindowBackends;
+using Me.EarzuChan.Ryo.Kurisu.AppEvents;
+using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
+using Me.EarzuChan.Ryo.Kurisu.Exceptions;
+using Me.EarzuChan.Ryo.Kurisu.WebCalls;
+using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
+using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
+using Me.EarzuChan.Ryo.Kurisu.WindowBackends;
 
-namespace Me.EarzuChan.Ryo.WinWebAppSystem
+namespace Me.EarzuChan.Ryo.Kurisu
 {
-    public class WebLetter
+    public class WebLetter(string name, params object[] args)
     {
-        public string Name;
+        public string Name = name;
 
-        public object[] Args;
-
-        public WebLetter(string name, params object[] args)
-        {
-            Name = name;
-            Args = args;
-        }
+        public object[] Args = args;
     }
 
-    public class WinWebApp
+    public class KurisuApp
     {
-        internal readonly WinWebAppProfile Profile;
+        internal readonly KurisuAppProfile Profile;
         internal readonly ArrayList Dependencies;
         internal readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers;
         internal readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers;
         internal readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders;
-        internal readonly IWinWebAppWindowBackend AppWindowBackend;
+        internal readonly IKurisuAppWindowBackend AppWindowBackend;
 
-        private readonly WinWebAppContext Context;
+        private readonly KurisuAppContext Context;
 
-        internal WinWebApp(WinWebAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> webEventHandlers, Dictionary<AppEventHandlerAttribute, Type> appEventHandlers, Dictionary<WebCallResponderAttribute, Type> webCallResponders, IWinWebAppWindowBackend appWindow)
+        internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> webEventHandlers, Dictionary<AppEventHandlerAttribute, Type> appEventHandlers, Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuAppWindowBackend appWindow)
         {
             Profile = profile;
             Dependencies = dependencies;
@@ -197,46 +189,46 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             Trace.WriteLine($"找不到AppEvent {appEvent.EventType} 可用的Handler");
         }
 
-        public static WinWebAppBuilder CreateBuilder(WinWebAppProfile profile) => new(profile);
+        public static KurisuAppBuilder CreateBuilder(KurisuAppProfile profile) => new(profile);
 
-        public static WinWebAppBuilder CreateBuilder() => CreateBuilder(new());
+        public static KurisuAppBuilder CreateBuilder() => CreateBuilder(new());
     }
 
-    public class WinWebAppBuilder
+    public class KurisuAppBuilder
     {
-        private readonly WinWebAppProfile Profile;
+        private readonly KurisuAppProfile Profile;
         private readonly ArrayList Dependencies = new();
         private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
         private readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers = new();
         private readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders = new();
-        private IWinWebAppWindowBackend? AppWindowBackend = null;
+        private IKurisuAppWindowBackend? AppWindowBackend = null;
         private bool IsBuilt = false;
 
-        internal WinWebAppBuilder(WinWebAppProfile profile)
+        internal KurisuAppBuilder(KurisuAppProfile profile)
         {
             Profile = profile;
         }
 
-        public WinWebApp Build()
+        public KurisuApp Build()
         {
             if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
 
-            if (AppWindowBackend == null) throw new WinWebAppBuildingException("没有可使用的窗口后端");
+            if (AppWindowBackend == null) throw new KurisuAppBuildingException("没有可使用的窗口后端");
 
             if (Profile.WebEventHandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
             if (Profile.AppEventHandlerRegistrationStrategy == AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanAppEventHandlers();
             if (Profile.WebCallResponderRegistrationStrategy == WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebCallResponders();
 
-            WinWebApp application = new(Profile, Dependencies, WebEventHandlers, AppEventHandlers, WebCallResponders, AppWindowBackend);
+            KurisuApp application = new(Profile, Dependencies, WebEventHandlers, AppEventHandlers, WebCallResponders, AppWindowBackend);
 
             IsBuilt = true;
 
             return application;
         }
 
-        public WinWebAppBuilder UseDefaultWindowBackend() => UseWindowBackend(new WinWebAppWpfWindowBackend());
+        public KurisuAppBuilder UseDefaultWindowBackend() => UseWindowBackend(new KurisuAppWpfWindowBackend());
 
-        public WinWebAppBuilder UseWindowBackend(IWinWebAppWindowBackend windowBackend)
+        public KurisuAppBuilder UseWindowBackend(IKurisuAppWindowBackend windowBackend)
         {
             if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口");
             AppWindowBackend = windowBackend;
@@ -288,27 +280,27 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             }
         }
 
-        public WinWebAppBuilder RegisterWebEventHandler(WebEventHandlerAttribute handlerAttribute, Type handler)
+        public KurisuAppBuilder RegisterWebEventHandler(WebEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute == null || (!typeof(IWebEventHandler).IsAssignableFrom(handler) && typeof(IWebEventHandlerForCallBack).IsAssignableFrom(handler))) throw new WinWebAppBuildingException("检查你注册处理器时提供的参数");
+            if (handlerAttribute == null || (!typeof(IWebEventHandler).IsAssignableFrom(handler) && typeof(IWebEventHandlerForCallBack).IsAssignableFrom(handler))) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebEventHandlerDirectly(handlerAttribute, handler);
 
             return this;
         }
 
-        public WinWebAppBuilder RegisterAppEventHandler(AppEventHandlerAttribute handlerAttribute, Type handler)
+        public KurisuAppBuilder RegisterAppEventHandler(AppEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute == null || !typeof(IAppEventHandler).IsAssignableFrom(handler)) throw new WinWebAppBuildingException("检查你注册处理器时提供的参数");
+            if (handlerAttribute == null || !typeof(IAppEventHandler).IsAssignableFrom(handler)) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterAppEventHandlerDirectly(handlerAttribute, handler);
 
             return this;
         }
 
-        public WinWebAppBuilder RegisterWebCallResponder(WebCallResponderAttribute responderAttribute, Type handler)
+        public KurisuAppBuilder RegisterWebCallResponder(WebCallResponderAttribute responderAttribute, Type handler)
         {
-            if (responderAttribute == null || !typeof(IWebCallResponder).IsAssignableFrom(handler)) throw new WinWebAppBuildingException("检查你注册处理器时提供的参数");
+            if (responderAttribute == null || !typeof(IWebCallResponder).IsAssignableFrom(handler)) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebCallResponderDirectly(responderAttribute, handler);
 
@@ -336,17 +328,17 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
             WebCallResponders.Add(responderAttribute, handler);
         }
 
-        public WinWebAppBuilder ProvideDependency<T>() where T : new()
+        public KurisuAppBuilder ProvideDependency<T>() where T : new()
         {
             //检测是否已经有T的实例
-            if (Dependencies.OfType<T>().Any()) throw new WinWebAppBuildingException($"已经提供过{typeof(T)}类型的依赖项了");
+            if (Dependencies.OfType<T>().Any()) throw new KurisuAppBuildingException($"已经提供过{typeof(T)}类型的依赖项了");
             Dependencies.Add(new T());
 
             return this;
         }
     }
 
-    public class WinWebAppProfile
+    public class KurisuAppProfile
     {
         // Basic Profile
         public string Name { get; init; } = "Ryo App";
@@ -359,7 +351,7 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public bool WindowBorderless { get; init; } = true;
         public int WindowWidth { get; init; } = 1200;
         public int WindowHeight { get; init; } = 800;
-        public WinWebAppWindowState StartUpWindowState { get; init; } = WinWebAppWindowState.Normal;
+        public KurisuAppWindowState StartUpWindowState { get; init; } = KurisuAppWindowState.Normal;
         public WebEventHandlerRegistrationStrategy WebEventHandlerRegistrationStrategy { get; init; } = WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
         public AppEventHandlerRegistrationStrategy AppEventHandlerRegistrationStrategy { get; init; } = AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
         public WebCallResponderRegistrationStrategy WebCallResponderRegistrationStrategy { get; init; } = WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically;
@@ -371,11 +363,11 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public bool DebugMode { get; init; } = false;
     }
 
-    public class WinWebAppContext
+    public class KurisuAppContext
     {
-        private readonly WinWebApp App;
+        private readonly KurisuApp App;
 
-        internal WinWebAppContext(WinWebApp app) => App = app;
+        internal KurisuAppContext(KurisuApp app) => App = app;
 
         public T Inject<T>() where T : class =>
             ControlFlowUtils.TryCatchingThenThrow<T>("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
@@ -390,9 +382,9 @@ namespace Me.EarzuChan.Ryo.WinWebAppSystem
         public void StopApp() => App.Stop();
 
         // AppWindowService
-        public void SetAppWindowState(WinWebAppWindowState state) => App.AppWindowBackend.SetWindowState(state);
+        public void SetAppWindowState(KurisuAppWindowState state) => App.AppWindowBackend.SetWindowState(state);
 
-        public WinWebAppWindowState GetAppWindowState() => App.AppWindowBackend.GetWindowState();
+        public KurisuAppWindowState GetAppWindowState() => App.AppWindowBackend.GetWindowState();
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口
