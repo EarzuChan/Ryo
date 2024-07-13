@@ -1,43 +1,74 @@
 <template>
-  <div id="ryo-app" class="ryo-dark">
-    <TopAppBar/>
-    <div id="contents">
-      <SidePanel/>
-      <Tabs/>
-    </div>
+  <div id="ryo-viewport" class="ryo-dark">
+    <Transition mode="out-in" name="shifter">
+      <div v-if="allAvailable" id="ryo-app" class="flex">
+        <TopAppBar/>
+        <div id="ryo-app-contents" class="flex">
+          <SidePanel/>
+          <Tabs/>
+        </div>
+      </div>
+      <EmptyPage v-else style="flex: 1"/>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import {useAppStateStore} from "@/stores/AppState"
 import TopAppBar from "@/views/TopAppBar.vue"
-import type {TreeNodeModel} from "@/models/Models"
-import {ref} from "vue"
 import SidePanel from "@/views/SidePanel.vue"
 import Tabs from "@/views/Tabs.vue"
+import {computed} from "vue";
+import {useKurisuStateStore} from "@/stores/KurisuState"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import EmptyPage from "@/views/ContentPages/EmptyPage.vue"
 
 const appState = useAppStateStore()
+const kurisuState = useKurisuStateStore()
+const openedFilesState = useWorkspaceStateStore()
+
+const allAvailable = computed(() => appState.available && kurisuState.available && openedFilesState.available)
 </script>
 
 <style scoped>
-#ryo-app {
+#ryo-viewport {
   display: flex;
-  flex-direction: column;
   height: 100vh;
 
   background-color: var(--ryo-color-surface);
   overflow: hidden;
 }
 
-#contents {
-  display: flex;
+#ryo-app-contents {
   flex-direction: row;
-  flex: 1;
-  overflow: hidden;
 }
 
-#main {
-  background-color: white;
+#ryo-app {
+  flex-direction: column;
+}
+
+.flex {
   flex: 1;
+  display: flex;
+  overflow: hidden;
+
+}
+
+.shifter-enter-active {
+  transition: all var(--ryo-motion-emphasized-decelerate);
+}
+
+.shifter-leave-active {
+  transition: all var(--ryo-motion-emphasized-accelerate);
+}
+
+.shifter-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.shifter-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
 }
 </style>

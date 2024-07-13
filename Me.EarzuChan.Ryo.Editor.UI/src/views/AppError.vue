@@ -1,5 +1,5 @@
 <template>
-  <div id="ryo-app" class="ryo-dark">
+  <div id="ryo-viewport" class="ryo-dark">
     <div id="error-box">
       <div id="contents">
         <div id="contents-scroll-wrapper">
@@ -7,11 +7,11 @@
             <div class="ryo-typography-headline-large info-text">不是，哥们：应用崩溃了</div>
             <div id="details-container">
               <div class="ryo-typography-body-medium info-text">错误详情：</div>
-              <CodeBlob>{{ getUpToNLines(errText, 3) }}</CodeBlob>
+              <CodeBlock>{{ getUpToNLines(errText, 3) }}</CodeBlock>
               <div class="ryo-typography-body-medium info-text">应用版本：</div>
-              <CodeBlob>{{ appInfo.name + ' v' + appInfo.version }}</CodeBlob>
+              <CodeBlock>{{ appInfo.name + ' v' + appInfo.version }}</CodeBlock>
               <div class="ryo-typography-body-medium info-text">建议的操作：</div>
-              <CodeBlob>重新加载试试看？</CodeBlob>
+              <CodeBlock>重新加载试试看？</CodeBlock>
               <div class="ryo-typography-body-medium info-text">哥们可在控制台获得更多信息</div>
             </div>
           </div>
@@ -28,10 +28,10 @@
 
 <script setup lang="ts">
 import TextButton from "@/components/TextButton.vue"
-import CodeBlob from "@/components/CodeBlob.vue"
 import {inject} from "@vue/runtime-core"
 import {copyTextToClipboard, getUpToNLines} from "@/utils/UsefulUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
+import CodeBlock from "@/components/CodeBlock.vue";
 
 const dialogState = useDialogStateStore()
 const err: any = inject('err')
@@ -61,7 +61,7 @@ function reloadApp() {
 </script>
 
 <style scoped>
-#ryo-app {
+#ryo-viewport {
   display: flex;
   flex-direction: column;
   height: 100vh;

@@ -1,14 +1,16 @@
-import {defineStore} from "pinia";
-import {computed, markRaw, ref} from "vue";
-import type {ItemModel, MassFile, TabModel} from "@/models/Models";
-import ItemPage from "@/views/ContentPages/ItemPage.vue";
+import {defineStore} from "pinia"
+import {computed, markRaw, ref} from "vue"
+import ItemPage from "@/views/ContentPages/ItemPage.vue"
 import WelcomePage from "@/views/ContentPages/WelcomePage.vue"
-import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/WinWebAppUtils"
-import {useDialogStateStore} from "@/stores/DialogState";
+import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
+import {useDialogStateStore} from "@/stores/DialogState"
+import type {ItemModel, MassFile} from "@/models/AppModels"
+import type {TabModel} from "@/models/UIModels"
 
-const TAG = "OpenedFilesState"
+const TAG = "WorkspaceState"
 
-export const useOpenedFilesStateStore = defineStore('opened-files-state', () => {
+export const useWorkspaceStateStore = defineStore('workspace-state', () => {
+    const available = ref(false)
 
     const openedFiles = ref<MassFile[]>([{
         name: "假文件1",
@@ -29,10 +31,13 @@ export const useOpenedFilesStateStore = defineStore('opened-files-state', () => 
                                 {"name": "iArr", "type": "java.lang.Integer[]"},
                                 {"name": "bArr", "type": "java.lang.Byte[][]"},
                                 {"name": "f", "type": "java.lang.Float"},
-                                {"name": "i", "type": "java.lang.Integer"}]
+                                {"name": "i", "type": "game23.model.DialogueTreeModel$UserMessageModel"}]
                         }, isArray: false, typeName: "sengine.graphics2d.FontSprites"
                     },
-                    data: {iArr: [1, 2, 3], bArr: [[1, 2], [3, 4]], f: 1.9, i: 191810}
+                    data: {
+                        iArr: [1, 2, 3], bArr: [[1, 2], [3, 4]], f: 1.9,
+                        i: {isHidden: false, message: "Hello, World!"},
+                    }
                 } as ItemModel
             },
             {name: "欢迎页", page: markRaw(WelcomePage)},
@@ -56,6 +61,8 @@ export const useOpenedFilesStateStore = defineStore('opened-files-state', () => 
 
     function closeTab(index: number) {
         const tab = openedTabs.value[index]
+
+        activeTabIndex.value = index
 
         if (tab.unsaved) {
             // 相应询问等操作
@@ -112,14 +119,17 @@ export const useOpenedFilesStateStore = defineStore('opened-files-state', () => 
             console.log(TAG, "OpenedFilesChanged监听器已创建")
             emitWebEvent(makeWebLetter('NotifyOpenedFiles'))
             console.log(TAG, "已提醒发送OpenedFiles")
+
+            available.value = true
         } catch (err) {
-            console.error(TAG, "遇到问题，App初始化终止，将报错", err);
+            console.error(TAG, "Init error", err)
         } finally {
             console.log(TAG, "Init over")
         }
     })()
 
     return {
+        available,
         openedFiles,
         anchorTab,
         clickTab,

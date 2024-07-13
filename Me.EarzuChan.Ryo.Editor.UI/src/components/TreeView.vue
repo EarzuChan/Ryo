@@ -31,8 +31,8 @@ interface InternalTreeNode {
   childrenCount: number
 }
 
-import {type PropType, computed, ref, type TransitionGroupProps} from 'vue'
-import type {TreeNodeModel} from "@/models/Models"
+import {type PropType, computed, ref} from 'vue'
+import type {TreeNodeModel} from "@/models/UIModels"
 import Icon from "./Icon.vue"
 
 const props = defineProps({

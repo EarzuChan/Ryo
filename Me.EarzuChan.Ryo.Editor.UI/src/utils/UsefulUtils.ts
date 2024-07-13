@@ -1,7 +1,3 @@
-import {createApp, h} from "vue"
-import type {DialogModel} from "@/models/Models"
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
-
 const TAG = "UsefulUtils"
 
 export function sleepFor(delay: number) {
@@ -45,8 +41,11 @@ export function arrayToText(arr: any[], empty: string = "数组为空"): string 
 }
 
 export function getSfcName(et: any): string {
-    const fileName: string = et.__file! as string
-    return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
+    if (ensure(et.__name)) return et.__name
+    else {
+        const fileName = et.__file
+        return fileName.substring(fileName.lastIndexOf("/") + 1, fileName.lastIndexOf("."))
+    }
 }
 
 export function delayExecution(delay: number, lambda: TimerHandler) {
@@ -71,4 +70,8 @@ export function makeTestArray(text: string, times: number): string[] {
 export function ensure(obj?: any): boolean {
     // console.log(TAG, "确保", obj)
     return obj !== null && obj !== undefined;
+}
+
+export function ensureObject(obj?: any): boolean {
+    return ensure(obj) && obj instanceof Object
 }

@@ -19,7 +19,7 @@
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard"/>
-        <ComboBox id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
+        <Select id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
         <TextButton button-style="filled" id="save-button">保存</TextButton>
       </div>
     </EditorHolder>
@@ -27,18 +27,22 @@
 </template>
 
 <script setup lang="ts">
-import {computed, type PropType, ref} from "vue";
-import type {ItemModel} from "@/models/Models"
+import {computed, onActivated, type PropType, ref} from "vue"
+import type {ItemModel} from "@/models/AppModels"
 import {arrayToText, boolToText, getSfcName} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
-import FieldEditor from "@/components/Editors/FieldEditor.vue"
 import IconButton from "@/components/IconButton.vue"
-import EditableLabel from "@/components/EditableLabel.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
-import ComboBox from "@/components/ComboBox.vue";
+import Select from "@/components/Select.vue"
+
+const TAG = "ItemPage"
 
 const appState = useAppStateStore()
+// const random = ref(Math.random())
+// TODO: 暂存未保存了可以，watch data然后init，用户在暂存上修改，保存才写入data
+// TODO: 重做编辑器容器底部栏 弄成插槽
+// TODO: 默认编辑器选择的提示该如何？
 
 const props = defineProps({
   data: {
@@ -63,6 +67,10 @@ const inOutMethods = computed(() => {
 })
 
 const preferEditor = ref(0)
+
+onActivated(() => {
+  // console.log(TAG, "激活了", random.value)
+})
 </script>
 
 <style scoped>

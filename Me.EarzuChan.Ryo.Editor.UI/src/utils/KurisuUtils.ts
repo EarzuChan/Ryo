@@ -1,5 +1,5 @@
-import type {WebLetter, WebResponse} from "@/models/Models"
-import {WebResponseState} from "@/models/Models";
+import type {WebLetter, WebResponse} from "@/models/KurisuModels"
+import {WebResponseState} from "@/models/KurisuModels"
 
 declare const chrome: any
 const TAG = "WinWebAppUtils"

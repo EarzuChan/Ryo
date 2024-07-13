@@ -1,9 +1,9 @@
 ﻿<template>
-  <Teleport to="#ryo-app">
+  <Teleport to="#ryo-viewport">
     <Transition name="menu" @after-enter="afterEnter" @after-leave="afterLeave">
       <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
         <div id="menu-contents">
-          <div v-for="(item,index) in items" :class="{hover: currentHover === index}"
+          <div v-for="(item,index) in items" :class="{hover: currentHover === index,marked: index === locateToIndex}"
                :id="`${item.name}-${index}`"
                class="menu-item ryo-typography-body-medium"
                @click="invoke(item)" @mouseenter="hover(item,index)">
@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
-import {AttachMethod, type MenuItem} from "@/models/Models"
+import {AttachMethod, type MenuItem} from "@/models/UIModels"
 import {menu} from "@/utils/MenuUtils"
 import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils";
 
@@ -118,6 +118,8 @@ function clickDocument(event: MouseEvent) {
 function closeMenu() {
   console.trace(TAG, 'closeMenu', menuItemClicked)
 
+  if (currentMenu.value) currentMenu.value.closeMenu()
+
   emit('close')
   if (menuItemClicked.value) {
     emit('close-on-menu-item')
@@ -138,6 +140,8 @@ defineExpose({closeMenu})
 
 onMounted(() => {
   emit('open')
+
+  // In-place
   fix.value = props.top
   if (props.locateToIndex !== -1 && props.locateToIndex < props.items.length) {
     console.log(TAG, 'locateToIndex', props.locateToIndex)
@@ -152,7 +156,19 @@ onMounted(() => {
       fix.value -= props.locateToIndex * 28
     }
   }
-  setTimeout(() => document.addEventListener('click', clickDocument), 0)
+
+  // 预防菜单上下超出屏幕
+  const rect = menuBase.value!.getBoundingClientRect()
+  console.log(TAG, 'rect', rect)
+  if (fix.value + rect.height + 12 > window.innerHeight) {
+    fix.value = window.innerHeight - rect.height - 12
+  } else if (fix.value < 12) {
+    fix.value = 12
+  }
+
+
+  // 我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
+  setTimeout(() => document.addEventListener('click', clickDocument))
 })
 onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 </script>
@@ -191,6 +207,11 @@ onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
 
 .menu-item.hover {
   background-color: rgba(var(--ryo-color-state-layers-on-surface), var(--ryo-opacity-state-layers-008));
+}
+
+/*BUG:不好看，我测你妈*/
+.menu-item.marked {
+  background-color: var(--ryo-color-secondary-container);
 }
 
 .menu-item:active {

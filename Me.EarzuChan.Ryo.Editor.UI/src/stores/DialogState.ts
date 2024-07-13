@@ -1,7 +1,7 @@
 import {defineStore} from "pinia"
-import {createApp, h, ref} from "vue";
-import type {DialogModel} from "@/models/Models";
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue";
+import {createApp, h, ref} from "vue"
+import type {DialogModel} from "@/models/UIModels"
+import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
 
 const TAG = "DialogState"
 export const useDialogStateStore = defineStore("dialog-state", () => {

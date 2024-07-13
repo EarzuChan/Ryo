@@ -1,7 +1,7 @@
-﻿import type {MenuModel} from "@/models/Models"
-import {createApp, h} from "vue"
+﻿import {createApp, h} from "vue"
 import Menu from "@/components/Menu.vue"
-import {AttachMethod} from "@/models/Models"
+import type {MenuModel} from "@/models/UIModels"
+import {AttachMethod} from "@/models/UIModels"
 
 const TAG = "MenuUtils"
 

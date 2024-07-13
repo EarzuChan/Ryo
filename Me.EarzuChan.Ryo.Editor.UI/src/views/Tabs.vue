@@ -20,7 +20,9 @@
       <div id="separator"/>
     </div>
     <div id="content_container">
-      <component class="content" :is="currentTabPageOrEmptyPage" :data="openedFilesState.activeTab?.data"/>
+      <KeepAlive include="ItemPage">
+        <Component class="content" :is="currentTabPageOrEmptyPage" :data="openedFilesState.activeTab?.data"/>
+      </KeepAlive>
     </div>
   </div>
 </template>
@@ -29,12 +31,12 @@
 import IconButton from "@/components/IconButton.vue"
 import {computed, ref} from "vue"
 import EmptyPage from "@/views/ContentPages/EmptyPage.vue"
-import {useOpenedFilesStateStore} from "@/stores/OpenedFilesState"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 
 const TAG = "Tabs"
 
 const tabIconHovering = ref(-1)
-const openedFilesState = useOpenedFilesStateStore()
+const openedFilesState = useWorkspaceStateStore()
 const currentTabPageOrEmptyPage = computed(() => openedFilesState.activeTab?.page || EmptyPage)
 
 function clickTab(index: number) {

@@ -1,64 +1,66 @@
 <template>
-  <div class="use-flex"
-       :class="{'with-margin':isComplexEditor&&props.withMargin,'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
-    <component class="fulfill" :is="editorType" v-model="model" :type="type"/>
+  <div class="use-flex" :class="{'with-margin':isComplexEditor&&props.withMargin,
+  'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
+    <Component :even="even" @err="e=>onError(e as string)" :errorMsg="errorMsg" class="fulfill" :is="editorType"
+               v-model="model"
+               :type="type"/>
     <slot/>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {ensure} from "@/utils/UsefulUtils"
-
-const TAG = "EditorHolder"
-
 import {computed, type PropType, ref} from "vue"
-import type {RyoType} from "@/models/Models"
+import {ensure} from "@/utils/UsefulUtils"
+import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import EditorError from "@/components/Editors/EditorError.vue"
 import FieldEditor from "@/components/Editors/FieldEditor.vue"
 
-const appState = useAppStateStore()
+const TAG = "EditorHolder"
 
+const appState = useAppStateStore()
 const props = defineProps({
   withMargin: Boolean,
   cardSurrounded: Boolean,
   notUseCard: Boolean,
   type: Object as PropType<RyoType>,
   preferEditor: Number,
+  even: Boolean,
 })
 
 const model = defineModel<any>()
-
+const errorMsg = ref("良好")
+const isError = ref(false)
 const isComplexEditor = ref(false)
 
-// watch(model, v => console.log(TAG, "监测", v), {immediate: true})
+function getError(msg: string) {
+  isComplexEditor.value = false
+  console.error(TAG, msg)
+  errorMsg.value = msg
+  return EditorError
+}
 
 const editorType = computed(() => {
-  if (!ensure(model.value)) {
-    isComplexEditor.value = false
-    console.error(TAG, "绑定的数据为空")
-    return EditorError
-  } else if (props.type) {
+  if (isError.value) return getError("编辑器错误：" + errorMsg.value)
+  else if (!ensure(model.value)) return getError("绑定的数据为空")
+  else if (props.type) {
     console.log(TAG, "给Ryo类型查找编辑器", props.type)
 
     const editors = appState.getEditorsByRyoType(props.type)
 
-    if (editors.length === 0) {
-      isComplexEditor.value = false
-      console.error(TAG, "没有可用编辑器")
-      return EditorError
-    }
+    if (editors.length === 0) return getError("没有可用的编辑器")
 
     const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
-
     isComplexEditor.value = chosen === FieldEditor
     return chosen
-  } else {
-    isComplexEditor.value = false
-    console.error(TAG, "RyoType为空")
-    return EditorError
-  }
+  } else return getError("Ryo类型为空")
 })
+
+function onError(err: string) {
+  console.error(TAG, "编辑器错误", err)
+  errorMsg.value = err
+  isError.value = true
+}
 </script>
 
 <style scoped>

@@ -12,8 +12,9 @@
       </div>
       <div id="app-bar-window-controls">
         <IconButton :size="48" icon="minimize" @click="minimizeWindow"/>
-        <IconButton :size="48" :icon="appState.isAppWindowMaximized?'restore':'fullscreen'" @click="switchWindowState"/>
-        <IconButton :size="48" icon="close" @click="appState.stopApp()"/>
+        <IconButton :size="48" :icon="kurisuState.isAppWindowMaximized?'restore':'fullscreen'"
+                    @click="switchWindowState"/>
+        <IconButton :size="48" icon="close" @click="kurisuState.stopApp()"/>
       </div>
     </div>
   </div>
@@ -22,13 +23,14 @@
 <script setup lang="ts">
 import IconButton from "@/components/IconButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
-import {AttachMethod, type MenuBarItem, WinWebAppWindowState} from "@/models/Models"
 import Icon from "@/components/Icon.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {menu} from "@/utils/MenuUtils"
-import {reactive, ref} from "vue";
-import {delayExecution} from "@/utils/UsefulUtils"
+import {ref} from "vue"
+import type {MenuBarItem} from "@/models/UIModels"
+import {useKurisuStateStore} from "@/stores/KurisuState";
+import {KurisuWindowState} from "@/models/KurisuModels";
 
 const TAG = 'TopAppBar'
 
@@ -37,6 +39,7 @@ const lastMenu = ref<MenuBarItem | null>(null)
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
+const kurisuState = useKurisuStateStore()
 
 const menuBarItems: MenuBarItem[] = [
   {id: 'file', name: '文件'},
@@ -59,7 +62,7 @@ function clickMenuButton(menuType: MenuBarItem) {
 
 function hoverMenuButton(menuType: MenuBarItem) {
   console.log(TAG, 'hoverMenuButton', menuType, currentMenu.value)
-  
+
   if (currentMenu.value !== null && lastMenu.value!.id !== menuType.id) {
     currentMenu.value.closeMenu()
 
@@ -93,7 +96,7 @@ function showMenu(menuType: MenuBarItem) {
                 ]
           },
           {name: '重启软件', action: () => console.log('重启软件')},
-          {name: '退出', action: () => appState.stopApp()}
+          {name: '退出', action: () => kurisuState.stopApp()}
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
@@ -216,11 +219,11 @@ function testDialog() {
 }
 
 function minimizeWindow() {
-  appState.setAppWindowState(WinWebAppWindowState.Minimized)
+  kurisuState.setAppWindowState(KurisuWindowState.Minimized)
 }
 
 function switchWindowState() {
-  appState.setAppWindowState(appState.isAppWindowMaximized ? WinWebAppWindowState.Normal : WinWebAppWindowState.Maximized)
+  kurisuState.setAppWindowState(kurisuState.isAppWindowMaximized ? KurisuWindowState.Normal : KurisuWindowState.Maximized)
 }
 </script>
 

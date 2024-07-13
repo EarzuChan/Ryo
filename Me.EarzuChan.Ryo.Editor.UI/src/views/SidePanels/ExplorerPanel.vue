@@ -9,10 +9,11 @@
 import EditableLabel from "@/components/EditableLabel.vue"
 import {computed, ref} from "vue"
 import TreeView from "@/components/TreeView.vue"
-import type {MassFile, TreeNodeModel} from "@/models/Models"
-import {useOpenedFilesStateStore} from "@/stores/OpenedFilesState"
+import type {TreeNodeModel} from "@/models/UIModels"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import type {MassFile} from "@/models/AppModels"
 
-const openedFilesStateStore = useOpenedFilesStateStore()
+const openedFilesStateStore = useWorkspaceStateStore()
 
 const computedMassFiles = computed(() => {
   const ori = openedFilesStateStore.openedFiles as MassFile[]

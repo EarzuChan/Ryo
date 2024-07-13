@@ -1,46 +1,43 @@
 <template>
   <!--TODO:添加、文本框宽度最窄、文本框清空按钮状态修复、右键或脱出删除、文本框文字选取-->
-  <div class="array-holder array-editor">
-    <draggable class="array-holder"
-               v-model="model"
-               @start="drag=true"
-               :animation="200"
-               @end="drag=false">
-      <template #item="{ element,index }">
-        <div class="array-item">
-          <EditorHolder not-use-card v-model="model![index]" :type="itemType"/>
-        </div>
-      </template>
-      <template #footer>
-        <div id="add-item-button" @click="addItem">
-          <IconButton :size="32" id="add-item-icon" icon="add"/>
-        </div>
-      </template>
-    </draggable>
+  <div class="array-editor"
+       :class="{'even':even}">
+    <VueDraggable class="draggable-place"
+                  v-model="model!"
+                  @start="notice(true)"
+                  :animation="200"
+                  handle=".array-item"
+                  @end="notice(false)">
+      <div class="array-item" v-for="(ke,index) in model" :key="ke">
+        <EditorHolder :even="!even" not-use-card v-model="model![index]" :type="itemType"/>
+      </div>
+    </VueDraggable>
+    <div id="add-item-button" @click="addItem">
+      <IconButton :size="32" id="add-item-icon" icon="add"/>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 const TAG = "ArrayEditor"
 
-import draggable from "vuedraggable"
 import {useAppStateStore} from "@/stores/AppState"
+import {VueDraggable} from 'vue-draggable-plus'
 import {computed, type PropType, ref} from "vue"
 import IconButton from "../IconButton.vue"
 import EditorHolder from "../EditorHolder.vue"
-import type {RyoType} from "@/models/Models"
-import {useDialogStateStore} from "@/stores/DialogState";
+import type {RyoType} from "@/models/AppModels"
+import {useDialogStateStore} from "@/stores/DialogState"
 
 // TODO：再加上文本编辑器的宽度自适应（作为atom时最小），数字编辑器的父级传递错误，右键删除，添加
-
-// BUG:数组有元素为undefined/null时，爆了
-
+// BUG: 输入一个数字（数据一但变化）就重载组件，或者拖动项目时也重载了组件，导致暂存数据丢失或者输入框失焦
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const props = defineProps({
   type: Object as PropType<RyoType>,
+  even: Boolean,
 })
-const model = defineModel<any[]>() // 为空该如何是好
+const model = defineModel<any[]>()
 const drag = ref(false)
 const itemType = computed(() => {
   if (props.type && props.type.typeName) {
@@ -49,6 +46,12 @@ const itemType = computed(() => {
     return appState.getRyoTypeByName(props.type.typeName)
   }
 })
+
+function notice(state: boolean) {
+  drag.value = state
+
+  console.log(TAG, "拖拽状态", state, model.value)
+}
 
 function addItem() {
   if (model.value && itemType.value) {
@@ -67,37 +70,38 @@ function addItem() {
 </script>
 
 <style scoped>
-.array-holder {
+.even > .draggable-place > .array-item, .even > #add-item-button {
+  background-color: var(--ryo-color-surface-container-highest);
+}
+
+.array-editor {
+  padding: 6px;
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
   gap: 6px;
 }
 
-.array-editor {
-  padding: 6px;
-  flex-direction: column;
-  gap: 0;
+.draggable-place {
+  display: contents;
 }
 
 .array-item {
   background-color: var(--ryo-color-surface-container-high);
   overflow: hidden;
   border-radius: 12px;
-  /*padding: 6px;
-  font-size: 14px;
-  color: white;*/
-  box-shadow: var(--ryo-elevation-2);
+  border: 1px solid var(--ryo-color-outline-varient);
   align-items: center;
   display: flex;
 }
 
 #add-item-button {
-  box-shadow: var(--ryo-elevation-2);
   background-color: var(--ryo-color-surface-container-high);
   overflow: hidden;
   border-radius: 12px;
+  border: 1px solid var(--ryo-color-outline-varient);
   min-width: 32px;
+  min-height: 32px;
 }
 
 #add-item-icon {

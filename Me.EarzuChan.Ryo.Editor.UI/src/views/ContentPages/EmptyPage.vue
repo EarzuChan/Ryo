@@ -12,6 +12,6 @@
 #empty-page {
   display: flex;
   justify-content: center;
-  align-content: center;
+  align-items: center;
 }
 </style>

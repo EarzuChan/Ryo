@@ -6,7 +6,7 @@
         <div class="item-value-holder" :class="{ 'even': isEven(index) }">
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
                         @update:model-value="a=>trySetMember(item.name,a)"
-                        :type="appState.getRyoTypeByName(item.type)"/>
+                        :type="appState.getRyoTypeByName(item.type)" :even="isEven(index)"/>
         </div>
       </div>
     </div>
@@ -16,9 +16,9 @@
 <script lang="ts" setup>
 import EditorHolder from "../EditorHolder.vue"
 import {computed, type PropType, watch} from "vue"
-import type {RyoType} from "@/models/Models"
+import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
-import {ensure} from "@/utils/UsefulUtils"
+import {ensure, ensureObject} from "@/utils/UsefulUtils"
 
 const TAG = "FieldEditor"
 
@@ -26,8 +26,9 @@ const appState = useAppStateStore()
 
 const props = defineProps({
   type: Object as PropType<RyoType>,
+  even: Boolean,
 })
-
+const emit = defineEmits(["err"])
 const model = defineModel<any>()
 
 // watch(model, v => console.log(TAG, "监测", v), {immediate: true})
@@ -42,14 +43,16 @@ const keys = computed(() => {
 function tryGetMember(name: string) {
   // console.log(TAG, "尝试获取成员", name)
 
-  if (ensure(model.value)) {
+  if (ensureObject(model.value)) {
     if (name in model.value) return model.value[name]
     else {
       console.error("绑定的数据中没有这个成员")
       return undefined
     }
   } else {
-    console.error("绑定的数据为空")
+    const errMsg = "绑定的数据为空或传入值不是对象"
+    console.error(errMsg, model.value)
+    emit('err', `${errMsg}，请看：${model.value}`)
     return undefined
   }
 }
@@ -65,7 +68,11 @@ function trySetMember(name: string, value: any) {
   }
 }
 
-const isEven = (index: number) => index % 2 != 0
+function isEven(index: number) {
+  let res = (index % 2) !== 0
+  if (props.even) res = !res
+  return res
+}
 </script>
 
 <style scoped>

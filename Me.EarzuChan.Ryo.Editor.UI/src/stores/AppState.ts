@@ -3,21 +3,22 @@ import {defineStore} from 'pinia'
 import {
     addWebEventListener,
     emitWebEvent,
-    makeWebLetter, sendWebCallAndTakeItsReturnValues
-} from "@/utils/WinWebAppUtils"
-import {type MemberType, type RyoType, type TypeSchema, WinWebAppWindowState} from "@/models/Models"
+    makeWebLetter,
+    sendWebCallAndTakeItsReturnValues
+} from "@/utils/KurisuUtils"
+import {type MemberType, type RyoType, type TypeSchema} from "@/models/AppModels"
+import {KurisuWindowState} from "@/models/KurisuModels"
 import NumberEditor from "@/components/Editors/NumberEditor.vue"
 import TextEditor from "@/components/Editors/TextEditor.vue"
 import BooleanEditor from "@/components/Editors/BooleanEditor.vue"
-import EditorHolder from "@/components/EditorHolder.vue"
 import ArrayEditor from "@/components/Editors/ArrayEditor.vue"
 import FieldEditor from "@/components/Editors/FieldEditor.vue"
 
 const TAG = "AppState"
 
 export const useAppStateStore = defineStore('app-state', () => {
+    const available = ref(false)
     const dataTypeSchemas = ref<TypeSchema[]>([])
-    const isAppWindowMaximized = ref<boolean>(false)
 
     function getEditorsByRyoType(ryoType: RyoType) {
         const editors = []
@@ -58,7 +59,9 @@ export const useAppStateStore = defineStore('app-state', () => {
 
         const baseType = dataTypeSchemas.value.find(schema => schema.type === typeName)
 
-        return {baseType, isArray, typeName}
+        const ryoType = {baseType, isArray, typeName}
+        console.log(TAG, "已获取RyoType", typeName, ryoType)
+        return ryoType
     }
 
     function typeSchemaToRyoType(baseType: TypeSchema, isArray: boolean = false): RyoType {
@@ -89,14 +92,6 @@ export const useAppStateStore = defineStore('app-state', () => {
         }
     }
 
-    function setAppWindowState(state: WinWebAppWindowState) {
-        emitWebEvent(makeWebLetter("SetAppWindowState", state))
-    }
-
-    function stopApp() {
-        emitWebEvent(makeWebLetter("StopApp"))
-    }
-
     async function fetchDataSchemas() {
         dataTypeSchemas.value = await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetAllDataTypes')) as TypeSchema[]
         console.log(TAG, "DataTypeSchemas已拉取", dataTypeSchemas.value)
@@ -108,31 +103,21 @@ export const useAppStateStore = defineStore('app-state', () => {
             console.log(TAG, "Start init")
 
             await fetchDataSchemas()
-
-            addWebEventListener("AppWindowStateChanged", (args: number[]) => {
-                const state = args[0] as WinWebAppWindowState
-                console.log(TAG, "AppMaximizationChanged", state, state === WinWebAppWindowState.Maximized)
-                isAppWindowMaximized.value = state === WinWebAppWindowState.Maximized
-            })
-            console.log(TAG, "AppWindowStateChanged监听器已创建")
-            emitWebEvent(makeWebLetter('NotifyAppWindowState'))
-            console.log(TAG, "已提醒发送AppWindowState")
+            available.value = true
         } catch (err) {
-            console.error(TAG, "遇到问题，App初始化终止，将报错", err);
+            console.error(TAG, "Init failed", err)
         } finally {
             console.log(TAG, "Init over")
         }
     })()
 
     return {
+        available,
         dataTypeSchemas,
-        isAppWindowMaximized,
         fetchDataSchemas,
         getInitValue,
         getEditorsByRyoType,
         getRyoTypeByName,
         typeSchemaToRyoType,
-        setAppWindowState,
-        stopApp,
     }
 })

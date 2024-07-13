@@ -13,23 +13,19 @@
 import {ref, computed, type PropType} from 'vue'
 import IconButton from "./IconButton.vue"
 import {menu} from "@/utils/MenuUtils"
-import {AttachMethod} from "@/models/Models";
+import {AttachMethod} from "@/models/UIModels"
 
 const props = defineProps({
   items: {
     type: Array as PropType<any[]>,
     default: false
   },
-  selected: {
-    type: Number,
-    default: -1
-  },
   elegant: {
     type: Boolean,
     default: false
   }
 })
-const emit = defineEmits(['update:selected'])
+const selected = defineModel<number>({default: -1})
 
 const iconButtonSize = computed(() => props.elegant ? 28 : 24)
 const labelHolderStyle = computed(() => {
@@ -41,9 +37,7 @@ const labelHolderStyle = computed(() => {
 const menuItems = computed(() => props.items.map((item, index) => {
   return {
     name: item,
-    action: () => {
-      emit('update:selected', index)
-    }
+    action: () => selected.value = index,
   }
 }))
 
@@ -53,7 +47,7 @@ function toggleItemsMenu() {
   if (currentMenu.value) {
     currentMenu.value.closeMenu()
   } else {
-    const ind = props.selected === -1 ? 0 : props.selected
+    const ind = selected.value
     const fix = props.elegant ? 0 : 0.5
     currentMenu.value = menu({
       items: menuItems.value,

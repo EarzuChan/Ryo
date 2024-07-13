@@ -1,21 +1,19 @@
-MIT License
+# MAMBA_OUT 许可
 
-Copyright (c) [year] [fullname]
+## 版权 © 2023年 EarzuChan
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+特此免费授予任何获得此 Ryo 项目及相关文档文件（包括 Ryo Library、Ryo Editor 等）副本之人，免费使用、查看源代码、推广宣传及按原样分享发送给他人之权限。以下行为在未经许可的情况下禁止：合并仓库、发布改版（包括私改、修改、魔改、修正、解限、破解、增强版）、再许可或出售（此项目提供的免费软件禁止倒卖）。需符合以下条件：
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+上述版权声明及本许可声明应包含在本软件的所有副本或重要部分中。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+本软件按“原样”提供，不提供任何形式的明示或暗示保证，包括但不限于适销性、特定用途适用性及非侵权的保证。在任何情况下，作者或版权持有人均不对因本软件或本软件的使用或其他交易引起的任何索赔、损害或其他责任负责，无论是在合同、侵权行为或其他方面。
+
+# MAMBA_OUT License
+
+## Copyright © 2023 EarzuChan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this Ryo project and associated documentation files (including Ryo Library, Ryo Editor, etc.), to use, view the source code, promote, and share it as-is with others. The following actions are prohibited without permission: merging repositories, releasing modified versions (including private modifications, alterations, tweaks, fixes, unrestricted versions, cracked versions, or enhanced versions), sublicensing, or selling (reselling the free software provided by this project is prohibited). The following conditions must be met:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the software.
+
+The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.

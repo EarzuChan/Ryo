@@ -13,7 +13,7 @@
       </div>
     </div>
     <div id="side-panel-content" v-if="sidePanelExpanded">
-      <component :is="sidePanelItems[currentPanel].panel"/>
+      <Component :is="sidePanelItems[currentPanel].panel"/>
     </div>
   </div>
 </template>
