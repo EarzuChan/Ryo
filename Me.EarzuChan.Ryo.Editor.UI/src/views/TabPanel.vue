@@ -1,7 +1,7 @@
 <template>
-  <div id="tabs">
-    <div id="tabs_top_bar" v-if="openedFilesState.openedTabs.length!==0">
-      <div id="tabs_container">
+  <div id="tab_panel">
+    <div id="tab_panel_top_bar" v-if="openedFilesState.openedTabs.length!==0">
+      <div id="tab_panel_container">
         <div v-for="(tab,index) in openedFilesState.openedTabs" @dblclick="anchorTab(index)" @click="clickTab(index)"
              class="tab_container"
              :class="{'active':openedFilesState.activeTabIndex===index}">
@@ -56,7 +56,7 @@ function closeTab(index: number) {
 </script>
 
 <style scoped>
-#tabs {
+#tab_panel {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -66,13 +66,13 @@ function closeTab(index: number) {
   border-radius: 16px 0 0 0;
 }
 
-#tabs_top_bar {
+#tab_panel_top_bar {
   display: flex;
   flex-direction: column;
   height: 36px;
 }
 
-#tabs_container {
+#tab_panel_container {
   display: flex;
   flex: 1;
   flex-direction: row;

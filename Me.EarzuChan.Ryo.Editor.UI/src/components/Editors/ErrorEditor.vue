@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="editor-error ryo-typography-body-medium">
-    编辑器错误：{{ errorMsg }}
+    {{ errorMsg }}
   </div>
 </template>
 

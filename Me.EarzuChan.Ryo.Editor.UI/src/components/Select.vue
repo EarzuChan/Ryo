@@ -12,7 +12,7 @@
 <script lang="ts" setup>
 import {ref, computed, type PropType} from 'vue'
 import IconButton from "./IconButton.vue"
-import {menu} from "@/utils/MenuUtils"
+import {showMenu} from "@/utils/MenuUtils"
 import {AttachMethod} from "@/models/UIModels"
 
 const props = defineProps({
@@ -49,7 +49,7 @@ function toggleItemsMenu() {
   } else {
     const ind = selected.value
     const fix = props.elegant ? 0 : 0.5
-    currentMenu.value = menu({
+    currentMenu.value = showMenu({
       items: menuItems.value,
       attachToId: 'mamba-out', locateToIndex: ind,
       left: -8, top: -12 - fix, attachMethod: AttachMethod.UpLeft, // 菜单超长时

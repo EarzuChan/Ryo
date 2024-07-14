@@ -1,19 +1,18 @@
 <template>
   <div class="use-flex" :class="{'with-margin':isComplexEditor&&props.withMargin,
   'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
-    <Component :even="even" @err="e=>onError(e as string)" :errorMsg="errorMsg" class="fulfill" :is="editorType"
-               v-model="model"
-               :type="type"/>
+    <Component v-if="ready" :even="even" @err="e=>onError(e as string)" :errorMsg="errorMsg"
+               class="fulfill" :is="editorType" v-model="model" :type="type"/>
     <slot/>
   </div>
 </template>
 
 <script lang="ts" setup>
-import {computed, type PropType, ref} from "vue"
-import {ensure} from "@/utils/UsefulUtils"
+import {computed, nextTick, type PropType, ref} from "vue"
+import {ensure, sleepFor} from "@/utils/UsefulUtils"
 import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
-import EditorError from "@/components/Editors/EditorError.vue"
+import ErrorEditor from "@/components/Editors/ErrorEditor.vue"
 import FieldEditor from "@/components/Editors/FieldEditor.vue"
 
 const TAG = "EditorHolder"
@@ -32,42 +31,56 @@ const model = defineModel<any>()
 const errorMsg = ref("良好")
 const isError = ref(false)
 const isComplexEditor = ref(false)
+const ready = ref(true)
 
 function getError(msg: string) {
   isComplexEditor.value = false
   console.error(TAG, msg)
   errorMsg.value = msg
-  return EditorError
+  return ErrorEditor
 }
 
 const editorType = computed(() => {
   if (isError.value) return getError("编辑器错误：" + errorMsg.value)
-  else if (!ensure(model.value)) return getError("绑定的数据为空")
+  else if (!ensure(model.value)) return getError("数据错误：绑定的数据为空")
+  // TODO: 确保提供的类型和实际数据类型一致
   else if (props.type) {
     console.log(TAG, "给Ryo类型查找编辑器", props.type)
 
-    const editors = appState.getEditorsByRyoType(props.type)
+    if (!appState.ensureRyoType(props.type, model.value)) return getError("数据错误：数据类型不匹配")
 
-    if (editors.length === 0) return getError("没有可用的编辑器")
+    const editors = appState.getEditorsByRyoType(props.type)
+    if (editors.length === 0) return getError("App错误：没有可用的编辑器")
 
     const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
     isComplexEditor.value = chosen === FieldEditor
     return chosen
-  } else return getError("Ryo类型为空")
+  } else return getError("更多错误：Ryo类型为空？")
 })
 
 function onError(err: string) {
-  console.error(TAG, "编辑器错误", err)
+  console.error(TAG, "检查到错误", err)
   errorMsg.value = err
   isError.value = true
 }
+
+async function reload() {
+  isError.value = false
+
+  ready.value = false
+  await nextTick()
+  ready.value = true
+}
+
+defineExpose({reload})
 </script>
 
 <style scoped>
 .editor-holder-card {
   border-radius: 12px;
 
-  border: 1px solid var(--ryo-color-outline-varient);
+  outline: 1px solid var(--ryo-color-outline-varient);
+  outline-offset: -1px;
   background-color: var(--ryo-color-surface);
 
   flex-direction: column;

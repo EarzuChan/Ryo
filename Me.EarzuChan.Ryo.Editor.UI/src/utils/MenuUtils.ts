@@ -5,7 +5,7 @@ import {AttachMethod} from "@/models/UIModels"
 
 const TAG = "MenuUtils"
 
-export function menu(config: MenuModel) {
+export function showMenu(config: MenuModel) {
     if (config.attachToId) {
         const element = document.getElementById(config.attachToId)
         if (element) {

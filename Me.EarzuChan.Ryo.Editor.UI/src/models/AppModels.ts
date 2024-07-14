@@ -38,3 +38,8 @@ export interface RecentFile {
     name: string
     path: string
 }
+
+export interface Pair<T, U> {
+    first: T
+    second: U
+}

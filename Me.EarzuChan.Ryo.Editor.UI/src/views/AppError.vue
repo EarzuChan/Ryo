@@ -39,7 +39,7 @@ const errText = `${err.stack}`
 const appInfo: any = inject('app_info')
 
 function repoErr() {
-  dialogState.dialog({
+  dialogState.order({
     icon: "close",
     headline: "这这不能",
     description: "抱歉，此功能尚未实现。",

@@ -11,7 +11,7 @@ using Me.EarzuChan.Ryo.Kurisu.Exceptions;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
-using Me.EarzuChan.Ryo.Kurisu.WindowBackends;
+using Me.EarzuChan.Ryo.Kurisu.WindowManagers;
 
 namespace Me.EarzuChan.Ryo.Kurisu
 {
@@ -29,11 +29,11 @@ namespace Me.EarzuChan.Ryo.Kurisu
         internal readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers;
         internal readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers;
         internal readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders;
-        internal readonly IKurisuAppWindowBackend AppWindowBackend;
+        internal readonly IKurisuAppWindowManager AppWindowManager;
 
         private readonly KurisuAppContext Context;
 
-        internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> webEventHandlers, Dictionary<AppEventHandlerAttribute, Type> appEventHandlers, Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuAppWindowBackend appWindow)
+        internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> webEventHandlers, Dictionary<AppEventHandlerAttribute, Type> appEventHandlers, Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuAppWindowManager appWindow)
         {
             Profile = profile;
             Dependencies = dependencies;
@@ -43,19 +43,19 @@ namespace Me.EarzuChan.Ryo.Kurisu
             WebCallResponders = webCallResponders;
 
             appWindow.Init(this);
-            AppWindowBackend = appWindow;
+            AppWindowManager = appWindow;
 
             Context = new(this);
         }
 
         public void Run()
         {
-            AppWindowBackend.Show();
+            AppWindowManager.Show();
         }
 
         public void Stop()
         {
-            AppWindowBackend.Close();
+            AppWindowManager.Close();
         }
 
         internal void HandleWebEvent(WebLetter model)
@@ -64,42 +64,38 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
             foreach (var hdl in WebEventHandlers)
             {
-                if (model.Name == hdl.Key.EventName)
+                if (model.Name != hdl.Key.EventName) continue;
+                var constructors = hdl.Value.GetConstructors();
+                foreach (var constructor in constructors)
                 {
-                    var constructors = hdl.Value.GetConstructors();
-                    foreach (var constructor in constructors)
+                    var parameters = constructor.GetParameters();
+                    // TODO:以后要验证参数类型匹配情况
+                    // Int64阿弥诺斯
+                    if (model.Args.Length != parameters.Length) continue;
+                    try
                     {
-                        var parameters = constructor.GetParameters();
-                        // TODO:以后要验证参数类型匹配情况
-                        // Int64阿弥诺斯
-                        if (model.Args.Length == parameters.Length)
+                        // 为支持快速回调的
+                        if (typeof(IWebEventHandler).IsAssignableFrom(hdl.Value))
                         {
-                            try
-                            {
-                                // 为支持快速回调的
-                                if (typeof(IWebEventHandler).IsAssignableFrom(hdl.Value))
-                                {
-                                    var command = (IWebEventHandler)constructor.Invoke(model.Args);
+                            var command = (IWebEventHandler)constructor.Invoke(model.Args);
 
-                                    command.Handle(Context);
-                                }
-                                else
-                                {
-                                    var command = (IWebEventHandlerForCallBack)constructor.Invoke(model.Args);
+                            command.Handle(Context);
+                        }
+                        else
+                        {
+                            var command = (IWebEventHandlerForCallBack)constructor.Invoke(model.Args);
 
-                                    EmitWebEvent(new($"CallBack{hdl.Key.EventName}", command.Handle(Context)));
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行WebEvent {hdl.Key.EventName} 失败", e, true));
-                            }
-                            return;
+                            EmitWebEvent(new($"CallBack{hdl.Key.EventName}", command.Handle(Context)));
                         }
                     }
-                    Trace.WriteLine($"WebEvent {hdl.Key.EventName} 的参数不对");
+                    catch (Exception e)
+                    {
+                        Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行WebEvent {hdl.Key.EventName} 失败", e, true));
+                    }
                     return;
                 }
+                Trace.WriteLine($"WebEvent {hdl.Key.EventName} 的参数不对");
+                return;
             }
             Trace.WriteLine($"找不到WebEvent {model.Name} 可用的Handler");
         }
@@ -110,35 +106,31 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
             foreach (var rpd in WebCallResponders)
             {
-                if (model.Name == rpd.Key.EventName)
+                if (model.Name != rpd.Key.EventName) continue;
+                var constructors = rpd.Value.GetConstructors();
+                foreach (var constructor in constructors)
                 {
-                    var constructors = rpd.Value.GetConstructors();
-                    foreach (var constructor in constructors)
+                    var parameters = constructor.GetParameters();
+                    // TODO:以后要验证参数类型匹配情况
+                    // Int64阿弥诺斯
+                    if (model.Args.Length != parameters.Length) continue;
+                    try
                     {
-                        var parameters = constructor.GetParameters();
-                        // TODO:以后要验证参数类型匹配情况
-                        // Int64阿弥诺斯
-                        if (model.Args.Length == parameters.Length)
-                        {
-                            try
-                            {
-                                var command = (IWebCallResponder)constructor.Invoke(model.Args);
+                        var command = (IWebCallResponder)constructor.Invoke(model.Args);
 
-                                return command.Respond(Context);
-                            }
-                            catch (Exception e)
-                            {
-                                var eText = TextUtils.MakeErrorMsgText($"执行WebCall {rpd.Key.EventName} 失败", e, true);
-                                Trace.WriteLine(eText);
-                                return new(WebResponseState.Failure, eText);
-                            }
-                        }
+                        return command.Respond(Context);
                     }
-
-                    var wrongArgs = $"WebCall {rpd.Key.EventName} 的参数不对";
-                    Trace.WriteLine(wrongArgs);
-                    return new(WebResponseState.Failure, wrongArgs);
+                    catch (Exception e)
+                    {
+                        var eText = TextUtils.MakeErrorMsgText($"执行WebCall {rpd.Key.EventName} 失败", e, true);
+                        Trace.WriteLine(eText);
+                        return new(WebResponseState.Failure, eText);
+                    }
                 }
+
+                var wrongArgs = $"WebCall {rpd.Key.EventName} 的参数不对";
+                Trace.WriteLine(wrongArgs);
+                return new(WebResponseState.Failure, wrongArgs);
             }
 
             var noSuchWebEvent = $"找不到WebCall {model.Name} 可用的Responder";
@@ -149,42 +141,36 @@ namespace Me.EarzuChan.Ryo.Kurisu
         internal void EmitWebEvent(WebLetter model)
         {
             // TODO:可能需要验证、解耦（转文本 发送层）
-            AppWindowBackend.EmitWebEvent(model);
+            AppWindowManager.EmitWebEvent(model);
         }
 
         internal void TriggerAppEvent(AppEvent appEvent)
         {
             Trace.WriteLine($"AppEvent类型：{appEvent.EventType} 参数数：{appEvent.Args.Length}");
 
-            foreach (var hdl in AppEventHandlers)
+            foreach (var constructors in from hdl in AppEventHandlers where appEvent.EventType == hdl.Key.EventType select hdl.Value.GetConstructors())
             {
-                if (appEvent.EventType == hdl.Key.EventType)
+                foreach (var constructor in constructors)
                 {
-                    var constructors = hdl.Value.GetConstructors();
-                    foreach (var constructor in constructors)
+                    var parameters = constructor.GetParameters();
+                    // TODO:以后要验证参数类型匹配情况
+                    if (appEvent.Args.Length != parameters.Length) continue;
+                    try
                     {
-                        var parameters = constructor.GetParameters();
-                        // TODO:以后要验证参数类型匹配情况
-                        if (appEvent.Args.Length == parameters.Length)
-                        {
-                            try
-                            {
-                                // 为支持快速回调的
-                                var command = (IAppEventHandler)constructor.Invoke(appEvent.Args);
+                        // 为支持快速回调的
+                        var command = (IAppEventHandler)constructor.Invoke(appEvent.Args);
 
-                                command.Handle(Context);
+                        command.Handle(Context);
 
-                            }
-                            catch (Exception e)
-                            {
-                                Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行AppEvent {appEvent.EventType} 失败", e, true));
-                            }
-                            return;
-                        }
                     }
-                    Trace.WriteLine($"AppEvent {appEvent.EventType} 的参数不对");
+                    catch (Exception e)
+                    {
+                        Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行AppEvent {appEvent.EventType} 失败", e, true));
+                    }
                     return;
                 }
+                Trace.WriteLine($"AppEvent {appEvent.EventType} 的参数不对");
+                return;
             }
             Trace.WriteLine($"找不到AppEvent {appEvent.EventType} 可用的Handler");
         }
@@ -197,11 +183,11 @@ namespace Me.EarzuChan.Ryo.Kurisu
     public class KurisuAppBuilder
     {
         private readonly KurisuAppProfile Profile;
-        private readonly ArrayList Dependencies = new();
+        private readonly ArrayList Dependencies = [];
         private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
         private readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers = new();
         private readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders = new();
-        private IKurisuAppWindowBackend? AppWindowBackend = null;
+        private IKurisuAppWindowManager? AppWindowBackend = null;
         private bool IsBuilt = false;
 
         internal KurisuAppBuilder(KurisuAppProfile profile)
@@ -226,12 +212,12 @@ namespace Me.EarzuChan.Ryo.Kurisu
             return application;
         }
 
-        public KurisuAppBuilder UseDefaultWindowBackend() => UseWindowBackend(new KurisuAppWpfWindowBackend());
+        public KurisuAppBuilder UseDefaultWindowBackend() => UseWindowBackend(new KurisuAppWpfWindowManager());
 
-        public KurisuAppBuilder UseWindowBackend(IKurisuAppWindowBackend windowBackend)
+        public KurisuAppBuilder UseWindowBackend(IKurisuAppWindowManager windowManager)
         {
             if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口");
-            AppWindowBackend = windowBackend;
+            AppWindowBackend = windowManager;
             return this;
         }
 
@@ -338,6 +324,7 @@ namespace Me.EarzuChan.Ryo.Kurisu
         }
     }
 
+    // 解耦网址 重构窗口模式
     public class KurisuAppProfile
     {
         // Basic Profile
@@ -382,9 +369,9 @@ namespace Me.EarzuChan.Ryo.Kurisu
         public void StopApp() => App.Stop();
 
         // AppWindowService
-        public void SetAppWindowState(KurisuAppWindowState state) => App.AppWindowBackend.SetWindowState(state);
+        public void SetAppWindowState(KurisuAppWindowState state) => App.AppWindowManager.SetWindowState(state);
 
-        public KurisuAppWindowState GetAppWindowState() => App.AppWindowBackend.GetWindowState();
+        public KurisuAppWindowState GetAppWindowState() => App.AppWindowManager.GetWindowState();
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口

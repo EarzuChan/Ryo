@@ -45,10 +45,6 @@ const resources = ref<WelcomePageResource[]>(
       {title: 'Ryo存储库', description: 'Github', link: 'https://www.github.com/EarzuChan/Ryo'},
       {title: '使用Ryo库', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
     ])
-
-function goTo(link: string) {
-  emitWebEvent(makeWebLetter('OpenLink', link))
-}
 </script>
 
 <style scoped>

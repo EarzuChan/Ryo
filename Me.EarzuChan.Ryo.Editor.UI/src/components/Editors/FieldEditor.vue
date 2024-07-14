@@ -84,7 +84,6 @@ function isEven(index: number) {
 }
 
 .field-holder {
-  flex: 1;
   display: flex;
   flex-direction: column;
 
@@ -92,6 +91,8 @@ function isEven(index: number) {
   width: fit-content;
 
   overflow-x: visible;
+
+  box-shadow: 0 1px var(--ryo-color-outline-varient);
 }
 
 .field-list-item {
@@ -101,8 +102,6 @@ function isEven(index: number) {
   display: flex;
 
   background-color: var(--ryo-color-surface-container-high);
-
-  border-bottom: 1px solid var(--ryo-color-outline-varient);
 }
 
 /*上面是否需要再考虑？*/
@@ -120,16 +119,15 @@ function isEven(index: number) {
   font-size: 14px;
   color: white;
 
-  border-right: 1px solid var(--ryo-color-outline-varient);
+  box-shadow: inset -1px 0 0 0 var(--ryo-color-outline-varient), inset 0 1px 0 0 var(--ryo-color-outline-varient);
 }
 
 .item-value-holder {
   flex: 1;
   background-color: var(--ryo-color-surface-container-highest);
-  /*padding-left: 12px;*/
-
   display: flex;
-  /*align-items: center;*/
+
+  box-shadow: inset 0 1px 0 0 var(--ryo-color-outline-varient);
 }
 
 /*.sub-editor-card {

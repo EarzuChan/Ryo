@@ -1,3 +1,5 @@
+import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils";
+
 const TAG = "UsefulUtils"
 
 export function sleepFor(delay: number) {
@@ -74,4 +76,17 @@ export function ensure(obj?: any): boolean {
 
 export function ensureObject(obj?: any): boolean {
     return ensure(obj) && obj instanceof Object
+}
+
+export function generateId(seed: number): number {
+    seed++
+    return Math.floor(Math.random() * seed * 1000 + seed)
+}
+
+export function deepCopy(obj: any): any {
+    return JSON.parse(JSON.stringify(obj))
+}
+
+export function goTo(link: string) {
+    emitWebEvent(makeWebLetter('OpenLink', link))
 }

@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import {computed, nextTick, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
 import {AttachMethod, type MenuItem} from "@/models/UIModels"
-import {menu} from "@/utils/MenuUtils"
+import {showMenu} from "@/utils/MenuUtils"
 import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils";
 
 const TAG = 'Menu'
@@ -88,7 +88,7 @@ function hover(item: MenuItem, index: number) {
   if (item.children) {
     let babe = item.children
     delay.value = delayExecution(100, () => {
-      currentMenu.value = menu({
+      currentMenu.value = showMenu({
         items: babe,
         attachToId: `${item.name}-${index}`, attachMethod: AttachMethod.UpRight,
         onClose() {

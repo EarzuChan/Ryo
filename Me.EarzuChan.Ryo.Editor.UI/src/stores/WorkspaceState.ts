@@ -28,14 +28,14 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                         baseType: {
                             type: "sengine.graphics2d.FontSprites",
                             members: [
-                                {"name": "iArr", "type": "java.lang.Integer[]"},
+                                {"name": "iArr", "type": "game23.model.DialogueTreeModel$UserMessageModel[]"},
                                 {"name": "bArr", "type": "java.lang.Byte[][]"},
                                 {"name": "f", "type": "java.lang.Float"},
                                 {"name": "i", "type": "game23.model.DialogueTreeModel$UserMessageModel"}]
                         }, isArray: false, typeName: "sengine.graphics2d.FontSprites"
                     },
                     data: {
-                        iArr: [1, 2, 3], bArr: [[1, 2], [3, 4]], f: 1.9,
+                        iArr: [{isHidden: true, message: "Hello, Man!"}], bArr: [[1, 2], [3, 4]], f: 1.9,
                         i: {isHidden: false, message: "Hello, World!"},
                     }
                 } as ItemModel
@@ -67,7 +67,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             // 相应询问等操作
             let close = true
 
-            dialogState.dialog({
+            dialogState.order({
                 headline: "是否要保存对 " + tab.name + " 的更改？",
                 description: "如果不保存，你的更改将丢失。",
                 actions: [
@@ -106,7 +106,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
     }
 
-    // Async Init
+// Async Init
     (async () => {
         try {
             console.log(TAG, "Start init")

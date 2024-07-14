@@ -1,7 +1,7 @@
 ﻿import {defineStore} from "pinia";
 import {ref} from "vue";
 import {KurisuWindowState} from "@/models/KurisuModels";
-import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils";
+import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
 
 const TAG = "KurisuState"
 

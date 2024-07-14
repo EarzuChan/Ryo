@@ -26,7 +26,7 @@ import {useAppStateStore} from "@/stores/AppState"
 import Icon from "@/components/Icon.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
-import {menu} from "@/utils/MenuUtils"
+import {showMenu} from "@/utils/MenuUtils"
 import {ref} from "vue"
 import type {MenuBarItem} from "@/models/UIModels"
 import {useKurisuStateStore} from "@/stores/KurisuState";
@@ -56,7 +56,7 @@ function clickMenuButton(menuType: MenuBarItem) {
   console.log(TAG, 'clickMenuButton', menuType)
 
   if (currentMenu.value === null) {
-    showMenu(menuType)
+    showMenuOf(menuType)
   }
 }
 
@@ -66,16 +66,16 @@ function hoverMenuButton(menuType: MenuBarItem) {
   if (currentMenu.value !== null && lastMenu.value!.id !== menuType.id) {
     currentMenu.value.closeMenu()
 
-    showMenu(menuType)
+    showMenuOf(menuType)
   }
 }
 
-function showMenu(menuType: MenuBarItem) {
+function showMenuOf(menuType: MenuBarItem) {
   lastMenu.value = menuType
 
   switch (menuType.id) {
     case 'file':
-      currentMenu.value = menu({
+      currentMenu.value = showMenu({
         items: [
           {name: '新建', action: () => console.log('新建')},
           {name: '打开', action: () => console.log('打开')},
@@ -86,8 +86,7 @@ function showMenu(menuType: MenuBarItem) {
           {name: '全部关闭', action: () => console.log('全部关闭')},
           {name: '添加资源', action: () => console.log('添加资源')},
           {name: '导出当前资源', action: () => console.log('导出当前资源')},
-          {name: '导入当前资源', action: () => console.log('导入当前资源')},
-          {
+          {name: '导入当前资源', action: () => console.log('导入当前资源')}, {
             name: '最近打开', children:
                 [
                   {name: '文件1', action: () => console.log('文件1')},
@@ -103,27 +102,50 @@ function showMenu(menuType: MenuBarItem) {
       })
       break
     case 'edit':
-      currentMenu.value = menu({
+      currentMenu.value = showMenu({
         items: [
-          {name: '撤销', action: () => console.log('撤销')}
+          {name: '撤销', action: () => console.log('撤销')},
+          {name: '重做', action: () => console.log('重做')},
+          {name: '刷新编辑器', action: () => console.log('刷新编辑器')},
+          {name: '抛弃未保存更改', action: () => console.log('抛弃未保存更改')},
+          {name: '保存当前标签页', action: () => console.log('保存编辑器')},
+          {name: '关闭当前标签页', action: () => console.log('关闭当前标签页')},
+          {name: '在标签页中查找', action: () => console.log('在标签页中查找')},
+          {name: '在所有文件中查找', action: () => console.log('在所有标签页中查找')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
       })
       break
     case 'view':
-      currentMenu.value = menu({
+      currentMenu.value = showMenu({
         items: [
-          {name: '侧边栏收起', action: () => console.log('侧边栏收起')}
+          {name: '侧边栏收起', action: () => console.log('侧边栏收起')}, {
+            name: '工具窗口', children:
+                [{name: 'TexturePacker', action: () => console.log('TexturePacker')},]
+          },
+          {name: '保存全部标签页', action: () => console.log('保存全部标签页')},
+          {name: '关闭全部标签页', action: () => console.log('关闭全部标签页')},
+          {name: '偏好设置', action: () => console.log('偏好设置')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
       })
       break
     case 'help':
-      currentMenu.value = menu({
+      currentMenu.value = showMenu({
         items: [
-          {name: '显示软件文档', action: () => console.log('显示软件文档')}
+          {name: '显示欢迎页', action: () => console.log('显示欢迎页')}, {
+            name: '资源', children:
+                [
+                  {name: '快速上手', action: () => console.log('快速上手')}, // TODO
+                  {name: '深度指南', action: () => console.log('深度指南')},
+                  {name: 'Ryo存储库', action: () => console.log('Ryo存储库')},
+                  {name: '使用Ryo库', action: () => console.log('使用Ryo库')},
+                ]
+          },
+          {name: '建议和反馈', action: () => console.log('建议和反馈')},
+          {name: '关于Ryo', action: () => console.log('关于Ryo')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
@@ -133,7 +155,7 @@ function showMenu(menuType: MenuBarItem) {
 }
 
 function testDialog() {
-  dialogState.dialog({
+  dialogState.order({
     icon: 'ryo',
     headline: '测试对话框',
     description: '这是一个测试对话框。\n人类有三大欲望，食欲，性欲，睡眠欲，而在这三大欲望当中，因为食欲是满足人类生存需求的欲望，所以，满足食欲的行为，在这三者中，优先性是第一位的。如果能在进食的过程中，吃下了美味的食物，也能使人类无比愉快，而在现实生活中，存在着对于这种快感执着追求的人，我们通常把这种人称之为美食家，而本餐厅，则专门为那些厌倦世间常见美食的人，量体裁衣，提供符合他们身份的美食。',
@@ -154,7 +176,7 @@ function testDialog() {
       {
         text: '再来一个',
         onClick: () => {
-          dialogState.dialog({
+          dialogState.order({
             icon: 'ryo',
             headline: '测试对话框3',
             description: '这是另一个测试对话框。\n鸭蛋么鸭蛋',
@@ -178,7 +200,7 @@ function testDialog() {
       }
     ]
   })
-  dialogState.dialog({
+  dialogState.order({
     icon: 'ryo',
     headline: '测试对话框2',
     description: '这是另一个测试对话框。\n非常的新鲜，非常的美味',
@@ -197,7 +219,7 @@ function testDialog() {
       }
     ]
   })
-  dialogState.dialog({
+  dialogState.order({
     icon: 'ryo',
     headline: '最后的吻别',
     description: '最后の警告Desu',

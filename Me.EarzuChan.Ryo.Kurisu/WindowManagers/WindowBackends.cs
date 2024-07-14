@@ -9,7 +9,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-namespace Me.EarzuChan.Ryo.Kurisu.WindowBackends
+namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers
 {
     public enum KurisuAppWindowState
     {
@@ -18,7 +18,7 @@ namespace Me.EarzuChan.Ryo.Kurisu.WindowBackends
         Minimized
     }
 
-    internal class KurisuAppWpfWindowBackend : IKurisuAppWindowBackend
+    internal class KurisuAppWpfWindowManager : IKurisuAppWindowManager
     {
 
         private KurisuApp App;
@@ -26,7 +26,7 @@ namespace Me.EarzuChan.Ryo.Kurisu.WindowBackends
         private readonly Application WpfApp = new();
         private readonly Window WpfWindow = new();
 
-        internal KurisuAppWpfWindowBackend() { }
+        internal KurisuAppWpfWindowManager() { }
 
         private void OnStateChanged(object? _, EventArgs __)
         {
@@ -104,7 +104,7 @@ namespace Me.EarzuChan.Ryo.Kurisu.WindowBackends
         public KurisuAppWindowState GetWindowState() => WpfWindow.WindowState == WindowState.Maximized ? KurisuAppWindowState.Maximized : WpfWindow.WindowState == WindowState.Normal ? KurisuAppWindowState.Normal : KurisuAppWindowState.Minimized;
     }
 
-    public interface IKurisuAppWindowBackend
+    public interface IKurisuAppWindowManager
     {
         public void SetWindowState(KurisuAppWindowState state);
 
