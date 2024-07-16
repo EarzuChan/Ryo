@@ -6,11 +6,16 @@ import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUt
 import {useDialogStateStore} from "@/stores/DialogState"
 import type {ItemModel, MassFile} from "@/models/AppModels"
 import type {TabModel} from "@/models/AppModels"
+import {useAppStateStore} from "@/stores/AppState"
+import {useNextStateStore} from "@/stores/NextState"
 
 const TAG = "WorkspaceState"
 
 export const useWorkspaceStateStore = defineStore('workspace-state', () => {
     const available = ref(false)
+
+    const appState = useAppStateStore()
+    const nextState = useNextStateStore()
 
     const openedFiles = ref<MassFile[]>([{
         name: "假文件1",
@@ -19,25 +24,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
     const openedTabs = ref<TabModel[]>(
         [
             {
-                name: "项目页",
+                name: "项目页1",
                 page: markRaw(ItemPage),
                 unsaved: true,
                 data: {
                     id: 1919810, parseSuccess: true,
-                    type: {
-                        baseType: {
-                            type: "sengine.graphics2d.FontSprites",
-                            members: [
-                                {"name": "iArr", "type": "game23.model.DialogueTreeModel$UserMessageModel[]"},
-                                {"name": "bArr", "type": "java.lang.Byte[][]"},
-                                {"name": "f", "type": "java.lang.Float"},
-                                {"name": "i", "type": "game23.model.DialogueTreeModel$UserMessageModel"}]
-                        }, isArray: false, typeName: "sengine.graphics2d.FontSprites"
-                    },
-                    data: {
-                        iArr: [{isHidden: true, message: "Hello, Man!"}], bArr: [[1, 2], [3, 4]], f: 1.9,
-                        i: {isHidden: false, message: "Hello, World!"},
-                    }
+                    type: appState.getRyoTypeByName("sengine.graphics2d.FontSprites[]"),
+                    data: [{
+                        iArr: [1, 9, 1, 9], bArr: [[1, 2], [3, 4]], f: 1.9,
+                        i: 810,
+                    }]
                 } as ItemModel
             },
             {

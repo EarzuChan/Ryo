@@ -119,11 +119,11 @@ function addItem() {
 }
 
 .array-editor {
-  padding: 6px;
+  padding: 8px;
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
-  gap: 6px;
+  gap: 8px;
 }
 
 .draggable-place {
