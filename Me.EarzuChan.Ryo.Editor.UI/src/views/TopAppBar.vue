@@ -29,8 +29,9 @@ import {useDialogStateStore} from "@/stores/DialogState"
 import {showMenu} from "@/utils/MenuUtils"
 import {ref} from "vue"
 import type {MenuBarItem} from "@/models/UIModels"
-import {useKurisuStateStore} from "@/stores/KurisuState";
-import {KurisuWindowState} from "@/models/KurisuModels";
+import {useKurisuStateStore} from "@/stores/KurisuState"
+import {KurisuWindowState} from "@/models/KurisuModels"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 
 const TAG = 'TopAppBar'
 
@@ -40,6 +41,7 @@ const lastMenu = ref<MenuBarItem | null>(null)
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const kurisuState = useKurisuStateStore()
+const workspaceState = useWorkspaceStateStore()
 
 const menuBarItems: MenuBarItem[] = [
   {id: 'file', name: '文件'},
@@ -107,7 +109,7 @@ function showMenuOf(menuType: MenuBarItem) {
           {name: '撤销', action: () => console.log('撤销')},
           {name: '重做', action: () => console.log('重做')},
           {name: '刷新编辑器', action: () => console.log('刷新编辑器')},
-          {name: '抛弃未保存更改', action: () => console.log('抛弃未保存更改')},
+          {name: '抛弃未保存更改', action: () => workspaceState.discard()},
           {name: '保存当前标签页', action: () => console.log('保存编辑器')},
           {name: '关闭当前标签页', action: () => console.log('关闭当前标签页')},
           {name: '在标签页中查找', action: () => console.log('在标签页中查找')},

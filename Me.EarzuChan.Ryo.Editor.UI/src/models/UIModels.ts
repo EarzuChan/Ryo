@@ -5,14 +5,6 @@ export interface TreeNodeModel {
     children?: TreeNodeModel[]
 }
 
-export interface TabModel {
-    name: string,
-    nonResident?: boolean
-    unsaved?: boolean
-    page?: any
-    data?: any
-}
-
 export interface DialogActionButtonModel {
     text: string
     onClick?: () => boolean | void
@@ -59,10 +51,4 @@ export enum AttachMethod {
 export interface MenuBarItem {
     name: string
     id: string
-}
-
-export interface WelcomePageResource {
-    title: string
-    description: string
-    link: string
 }

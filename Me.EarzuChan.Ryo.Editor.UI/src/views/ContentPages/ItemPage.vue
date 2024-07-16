@@ -15,9 +15,9 @@
         </div>
       </div>
     </div>
-    <EditorHolder ref="holder" card-surrounded :type="data.type" v-model="tempData" :prefer-editor="preferEditor">
+    <EditorHolder ref="holder" card-surrounded :type="data.type" v-model="data.tempData" :prefer-editor="preferEditor">
       <div id="editor-holder-action-bar">
-        <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload"/>
+        <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
         <Select id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
         <TextButton button-style="filled" id="save-button" @click="save">保存</TextButton>
@@ -27,21 +27,22 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onActivated, type PropType, ref} from "vue"
+import {computed, getCurrentInstance, onActivated, onDeactivated, type PropType, ref} from "vue"
 import type {ItemModel} from "@/models/AppModels"
-import {arrayToText, boolToText, deepCopy, getSfcName} from "@/utils/UsefulUtils"
+import {arrayToText, boolToText, deepCopy, getSfcName, TODO} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
 import Select from "@/components/Select.vue"
-import {useDialogStateStore} from "@/stores/DialogState";
+import {useDialogStateStore} from "@/stores/DialogState"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 
 const TAG = "ItemPage"
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
-// const random = ref(Math.random())
+const workspaceState = useWorkspaceStateStore()
 // TODO: 暂存未保存了可以，watch data然后init，用户在暂存上修改，保存才写入data
 // TODO: 历史记录，撤消重做
 // TODO: 重做编辑器容器底部栏 弄成插槽
@@ -62,19 +63,19 @@ const supportedEditors = computed(() => {
 
   return ["TODO"]
 })
-
 const inOutMethods = computed(() => {
   const typeName = props.data.type
 
   return ["TODO"]
 })
 
-const preferEditor = ref(0)
 const holder = ref<any>(null)
-const tempData = ref<any>(deepCopy(props.data.data))
+
+// BUG: 不稳定啊，应该在Prop里面设置一个键值代表当前文件码，在WorkspaceState里面另外提取内容
+const preferEditor = ref(0)
 
 function save() {
-  console.log(TAG, "保存", tempData.value, props.data.data)
+  console.log(TAG, "保存", props.data.tempData, props.data.data)
 
   dialogState.order({
     headline: "保存",
@@ -83,8 +84,8 @@ function save() {
       {text: "取消"},
       {
         text: "确定", onClick: () => {
-          props.data.data = deepCopy(tempData.value)
-          console.log(TAG, "保存成功", tempData.value, props.data.data)
+          props.data.data = deepCopy(props.data.tempData)
+          console.log(TAG, "保存成功", props.data.tempData, props.data.data)
         }
       },
     ]
@@ -99,10 +100,10 @@ function discard() {
     description: "您确定要放弃未保存的更改吗？\n这将恢复编辑器到上次保存的状态",
     actions: [
       {text: "取消"},
-      {text: "确定", onClick: () => tempData.value = deepCopy(props.data.data)},
+      {text: "确定", onClick: () => props.data.tempData = deepCopy(props.data.data)},
       {
         text: "确定并重载", onClick: () => { // TODO:重不重载弄个偏好设置
-          tempData.value = deepCopy(props.data.data)
+          props.data.tempData = deepCopy(props.data.data)
           holder.value.reload()
         }
       }
@@ -110,10 +111,11 @@ function discard() {
   })
 }
 
-function reload() {
+function reload(fromSystem: boolean = false) {
   console.log(TAG, "重载编辑器")
 
-  dialogState.order({
+  if (fromSystem) holder.value.reload()
+  else dialogState.order({
     icon: "reload", headline: "重载编辑器",
     description: "您确定要重载编辑器吗？\n这将放弃未写入暂存的编辑中不正确数据",
     actions: [
@@ -123,8 +125,28 @@ function reload() {
   })
 }
 
+function undo() {
+  TODO(TAG, "撤销")
+}
+
+function redo() {
+  TODO(TAG, "重做")
+}
+
+defineExpose({
+  reload,
+  save,
+  discard,
+  undo,
+  redo
+})
+
 onActivated(() => {
-  // console.log(TAG, "激活了", random.value)
+  workspaceState.setActiveTabPage(getCurrentInstance()!.exposed)
+})
+
+onDeactivated(() => {
+  if (workspaceState.activeTabPage === ref(getCurrentInstance()!.exposed).value) workspaceState.setActiveTabPage(null)
 })
 </script>
 

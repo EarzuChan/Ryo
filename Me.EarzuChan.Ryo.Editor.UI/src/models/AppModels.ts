@@ -32,6 +32,8 @@ export interface ItemModel {
     type: RyoType
     parseSuccess: boolean
     data?: any
+    history?: HistoryRecord[]
+    tempData?: any
 }
 
 export interface RecentFile {
@@ -42,4 +44,21 @@ export interface RecentFile {
 export interface Pair<T, U> {
     first: T
     second: U
+}
+
+export interface TabModel {
+    name: string,
+    nonResident?: boolean
+    unsaved?: boolean
+    page?: any
+    data?: any
+}
+
+export interface HistoryRecord {
+}
+
+export interface LearningResourceModel {
+    title: string
+    description: string
+    link: string
 }

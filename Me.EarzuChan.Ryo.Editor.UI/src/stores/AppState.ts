@@ -54,7 +54,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             let isArray = false
             if (typeName.endsWith("[]")) {
                 isArray = true
-                typeName = typeName.substring(0, typeName.length - 2)
+                typeName = typeName.substring(0, typeName.length - 2) // 裁掉末尾的"[]"
             }
 
             const baseType = dataTypeSchemas.value.find(schema => schema.type === typeName)

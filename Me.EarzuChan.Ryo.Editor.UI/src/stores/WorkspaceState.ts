@@ -1,11 +1,11 @@
 import {defineStore} from "pinia"
-import {computed, markRaw, ref} from "vue"
+import {type ComponentInternalInstance, computed, markRaw, ref} from "vue"
 import ItemPage from "@/views/ContentPages/ItemPage.vue"
 import WelcomePage from "@/views/ContentPages/WelcomePage.vue"
 import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
 import type {ItemModel, MassFile} from "@/models/AppModels"
-import type {TabModel} from "@/models/UIModels"
+import type {TabModel} from "@/models/AppModels"
 
 const TAG = "WorkspaceState"
 
@@ -40,11 +40,27 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     }
                 } as ItemModel
             },
+            {
+                name: "项目页2",
+                page: markRaw(ItemPage),
+                unsaved: true,
+                data: {
+                    id: 1919810, parseSuccess: true,
+                    type: {
+                        baseType: {
+                            type: "java.lang.String",
+                        }, isArray: true, typeName: "java.lang.String"
+                    },
+                    data: ["man"]
+                } as ItemModel
+            },
             {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},
         ])
+    const openedItems = ref<ItemModel[]>([])
     const activeTabIndex = ref(0)
     const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
     const dialogState = useDialogStateStore()
+    const activeTabPage = ref<any>(null)
 
     function clickTab(index: number) {
         activeTabIndex.value = index
@@ -106,6 +122,15 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
     }
 
+    function setActiveTabPage(page: any) {
+        activeTabPage.value = page
+        console.log(TAG, "已设置活动页", page)
+    }
+
+    function discard() {
+        activeTabPage.value?.discard()
+    }
+
 // Async Init
     (async () => {
         try {
@@ -136,5 +161,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         openedTabs,
         activeTabIndex,
         activeTab,
+        activeTabPage,
+        setActiveTabPage,
+        discard
     }
 })
