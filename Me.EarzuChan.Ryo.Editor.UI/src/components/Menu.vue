@@ -3,7 +3,8 @@
     <Transition name="menu" @after-enter="afterEnter" @after-leave="afterLeave">
       <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
         <div id="menu-contents">
-          <div v-for="(item,index) in items" :class="{hover: currentHover === index,marked: index === locateToIndex}"
+          <div v-for="(item,index) in items"
+               :class="{hover: currentHover === index,marked: index === locateToIndex,disabled: item.disabled}"
                :id="`${item.name}-${index}`"
                class="menu-item ryo-typography-body-medium"
                @click="invoke(item)" @mouseenter="hover(item,index)">
@@ -198,6 +199,11 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
   align-items: center;
   cursor: pointer;
   color: var(--ryo-color-on-surface);
+}
+
+.menu-item.disabled {
+  pointer-events: none;
+  opacity: var(--ryo-opacity-038);
 }
 
 .menu-item.hover {

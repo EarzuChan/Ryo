@@ -4,18 +4,19 @@
       <div class="ryo-typography-label-large">项目元数据</div>
       <div class="horizontal-layout">
         <div class="info ryo-typography-body-large">ID：{{
-            data.id
-          }}<br>名称：{{ data.name ? data.name : "（无名内联项目）" }}<br>类型：{{
-            data.type ? data.type.typeName : "（未知类型）"
+            itemData.id
+          }}<br>名称：{{ itemData.name ? itemData.name : "（无名内联项目）" }}<br>类型：{{
+            itemData.type ? itemData.type.typeName : "（未知类型）"
           }}
         </div>
         <div class="info ryo-typography-body-large">解析状态：{{
-            boolToText(data.parseSuccess)
+            boolToText(itemData.parseSuccess)
           }}<br>编辑器：{{ arrayToText(supportedEditors) }}<br>导入导出：{{ arrayToText(inOutMethods) }}
         </div>
       </div>
     </div>
-    <EditorHolder ref="holder" card-surrounded :type="data.type" v-model="data.tempData" :prefer-editor="preferEditor">
+    <EditorHolder ref="holder" card-surrounded :type="itemData.type" v-model="itemData.tempData"
+                  :prefer-editor="preferEditor">
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
@@ -27,9 +28,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, getCurrentInstance, onActivated, onDeactivated, type PropType, ref} from "vue"
-import type {ItemModel} from "@/models/AppModels"
-import {arrayToText, boolToText, deepCopy, getSfcName, TODO} from "@/utils/UsefulUtils"
+import {computed, getCurrentInstance, onActivated, onDeactivated, ref, watch} from "vue"
+import {arrayToText, boolToText, deepCopy, ensure, getSfcName, TODO} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
 import TextButton from "@/components/TextButton.vue"
@@ -37,45 +37,55 @@ import {useAppStateStore} from "@/stores/AppState"
 import Select from "@/components/Select.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import {type ItemModel} from "@/models/AppModels"
 
 const TAG = "ItemPage"
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const workspaceState = useWorkspaceStateStore()
-// TODO: 暂存未保存了可以，watch data然后init，用户在暂存上修改，保存才写入data
 // TODO: 历史记录，撤消重做
-// TODO: 重做编辑器容器底部栏 弄成插槽
-// TODO: 默认编辑器选择的提示该如何？
+/* TODO: 默认编辑器选择的提示该如何？
+重做编辑器容器底部栏 弄成插槽？*/
 
 const props = defineProps({
-  data: {
-    type: Object as PropType<ItemModel>,
-    default: {}
-  }
+  data: Number
 })
 
+const itemData = computed<ItemModel>(() => {
+  console.debug(TAG, "获取项目数据", props.data, workspaceState.openedItems.length)
+  if (ensure(props.data) && props.data! > -1 && props.data! < workspaceState.openedItems.length) {
+    const item = workspaceState.openedItems[props.data!]
+    if (!ensure(item.tempData)) {
+      console.debug(TAG, "初始化项目数据暂存", item.data)
+      item.unsaved = false // 怎么追踪更改
+      item.tempData = deepCopy(item.data)
+    }
+    return item
+  } else {
+    console.error(TAG, "无效的项目数据索引")
+    return {id: -1, parseSuccess: false}
+  }
+})
 const supportedEditors = computed(() => {
-  const type = props.data.type
+  const type = itemData.value.type
   if (type) {
     return appState.getEditorsByRyoType(type).map(et => getSfcName(et))
   }
 
-  return ["TODO"]
+  return ["未知类型 无可用编辑器"]
 })
 const inOutMethods = computed(() => {
-  const typeName = props.data.type
+  const typeName = itemData.value.type
 
-  return ["TODO"]
+  return [TODO(TAG, "获取导入导出方法")]
 })
 
 const holder = ref<any>(null)
-
-// BUG: 不稳定啊，应该在Prop里面设置一个键值代表当前文件码，在WorkspaceState里面另外提取内容
 const preferEditor = ref(0)
 
 function save() {
-  console.log(TAG, "保存", props.data.tempData, props.data.data)
+  console.log(TAG, "保存", itemData.value.tempData, itemData.value.data)
 
   dialogState.order({
     headline: "保存",
@@ -84,8 +94,8 @@ function save() {
       {text: "取消"},
       {
         text: "确定", onClick() {
-          props.data.data = deepCopy(props.data.tempData)
-          console.log(TAG, "保存成功", props.data.tempData, props.data.data)
+          itemData.value.data = deepCopy(itemData.value.tempData)
+          console.log(TAG, "保存成功", itemData.value.tempData, itemData.value.data)
         }
       },
     ]
@@ -100,10 +110,10 @@ function discard() {
     description: "您确定要放弃未保存的更改吗？\n这将恢复编辑器到上次保存的状态",
     actions: [
       {text: "取消"},
-      {text: "确定", onClick: () => props.data.tempData = deepCopy(props.data.data)},
+      {text: "确定", onClick: () => itemData.value.tempData = deepCopy(itemData.value.data)},
       {
         text: "确定并重载", onClick() { // TODO:重不重载弄个偏好设置
-          props.data.tempData = deepCopy(props.data.data)
+          itemData.value.tempData = deepCopy(itemData.value.data)
           reload(true)
         }
       }

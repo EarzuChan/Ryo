@@ -93,4 +93,7 @@ export function openLink(link: string) {
 
 export function TODO(...arg: any[]) {
     console.warn("TODO", ...arg)
+
+    // 把参数拼接成字符串
+    return "TODO " + arg.slice(1).join(" ")
 }

@@ -1,6 +1,6 @@
-﻿import {defineStore} from "pinia";
-import {sleepFor} from "@/utils/UsefulUtils";
-import {ref} from "vue";
+﻿import {defineStore} from "pinia"
+import {sleepFor} from "@/utils/UsefulUtils"
+import {ref} from "vue"
 
 const TAG = "NextState"
 

@@ -24,6 +24,7 @@ export interface DialogModel {
 
 export interface MenuItem {
     name: string
+    disabled?: boolean
     action?: () => void
     children?: MenuItem[]
 }

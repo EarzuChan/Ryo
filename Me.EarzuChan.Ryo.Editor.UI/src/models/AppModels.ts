@@ -29,7 +29,8 @@ export interface RyoType {
 export interface ItemModel {
     id: number
     name?: string
-    type: RyoType
+    unsaved?: boolean
+    type?: RyoType
     parseSuccess: boolean
     data?: any
     history?: HistoryRecord[]
@@ -49,9 +50,14 @@ export interface Pair<T, U> {
 export interface TabModel {
     name: string,
     nonResident?: boolean
-    unsaved?: boolean
     page?: any
     data?: any
+}
+
+export enum TabType {
+    Welcome,
+    Item,
+    Empty
 }
 
 export interface HistoryRecord {
