@@ -83,7 +83,7 @@ function save() {
     actions: [
       {text: "取消"},
       {
-        text: "确定", onClick: () => {
+        text: "确定", onClick() {
           props.data.data = deepCopy(props.data.tempData)
           console.log(TAG, "保存成功", props.data.tempData, props.data.data)
         }
@@ -102,9 +102,9 @@ function discard() {
       {text: "取消"},
       {text: "确定", onClick: () => props.data.tempData = deepCopy(props.data.data)},
       {
-        text: "确定并重载", onClick: () => { // TODO:重不重载弄个偏好设置
+        text: "确定并重载", onClick() { // TODO:重不重载弄个偏好设置
           props.data.tempData = deepCopy(props.data.data)
-          holder.value.reload()
+          reload(true)
         }
       }
     ]

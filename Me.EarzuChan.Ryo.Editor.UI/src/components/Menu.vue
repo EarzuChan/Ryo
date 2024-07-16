@@ -16,14 +16,12 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
+import {computed, onBeforeUnmount, onMounted, type PropType, ref} from "vue"
 import {AttachMethod, type MenuItem} from "@/models/UIModels"
 import {showMenu} from "@/utils/MenuUtils"
-import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils";
+import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils"
 
 const TAG = 'Menu'
-const menuBase = ref<HTMLElement | null>(null)
-const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-item'])
 
 const props = defineProps({
   items: {
@@ -47,10 +45,7 @@ const props = defineProps({
     default: -1
   }
 })
-
-const currentHover = ref(-1)
-const fix = ref(0)
-const ctrlShow = ref(true)
+const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-item'])
 
 const menuItemStyle = computed(() => {
   return {
@@ -59,8 +54,13 @@ const menuItemStyle = computed(() => {
   }
 })
 
+const menuBase = ref<HTMLElement | null>(null)
+const currentHover = ref(-1)
+const fix = ref(0)
+const ctrlShow = ref(true)
 const currentMenu = ref<any>(null)
 const menuItemClicked = ref(false)
+const delay = ref<any>(null)
 
 function invoke(item: MenuItem) {
   if (item.action) {
@@ -71,19 +71,14 @@ function invoke(item: MenuItem) {
   closeMenu()
 }
 
-const delay = ref<any>(null)
-
 function hover(item: MenuItem, index: number) {
   if (index === currentHover.value) return
 
   // console.log(TAG, 'hover', index)
   currentHover.value = index
 
-  if (currentMenu.value) {
-    currentMenu.value.closeMenu()
-  } else if (delay.value) {
-    delay.value.cancel()
-  }
+  if (currentMenu.value) currentMenu.value.closeMenu()
+  else if (delay.value) delay.value.cancel()
 
   if (item.children) {
     let babe = item.children
@@ -168,9 +163,9 @@ onMounted(() => {
 
 
   // 我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
-  setTimeout(() => document.addEventListener('click', clickDocument))
+  setTimeout(() => document.addEventListener('mousedown', clickDocument))
 })
-onBeforeUnmount(() => document.removeEventListener('click', clickDocument))
+onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
 </script>
 
 <style scoped>
