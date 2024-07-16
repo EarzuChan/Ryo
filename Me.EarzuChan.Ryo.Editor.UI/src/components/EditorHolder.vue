@@ -1,7 +1,7 @@
 <template>
-  <div class="use-flex" :class="{'with-margin':isComplexEditor&&props.withMargin,
-  'editor-holder-card':isComplexEditor && !notUseCard || cardSurrounded,'fulfill':!isComplexEditor}">
-    <Component v-if="ready" :even="even" @err="e=>onError(e as string)" :errorMsg="errorMsg"
+  <div class="use-flex fulfill" :class="{'with-margin':isComplexEditor&&props.withMargin,
+  'editor-holder-card':shouldUseCard}">
+    <Component v-if="ready" :even="realEven" @err="e=>onError(e as string)" :errorMsg="errorMsg"
                class="fulfill" :is="editorType" v-model="model" :type="type"/>
     <slot/>
   </div>
@@ -27,19 +27,6 @@ const props = defineProps({
   even: Boolean,
 })
 
-const model = defineModel<any>()
-const errorMsg = ref("良好")
-const isError = ref(false)
-const isComplexEditor = ref(false)
-const ready = ref(true)
-
-function getError(msg: string) {
-  isComplexEditor.value = false
-  console.error(TAG, msg)
-  errorMsg.value = msg
-  return ErrorEditor
-}
-
 const editorType = computed(() => {
   if (isError.value) return getError("编辑器错误：" + errorMsg.value)
   else if (!ensure(model.value)) return getError("数据错误：绑定的数据为空")
@@ -57,6 +44,26 @@ const editorType = computed(() => {
     return chosen
   } else return getError("更多错误：Ryo类型为空？")
 })
+const realEven = computed(() => {
+  let val = props.even
+  if (!shouldUseCard.value) val = !val
+
+  return val
+})
+const shouldUseCard = computed(() => isComplexEditor.value && !props.notUseCard || props.cardSurrounded)
+
+const model = defineModel<any>()
+const errorMsg = ref("良好")
+const isError = ref(false)
+const isComplexEditor = ref(false)
+const ready = ref(true)
+
+function getError(msg: string) {
+  isComplexEditor.value = false
+  console.error(TAG, msg)
+  errorMsg.value = msg
+  return ErrorEditor
+}
 
 function onError(err: string) {
   console.error(TAG, "检查到错误", err)

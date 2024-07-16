@@ -101,10 +101,6 @@ function toggleItemsMenu() {
 
 .label {
   color: var(--ryo-color-on-surface-variant);
-  display: flex;
-  white-space: nowrap;
-  background: none;
-  border: none;
 
   flex: 1;
 }

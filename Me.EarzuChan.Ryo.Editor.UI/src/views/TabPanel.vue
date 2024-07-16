@@ -1,17 +1,17 @@
 <template>
   <div id="tab_panel">
-    <div id="tab_panel_top_bar" v-if="openedFilesState.openedTabs.length!==0">
+    <div id="tab_panel_top_bar" v-if="workspaceState.openedTabs.length!==0">
       <div id="tab_panel_container">
-        <div v-for="(tab,index) in openedFilesState.openedTabs" @dblclick="anchorTab(index)" @click="clickTab(index)"
+        <div v-for="(tab,index) in workspaceState.openedTabs" @dblclick="anchorTab(index)" @click="clickTab(index)"
              class="tab_container"
-             :class="{'active':openedFilesState.activeTabIndex===index}">
+             :class="{'active':workspaceState.activeTabIndex===index}">
           <div class="tab_top_padding"/>
           <div class="tab_content">
             <div class="tab_title ryo-typography-label-large"
                  :class="{'non-resident':tab.nonResident}">{{ tab.name }}
             </div>
             <IconButton @click.stop="closeTab(index)" :size="24"
-                        :icon="tabIconHovering===index || tab.unsaved!==true ? 'close_tab' : 'unsaved_dot'"
+                        :icon="tabIconHovering===index || !workspaceState.getIsTabUnsaved(index) ? 'close_tab' : 'unsaved_dot'"
                         class="tab_icon" @mouseenter="tabIconHovering=index" @mouseleave="tabIconHovering=-1"/>
           </div>
           <div class="tab_bottom_padding"/>
@@ -21,7 +21,8 @@
     </div>
     <div id="content_container">
       <KeepAlive include="ItemPage">
-        <Component class="content" :is="currentTabPageOrEmptyPage" :data="openedFilesState.activeTab?.data"/>
+        <Component class="content" :is="currentTabPageOrEmptyPage"
+                   :data="workspaceState.activeTab?.data"/>
       </KeepAlive>
     </div>
   </div>
@@ -36,22 +37,22 @@ import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 const TAG = "Tabs"
 
 const tabIconHovering = ref(-1)
-const openedFilesState = useWorkspaceStateStore()
-const currentTabPageOrEmptyPage = computed(() => openedFilesState.activeTab?.page || EmptyPage)
+const workspaceState = useWorkspaceStateStore()
+const currentTabPageOrEmptyPage = computed(() => workspaceState.activeTab?.page || EmptyPage)
 
 function clickTab(index: number) {
   console.log(TAG, "点击了第" + (index + 1) + "个标签")
-  openedFilesState.clickTab(index)
+  workspaceState.clickTab(index)
 }
 
 function anchorTab(index: number) {
   console.log(TAG, "双击了第" + (index + 1) + "个标签，使其固定")
-  openedFilesState.anchorTab(index)
+  workspaceState.anchorTab(index)
 }
 
 function closeTab(index: number) {
   console.log(TAG, "关闭了第" + (index + 1) + "个标签")
-  openedFilesState.closeTab(index)
+  workspaceState.closeTab(index)
 }
 </script>
 

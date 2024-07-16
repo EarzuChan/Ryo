@@ -4,46 +4,59 @@ import ItemPage from "@/views/ContentPages/ItemPage.vue"
 import WelcomePage from "@/views/ContentPages/WelcomePage.vue"
 import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
-import type {ItemModel, MassFile} from "@/models/AppModels"
-import type {TabModel} from "@/models/UIModels"
+import {type ItemModel, type MassFile, TabType} from "@/models/AppModels"
+import type {TabModel} from "@/models/AppModels"
+import {useAppStateStore} from "@/stores/AppState"
+import {TODO} from "@/utils/UsefulUtils"
 
 const TAG = "WorkspaceState"
 
 export const useWorkspaceStateStore = defineStore('workspace-state', () => {
     const available = ref(false)
 
+    const appState = useAppStateStore()
+
+    const activeTabPage = ref<any>(null)
+
+    const openedTabs = ref<TabModel[]>([
+        {
+            name: "项目页1",
+            page: markRaw(ItemPage),
+            data: 0
+        },
+        {
+            name: "项目页2",
+            page: markRaw(ItemPage),
+            data: 1
+        },
+        {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},
+    ])
+    const activeTabIndex = ref(0)
+    const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
+
     const openedFiles = ref<MassFile[]>([{
         name: "假文件1",
         items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]
     }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}])
-    const openedTabs = ref<TabModel[]>(
-        [
-            {
-                name: "项目页",
-                page: markRaw(ItemPage),
-                unsaved: true,
-                data: {
-                    id: 1919810, parseSuccess: true,
-                    type: {
-                        baseType: {
-                            type: "sengine.graphics2d.FontSprites",
-                            members: [
-                                {"name": "iArr", "type": "game23.model.DialogueTreeModel$UserMessageModel[]"},
-                                {"name": "bArr", "type": "java.lang.Byte[][]"},
-                                {"name": "f", "type": "java.lang.Float"},
-                                {"name": "i", "type": "game23.model.DialogueTreeModel$UserMessageModel"}]
-                        }, isArray: false, typeName: "sengine.graphics2d.FontSprites"
-                    },
-                    data: {
-                        iArr: [{isHidden: true, message: "Hello, Man!"}], bArr: [[1, 2], [3, 4]], f: 1.9,
-                        i: {isHidden: false, message: "Hello, World!"},
-                    }
-                } as ItemModel
+    const openedItems = ref<ItemModel[]>([
+        {
+            id: 1919810, parseSuccess: true,
+            type: appState.getRyoTypeByName("sengine.graphics2d.FontSprites[]"),
+            data: [{
+                iArr: [1, 9, 1, 9], bArr: [[1, 2], [3, 4]], f: 1.9,
+                i: 810,
+            }]
+        },
+        {
+            id: 1919810, parseSuccess: true,
+            type: {
+                baseType: {
+                    type: "java.lang.String",
+                }, isArray: true, typeName: "java.lang.String"
             },
-            {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},
-        ])
-    const activeTabIndex = ref(0)
-    const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
+            data: ["man"]
+        }])
+
     const dialogState = useDialogStateStore()
 
     function clickTab(index: number) {
@@ -58,12 +71,19 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
     }
 
+    function getIsTabUnsaved(index: number) {
+        const man = openedTabs.value[index].data
+        if (typeof man === 'number') {
+            return openedItems.value[man].unsaved === true
+        } else return false
+    }
+
     function closeTab(index: number) {
         const tab = openedTabs.value[index]
 
         activeTabIndex.value = index
 
-        if (tab.unsaved) {
+        if (getIsTabUnsaved(index)) {
             // 相应询问等操作
             let close = true
 
@@ -73,17 +93,17 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 actions: [
                     {
                         text: "保存", onClick() {
-                            console.log(TAG, "保存")
+                            TODO(TAG, "保存")
                         }
                     },
                     {
                         text: "不保存", onClick() {
-                            console.log(TAG, "不保存")
+                            TODO(TAG, "不保存")
                         }
                     },
                     {
                         text: "取消", onClick() {
-                            console.log(TAG, "取消")
+                            TODO(TAG, "取消")
                             close = false
                         }
                     }
@@ -104,6 +124,61 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         } else if (activeTabIndex.value > index) {
             activeTabIndex.value--
         }
+    }
+
+    function setActiveTabPage(page: any) {
+        activeTabPage.value = page
+        console.debug(TAG, "已设置当前Tab", page)
+    }
+
+    function openTab(tabType: TabType, index: number = -1) {
+        console.debug(TAG, "打开Tab", tabType, index)
+        switch (tabType) {
+            case TabType.Empty:
+                internalOpenTab({name: "空白页", nonResident: true})
+                break
+            case TabType.Item:
+                let name = openedItems.value[index]?.name
+                if (name === undefined) name = "无名项目"
+                internalOpenTab({name, page: markRaw(ItemPage), data: index, nonResident: true})
+                // TODO: 项目一旦unsaved，就常驻
+                break
+            case TabType.Welcome:
+                internalOpenTab({name: "欢迎", page: markRaw(WelcomePage), nonResident: true})
+        }
+    }
+
+    function internalOpenTab(tab: TabModel) {
+        // 遍历是否有非常驻，有就顶掉
+        let nonResidentIndex = openedTabs.value.findIndex(tab => tab.nonResident)
+        console.debug(TAG, "内部打开Tab", tab, nonResidentIndex)
+        if (nonResidentIndex !== -1) {
+            openedTabs.value[nonResidentIndex] = tab
+            activeTabIndex.value = nonResidentIndex
+        } else {
+            openedTabs.value.push(tab)
+            activeTabIndex.value = openedTabs.value.length - 1
+        }
+    }
+
+    function pageDiscard() {
+        activeTabPage.value?.discard()
+    }
+
+    function pageReload(fromSystem: boolean = false) {
+        activeTabPage.value?.reload(fromSystem)
+    }
+
+    function pageSave() {
+        activeTabPage.value?.save()
+    }
+
+    function pageRedo() {
+        activeTabPage.value?.redo()
+    }
+
+    function pageUndo() {
+        activeTabPage.value?.undo()
     }
 
 // Async Init
@@ -130,11 +205,21 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
     return {
         available,
         openedFiles,
+        openedItems,
         anchorTab,
         clickTab,
         closeTab,
         openedTabs,
         activeTabIndex,
         activeTab,
+        activeTabPage,
+        setActiveTabPage,
+        pageDiscard,
+        pageReload,
+        pageRedo,
+        pageUndo,
+        pageSave,
+        getIsTabUnsaved,
+        openTab
     }
 })

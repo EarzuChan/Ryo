@@ -87,6 +87,13 @@ export function deepCopy(obj: any): any {
     return JSON.parse(JSON.stringify(obj))
 }
 
-export function goTo(link: string) {
+export function openLink(link: string) {
     emitWebEvent(makeWebLetter('OpenLink', link))
+}
+
+export function TODO(...arg: any[]) {
+    console.warn("TODO", ...arg)
+
+    // 把参数拼接成字符串
+    return "TODO " + arg.slice(1).join(" ")
 }

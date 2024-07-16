@@ -29,8 +29,11 @@ import {useDialogStateStore} from "@/stores/DialogState"
 import {showMenu} from "@/utils/MenuUtils"
 import {ref} from "vue"
 import type {MenuBarItem} from "@/models/UIModels"
-import {useKurisuStateStore} from "@/stores/KurisuState";
-import {KurisuWindowState} from "@/models/KurisuModels";
+import {useKurisuStateStore} from "@/stores/KurisuState"
+import {KurisuWindowState} from "@/models/KurisuModels"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import {TODO} from "@/utils/UsefulUtils"
+import {TabType} from "@/models/AppModels"
 
 const TAG = 'TopAppBar'
 
@@ -40,6 +43,7 @@ const lastMenu = ref<MenuBarItem | null>(null)
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const kurisuState = useKurisuStateStore()
+const workspaceState = useWorkspaceStateStore()
 
 const menuBarItems: MenuBarItem[] = [
   {id: 'file', name: '文件'},
@@ -73,6 +77,8 @@ function hoverMenuButton(menuType: MenuBarItem) {
 function showMenuOf(menuType: MenuBarItem) {
   lastMenu.value = menuType
 
+  const pageNotOk = workspaceState.activeTabPage === null
+
   switch (menuType.id) {
     case 'file':
       currentMenu.value = showMenu({
@@ -104,14 +110,18 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'edit':
       currentMenu.value = showMenu({
         items: [
-          {name: '撤销', action: () => console.log('撤销')},
-          {name: '重做', action: () => console.log('重做')},
-          {name: '刷新编辑器', action: () => console.log('刷新编辑器')},
-          {name: '抛弃未保存更改', action: () => console.log('抛弃未保存更改')},
-          {name: '保存当前标签页', action: () => console.log('保存编辑器')},
-          {name: '关闭当前标签页', action: () => console.log('关闭当前标签页')},
-          {name: '在标签页中查找', action: () => console.log('在标签页中查找')},
-          {name: '在所有文件中查找', action: () => console.log('在所有标签页中查找')},
+          {name: '撤销', disabled: pageNotOk, action: () => workspaceState.pageUndo()},
+          {name: '重做', disabled: pageNotOk, action: () => workspaceState.pageRedo()},
+          {name: '刷新编辑器', disabled: pageNotOk, action: () => workspaceState.pageReload()},
+          {name: '抛弃未保存更改', disabled: pageNotOk, action: () => workspaceState.pageDiscard()},
+          {name: '保存当前标签页', disabled: pageNotOk, action: () => workspaceState.pageSave()},
+          {
+            name: '关闭当前标签页',
+            disabled: pageNotOk,
+            action: () => workspaceState.closeTab(workspaceState.activeTabIndex)
+          },
+          {name: '在标签页中查找', action: () => TODO(TAG, '在标签页中查找')},
+          {name: '在所有文件中查找', action: () => TODO(TAG, '在所有文件中查找')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
@@ -135,7 +145,7 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'help':
       currentMenu.value = showMenu({
         items: [
-          {name: '显示欢迎页', action: () => console.log('显示欢迎页')}, {
+          {name: '显示欢迎页', action: () => workspaceState.openTab(TabType.Welcome)}, {
             name: '资源', children:
                 [
                   {name: '快速上手', action: () => console.log('快速上手')}, // TODO

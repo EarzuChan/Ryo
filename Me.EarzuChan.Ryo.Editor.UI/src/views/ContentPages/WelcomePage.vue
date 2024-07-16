@@ -20,7 +20,7 @@
       </div>
       <div class="text-group">
         <div class="ryo-typography-title-large white">资源</div>
-        <div v-for="resource in resources" class="horizontal-group" @click="goTo(resource.link)">
+        <div v-for="resource in resources" class="horizontal-group" @click="openLink(resource.link)">
           <div class="ryo-typography-body-large primary">{{ resource.title }}</div>
           <div class="ryo-typography-body-large on-surface-variant">{{ resource.description }}</div>
         </div>
@@ -32,13 +32,13 @@
 <script setup lang="ts">
 import {ref} from "vue"
 import type {RecentFile} from "@/models/AppModels"
-import type {WelcomePageResource} from "@/models/UIModels"
-import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
+import type {LearningResourceModel} from "@/models/AppModels"
+import {openLink} from "@/utils/UsefulUtils"
 
 const TAG = 'WelcomePage'
 
 const recentFiles = ref<RecentFile[]>([{name: 'test', path: 'man'}])
-const resources = ref<WelcomePageResource[]>(
+const resources = ref<LearningResourceModel[]>(
     [
       {title: '快速上手', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
       {title: '深度指南', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},

@@ -16,6 +16,7 @@
   color: white;
   white-space: pre-wrap;
 
-  border: 1px solid var(--ryo-color-outline-varient);
+  outline: 1px solid var(--ryo-color-outline-varient);
+  outline-offset: -1px;
 }
 </style>

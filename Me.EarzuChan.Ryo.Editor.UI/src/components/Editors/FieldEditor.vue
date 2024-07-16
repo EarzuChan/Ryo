@@ -1,7 +1,7 @@
 <template>
   <div class="field-editor">
     <div class="field-holder">
-      <div v-for="(item,index) in keys" class="field-list-item" :class="{ 'even': isEven(index) }">
+      <div v-for="(item,index) in keys" class="field-list-item" :key="item.name" :class="{ 'even': isEven(index) }">
         <div class="item-name">{{ item.name }}</div>
         <div class="item-value-holder" :class="{ 'even': isEven(index) }">
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
@@ -15,7 +15,7 @@
 
 <script lang="ts" setup>
 import EditorHolder from "../EditorHolder.vue"
-import {computed, type PropType, watch} from "vue"
+import {computed, type PropType} from "vue"
 import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, ensureObject} from "@/utils/UsefulUtils"
