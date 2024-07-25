@@ -3,7 +3,8 @@
                    @focusout="clearLastClicked">
     <div class="tree-node-container" :style="'padding-left:' + (node.level * props.indent) + 'px'"
          v-for="node in processedTree" :key="node.indexPath.toString()"
-         @click="handleClickNode(node)" :class="{'last-clicked':isEqual(lastClicked,node.indexPath)}">
+         @click="handleClickNode(node)" @contextmenu.prevent.stop="e=>handleRightClickNode(e,node)"
+         :class="{'last-clicked':isEqual(lastClicked,node.indexPath)}">
       <div class="tree-node">
         <Icon class="tree-node-icon" :filled-icon="node.isStem?false:isEqual(lastClicked,node.indexPath)"
               :class="{'rotate' : node.expanded}" :icon="node.isStem?'chevron':'file'"/>
@@ -19,8 +20,13 @@
 
 <script lang="ts" setup>
 import {isEqual} from "@/utils/UsefulUtils"
+import {type PropType, computed, ref} from 'vue'
+import type {TreeNodeModel} from "@/models/UIModels"
+import Icon from "./Icon.vue"
 
 const TAG = "TreeView"
+
+// TODO:虚拟列表
 
 interface InternalTreeNode {
   name: string
@@ -30,10 +36,6 @@ interface InternalTreeNode {
   expanded: boolean
   childrenCount: number
 }
-
-import {type PropType, computed, ref} from 'vue'
-import type {TreeNodeModel} from "@/models/UIModels"
-import Icon from "./Icon.vue"
 
 const props = defineProps({
   nodes: Array as PropType<TreeNodeModel[]>,
@@ -49,7 +51,7 @@ function clearLastClicked() {
   lastClicked.value = []
 }
 
-const emit = defineEmits(['nodeClick'])
+const emit = defineEmits(['nodeClick', 'nodeRightClick'])
 
 const nonExpandedNodes = ref<number[][]>([])
 const lastClicked = ref<number[]>([])
@@ -108,6 +110,11 @@ function handleClickNode(node: InternalTreeNode) {
   } else
     emit('nodeClick', node.indexPath)
 }
+
+function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
+  console.log(TAG, 'Node right clicked:', node, node.indexPath)
+  emit('nodeRightClick', node.indexPath, e)
+}
 </script>
 
 <style scoped>
@@ -127,12 +134,16 @@ function handleClickNode(node: InternalTreeNode) {
   margin: 0 24px 0 12px;
   display: flex;
   flex: 1;
+  overflow: hidden;
   align-items: center;
   gap: 12px;
 }
 
 .tree-node-label {
   flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .tree-node-icon {

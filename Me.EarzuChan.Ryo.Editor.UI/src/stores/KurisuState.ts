@@ -1,7 +1,7 @@
 ﻿import {defineStore} from "pinia";
 import {ref} from "vue";
 import {KurisuWindowState} from "@/models/KurisuModels";
-import {addWebEventListener, emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
+import {addWebEventListener, emitWebEvent, makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
 
 const TAG = "KurisuState"
 
@@ -11,25 +11,30 @@ export const useKurisuStateStore = defineStore('kurisu-state', () => {
     const isAppWindowMaximized = ref<boolean>(false)
 
     function setAppWindowState(state: KurisuWindowState) {
-        emitWebEvent(makeWebLetter("SetAppWindowState", state))
+        emitWebEvent(makeWebLetter("AppProperty:WindowState", state))
     }
 
     function stopApp() {
-        emitWebEvent(makeWebLetter("StopApp"))
+        emitWebEvent(makeWebLetter("AppCommand:StopApp"))
+    }
+
+    function argsToIsAppWindowMaximized(args: number[]): boolean {
+        return args[0] as KurisuWindowState === KurisuWindowState.Maximized
     }
 
     (async () => {
         try {
             console.log(TAG, "Start init")
 
-            addWebEventListener("AppWindowStateChanged", (args: number[]) => {
-                const state = args[0] as KurisuWindowState
-                console.log(TAG, "AppMaximizationChanged", state, state === KurisuWindowState.Maximized)
-                isAppWindowMaximized.value = state === KurisuWindowState.Maximized
+            addWebEventListener("AppEvent:AppWindowStateChanged", (args: number[]) => {
+                const maximized = argsToIsAppWindowMaximized(args)
+                console.log(TAG, "AppMaximizationChanged", maximized)
+                isAppWindowMaximized.value = maximized
             })
             console.log(TAG, "AppWindowStateChanged监听器已创建")
-            emitWebEvent(makeWebLetter('NotifyAppWindowState'))
-            console.log(TAG, "已提醒发送AppWindowState")
+
+            isAppWindowMaximized.value = argsToIsAppWindowMaximized(await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:WindowState")))
+            console.log(TAG, "已拉取初始AppWindowState")
 
             available.value = true
         } catch (err) {

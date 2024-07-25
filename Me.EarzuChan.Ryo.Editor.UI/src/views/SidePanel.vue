@@ -7,12 +7,12 @@
                     :icon="panelItem.icon" @click="clickPanelTab(panelItem,index)"/>
       </div>
       <div id="side-panel-control-buttons">
-        <IconButton :size="48" :icon="sidePanelExpanded?'panel_narrow':'panel'"
-                    @click="sidePanelExpanded=!sidePanelExpanded"/>
+        <IconButton :size="48" :icon="appState.sidePanelExpanded?'panel_narrow':'panel'"
+                    @click="appState.sidePanelExpanded=!appState.sidePanelExpanded"/>
         <IconButton :size="48" icon="settings" @click="openSettings"/>
       </div>
     </div>
-    <div id="side-panel-content" v-if="sidePanelExpanded">
+    <div id="side-panel-content" v-if="appState.sidePanelExpanded">
       <Component :is="sidePanelItems[currentPanel].panel"/>
     </div>
   </div>
@@ -22,6 +22,7 @@
 import IconButton from "@/components/IconButton.vue"
 import {ref} from "vue"
 import ExplorerPanel from "@/views/SidePanels/ExplorerPanel.vue"
+import {useAppStateStore} from "@/stores/AppState";
 
 interface SidePanelItem {
   name: string
@@ -34,7 +35,7 @@ const sidePanelItems = [
 ]
 const currentPanel = ref<number>(0)
 
-const sidePanelExpanded = ref(true)
+const appState = useAppStateStore()
 
 function openSettings() {
 }
@@ -82,7 +83,8 @@ function clickPanelTab(item: SidePanelItem, index: number) {
   width: 288px;
   margin-right: 8px;
   padding: 12px;
-  display: flex;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   background-color: var(--ryo-color-surface-container-high);
 }

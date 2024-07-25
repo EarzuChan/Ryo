@@ -4,5 +4,4 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Exceptions
-{ }
+namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Exceptions;

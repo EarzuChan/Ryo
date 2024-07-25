@@ -4,15 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.Kurisu.Exceptions
-{
-    public class WebEventParsingException(string reason) : Exception($"Parsing Web Event error: {reason}");
+namespace Me.EarzuChan.Ryo.Kurisu.Exceptions;
 
-    public class WebCallParsingException(string reason) : Exception($"Parsing Web Call error: {reason}");
+public class WebEventParsingException(string reason) : Exception($"Parsing Web Event error: {reason}");
 
-    public class IllegalWebEventException(string reason) : Exception($"An illegal Web Event: {reason}");
+public class WebCallParsingException(string reason) : Exception($"Parsing Web Call error: {reason}");
 
-    public class IllegalWebCallException(string reason) : Exception($"An illegal Web Call: {reason}");
+public class IllegalWebEventException(string reason) : Exception($"An illegal Web Event: {reason}");
 
-    public class KurisuAppBuildingException(string reason) : Exception($"Building your Kurisu App error: {reason}");
-}
+public class IllegalWebCallException(string reason) : Exception($"An illegal Web Call: {reason}");
+
+public class KurisuAppBuildingException(string reason) : Exception($"Building your Kurisu App error: {reason}");

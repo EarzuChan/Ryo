@@ -1,13 +1,8 @@
 const TAG = "AppModels"
 
-export interface MassFile {
+export interface VolumeModel {
     name: string
-    items: MassItem[]
-}
-
-export interface MassItem {
-    id: number,
-    name: string
+    items: FileModel[]
 }
 
 export interface MemberType {
@@ -26,8 +21,9 @@ export interface RyoType {
     typeName: string
 }
 
-export interface ItemModel {
+export interface FileModel {
     id: number
+    fromFile?: string
     name?: string
     unsaved?: boolean
     type?: RyoType

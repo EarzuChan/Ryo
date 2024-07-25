@@ -4,24 +4,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Me.EarzuChan.Ryo.Kurisu.WebCalls
+namespace Me.EarzuChan.Ryo.Kurisu.WebCalls;
+
+public class WebResponse
 {
-    public class WebResponse
+    public WebResponseState State;
+    public object[] ReturnValues;
+
+    public WebResponse(WebResponseState state, params object[] returnValues)
     {
-        public WebResponseState State;
-        public object[] ReturnValues;
+        returnValues ??= Array.Empty<object>();
 
-        public WebResponse(WebResponseState state, params object[] returnValues)
-        {
-            returnValues ??= Array.Empty<object>();
-
-            State = state;
-            ReturnValues = returnValues;
-        }
+        State = state;
+        ReturnValues = returnValues;
     }
+}
 
-    public enum WebResponseState
-    {
-        Failure, Success
-    }
+public enum WebResponseState
+{
+    Failure, Success
 }

@@ -37,7 +37,7 @@ const editorType = computed(() => {
     if (!appState.ensureRyoType(props.type, model.value)) return getError("数据错误：数据类型不匹配")
 
     const editors = appState.getEditorsByRyoType(props.type)
-    if (editors.length === 0) return getError("App错误：没有可用的编辑器")
+    if (editors.length === 0) return getError("编辑器错误：没有可用的编辑器")
 
     const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
     isComplexEditor.value = chosen === FieldEditor
