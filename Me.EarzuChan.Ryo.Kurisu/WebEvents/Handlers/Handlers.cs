@@ -17,12 +17,6 @@ namespace Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers
         public void Handle(KurisuAppContext context);
     }
 
-    [Obsolete]
-    public interface IWebEventHandlerForCallBack
-    {
-        public object[] Handle(KurisuAppContext context);
-    }
-
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public class WebEventHandlerAttribute : Attribute
     {

@@ -33,7 +33,10 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
         private readonly KurisuAppContext Context;
 
-        internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies, Dictionary<WebEventHandlerAttribute, Type> webEventHandlers, Dictionary<AppEventHandlerAttribute, Type> appEventHandlers, Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuAppWindowManager appWindow)
+        internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies,
+            Dictionary<WebEventHandlerAttribute, Type> webEventHandlers,
+            Dictionary<AppEventHandlerAttribute, Type> appEventHandlers,
+            Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuAppWindowManager appWindow)
         {
             Profile = profile;
             Dependencies = dependencies;
@@ -62,6 +65,28 @@ namespace Me.EarzuChan.Ryo.Kurisu
         {
             Trace.WriteLine($"WebEvent名称：{model.Name} 参数数：{model.Args.Length}");
 
+            var multi = model.Name.Split(':');
+            if (multi.Length == 2)
+            {
+                Trace.WriteLine($"该WebEvent意图调用内置Api：{multi[0]}，需求：{multi[1]}");
+
+                switch (multi[0])
+                {
+                    case "AppProperty":
+                        var property = Enum.Parse<KurisuAppProperty>(multi[1]);
+                        Context.SetAppProperty(property, model.Args);
+                        break;
+                    case "AppCommand":
+                        var command = Enum.Parse<KurisuAppCommand>(multi[1]);
+                        Context.ExecuteAppCommand(command, model.Args);
+                        break;
+                    default:
+                        Trace.WriteLine($"没有内置Api：{multi[0]}");
+                        break;
+                }
+            }
+            else Trace.WriteLine("该WebEvent为普通WebEvent");
+
             foreach (var hdl in WebEventHandlers)
             {
                 if (model.Name != hdl.Key.EventName) continue;
@@ -74,35 +99,54 @@ namespace Me.EarzuChan.Ryo.Kurisu
                     if (model.Args.Length != parameters.Length) continue;
                     try
                     {
-                        // 为支持快速回调的
-                        if (typeof(IWebEventHandler).IsAssignableFrom(hdl.Value))
-                        {
-                            var command = (IWebEventHandler)constructor.Invoke(model.Args);
-
-                            command.Handle(Context);
-                        }
-                        else
-                        {
-                            var command = (IWebEventHandlerForCallBack)constructor.Invoke(model.Args);
-
-                            EmitWebEvent(new($"CallBack{hdl.Key.EventName}", command.Handle(Context)));
-                        }
+                        var command = (IWebEventHandler)constructor.Invoke(model.Args);
+                        command.Handle(Context);
                     }
                     catch (Exception e)
                     {
                         Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行WebEvent {hdl.Key.EventName} 失败", e, true));
                     }
+
                     return;
                 }
+
                 Trace.WriteLine($"WebEvent {hdl.Key.EventName} 的参数不对");
                 return;
             }
+
             Trace.WriteLine($"找不到WebEvent {model.Name} 可用的Handler");
         }
 
         internal WebResponse RespondWebCall(WebLetter model)
         {
             Trace.WriteLine($"WebCall名称：{model.Name} 参数数：{model.Args.Length}");
+
+            var multi = model.Name.Split(':');
+            if (multi.Length == 2)
+            {
+                Trace.WriteLine($"该WebCall意图调用内置Api：{multi[0]}，需求：{multi[1]}");
+
+                switch (multi[0])
+                {
+                    case "AppProperty":
+                        var property = Enum.Parse<KurisuAppProperty>(multi[1]);
+                        var result = Context.GetAppProperty<object>(property);
+                        return result == null
+                            ? new(WebResponseState.Failure, $"找不到属性{property}")
+                            : new(WebResponseState.Success, result);
+                    case "AppCommand":
+                        var command = Enum.Parse<KurisuAppCommand>(multi[1]);
+                        var retVal = Context.ExecuteAppCommand<object>(command, model.Args);
+                        return retVal == null
+                            ? new(WebResponseState.Failure, $"执行命令{command}失败")
+                            : new(WebResponseState.Success, retVal);
+                        break;
+                    default:
+                        Trace.WriteLine($"没有内置Api：{multi[0]}");
+                        return new WebResponse(WebResponseState.Failure, $"没有内置Api：{multi[0]}");
+                }
+            }
+            else Trace.WriteLine("该WebCall为普通WebCall");
 
             foreach (var rpd in WebCallResponders)
             {
@@ -144,11 +188,16 @@ namespace Me.EarzuChan.Ryo.Kurisu
             AppWindowManager.EmitWebEvent(model);
         }
 
+        // TODO:呃呃
         internal void TriggerAppEvent(AppEvent appEvent)
         {
             Trace.WriteLine($"AppEvent类型：{appEvent.EventType} 参数数：{appEvent.Args.Length}");
 
-            foreach (var constructors in from hdl in AppEventHandlers where appEvent.EventType == hdl.Key.EventType select hdl.Value.GetConstructors())
+            Context.EmitWebEvent(new WebLetter($"AppEvent:{appEvent.EventType}", appEvent.Args));
+
+            foreach (var constructors in from hdl in AppEventHandlers
+                     where appEvent.EventType == hdl.Key.EventType
+                     select hdl.Value.GetConstructors())
             {
                 foreach (var constructor in constructors)
                 {
@@ -161,23 +210,23 @@ namespace Me.EarzuChan.Ryo.Kurisu
                         var command = (IAppEventHandler)constructor.Invoke(appEvent.Args);
 
                         command.Handle(Context);
-
                     }
                     catch (Exception e)
                     {
                         Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行AppEvent {appEvent.EventType} 失败", e, true));
                     }
+
                     return;
                 }
+
                 Trace.WriteLine($"AppEvent {appEvent.EventType} 的参数不对");
                 return;
             }
+
             Trace.WriteLine($"找不到AppEvent {appEvent.EventType} 可用的Handler");
         }
 
         public static KurisuAppBuilder CreateBuilder(KurisuAppProfile profile) => new(profile);
-
-        public static KurisuAppBuilder CreateBuilder() => CreateBuilder(new());
     }
 
     public class KurisuAppBuilder
@@ -201,11 +250,15 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
             if (AppWindowBackend == null) throw new KurisuAppBuildingException("没有可使用的窗口后端");
 
-            if (Profile.WebEventHandlerRegistrationStrategy == WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
-            if (Profile.AppEventHandlerRegistrationStrategy == AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanAppEventHandlers();
-            if (Profile.WebCallResponderRegistrationStrategy == WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebCallResponders();
+            if (Profile.WebEventHandlerRegistrationStrategy ==
+                WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebEventHandlers();
+            if (Profile.AppEventHandlerRegistrationStrategy ==
+                AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically) ScanAppEventHandlers();
+            if (Profile.WebCallResponderRegistrationStrategy ==
+                WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically) ScanWebCallResponders();
 
-            KurisuApp application = new(Profile, Dependencies, WebEventHandlers, AppEventHandlers, WebCallResponders, AppWindowBackend);
+            KurisuApp application = new(Profile, Dependencies, WebEventHandlers, AppEventHandlers, WebCallResponders,
+                AppWindowBackend);
 
             IsBuilt = true;
 
@@ -227,12 +280,10 @@ namespace Me.EarzuChan.Ryo.Kurisu
             foreach (var type in types)
             {
                 var attribute = type.GetCustomAttribute<WebEventHandlerAttribute>();
-                if (attribute != null && (typeof(IWebEventHandler).IsAssignableFrom(type) || typeof(IWebEventHandlerForCallBack).IsAssignableFrom(type)))
-                {
-                    if (!attribute.Scannable) continue;
+                if (attribute == null || !typeof(IWebEventHandler).IsAssignableFrom(type) ||
+                    !attribute.Scannable) continue;
 
-                    RegisterWebEventHandlerDirectly(attribute, type);
-                }
+                RegisterWebEventHandlerDirectly(attribute, type);
             }
         }
 
@@ -268,7 +319,8 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
         public KurisuAppBuilder RegisterWebEventHandler(WebEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute == null || (!typeof(IWebEventHandler).IsAssignableFrom(handler) && typeof(IWebEventHandlerForCallBack).IsAssignableFrom(handler))) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
+            if (handlerAttribute == null || !typeof(IWebEventHandler).IsAssignableFrom(handler))
+                throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebEventHandlerDirectly(handlerAttribute, handler);
 
@@ -277,7 +329,8 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
         public KurisuAppBuilder RegisterAppEventHandler(AppEventHandlerAttribute handlerAttribute, Type handler)
         {
-            if (handlerAttribute == null || !typeof(IAppEventHandler).IsAssignableFrom(handler)) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
+            if (handlerAttribute == null || !typeof(IAppEventHandler).IsAssignableFrom(handler))
+                throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterAppEventHandlerDirectly(handlerAttribute, handler);
 
@@ -286,7 +339,8 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
         public KurisuAppBuilder RegisterWebCallResponder(WebCallResponderAttribute responderAttribute, Type handler)
         {
-            if (responderAttribute == null || !typeof(IWebCallResponder).IsAssignableFrom(handler)) throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
+            if (responderAttribute == null || !typeof(IWebCallResponder).IsAssignableFrom(handler))
+                throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebCallResponderDirectly(responderAttribute, handler);
 
@@ -314,41 +368,41 @@ namespace Me.EarzuChan.Ryo.Kurisu
             WebCallResponders.Add(responderAttribute, handler);
         }
 
-        public KurisuAppBuilder ProvideDependency<T>() where T : new()
+        public KurisuAppBuilder ProvideDependency<T>() where T : new() => ProvideDependency(new T());
+
+        public KurisuAppBuilder ProvideDependency<T>(T dependency)
         {
-            //检测是否已经有T的实例
-            if (Dependencies.OfType<T>().Any()) throw new KurisuAppBuildingException($"已经提供过{typeof(T)}类型的依赖项了");
-            Dependencies.Add(new T());
+            if (Dependencies.OfType<T>().Any()) throw new KurisuAppBuildingException("已经提供过该依赖项了");
+            Dependencies.Add(dependency);
 
             return this;
         }
     }
 
     // 解耦网址 重构窗口模式
-    public class KurisuAppProfile
-    {
-        // Basic Profile
-        public string Name { get; init; } = "Ryo App";
-        public string Icon { get; init; } = "AppResources/icon_ryo_app.ico";
-        public bool UseIcon { get; init; } = true;
-        public string Version { get; init; } = "1.0.0.0";
-        public string VirtualHostNameName { get; init; } = "ryo_web_frontend";
-        public string StartUpUrl { get; init; } = "https://ryo_web_frontend/index.html";
-        public string WebResourcePath { get; init; } = "WebResources";
-        public bool WindowBorderless { get; init; } = true;
-        public int WindowWidth { get; init; } = 1200;
-        public int WindowHeight { get; init; } = 800;
-        public KurisuAppWindowState StartUpWindowState { get; init; } = KurisuAppWindowState.Normal;
-        public WebEventHandlerRegistrationStrategy WebEventHandlerRegistrationStrategy { get; init; } = WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
-        public AppEventHandlerRegistrationStrategy AppEventHandlerRegistrationStrategy { get; init; } = AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically;
-        public WebCallResponderRegistrationStrategy WebCallResponderRegistrationStrategy { get; init; } = WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically;
-
-        // Debug Profile
-        public bool DebugStartUpWithDebugUrl { get; init; } = true;
-        public bool DebugAutomaticOpenDevTool { get; init; } = true;
-        public string DebugStartUpUrl { get; init; } = "http://localhost:5173/";
-        public bool DebugMode { get; init; } = false;
-    }
+    public record KurisuAppProfile(
+        string Icon,
+        string StartUpUrl,
+        string DebugStartUpUrl,
+        bool UseIcon = false,
+        string Name = "Kurisu App",
+        string Version = "1.0.0.0",
+        string VirtualHostName = "kurisu_app",
+        string WebResourcePath = "WebResources",
+        bool WindowBorderless = true,
+        int WindowWidth = 1200,
+        int WindowHeight = 800,
+        KurisuAppWindowState StartUpWindowState = KurisuAppWindowState.Normal,
+        WebEventHandlerRegistrationStrategy WebEventHandlerRegistrationStrategy =
+            WebEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically,
+        AppEventHandlerRegistrationStrategy AppEventHandlerRegistrationStrategy =
+            AppEventHandlerRegistrationStrategy.ScanAndRegisterAutomatically,
+        WebCallResponderRegistrationStrategy WebCallResponderRegistrationStrategy =
+            WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically,
+        bool DebugStartUpWithDebugUrl = false,
+        bool DebugAutomaticOpenDevTool = true,
+        bool DebugMode = false
+    );
 
     public class KurisuAppContext
     {
@@ -356,22 +410,91 @@ namespace Me.EarzuChan.Ryo.Kurisu
 
         internal KurisuAppContext(KurisuApp app) => App = app;
 
-        public T Inject<T>() where T : class =>
-            ControlFlowUtils.TryCatchingThenThrow<T>("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
+        public T? Inject<T>() where T : class => ControlFlowUtils.TryCatchingThenThrow("Cannot inject dependency",
+            () => App.Dependencies.OfType<T>().First(),
+            new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 
         // AppService
-        public void EmitWebEvent(WebLetter model)
+        public void EmitWebEvent(WebLetter model) => App.EmitWebEvent(model);
+
+
+        public void SetAppProperty(KurisuAppProperty property, params object[] value)
         {
-            // TODO:Unstable Babe
-            App.EmitWebEvent(model);
+            switch (property)
+            {
+                case KurisuAppProperty.WindowState:
+                    App.AppWindowManager.SetWindowState((KurisuAppWindowState)value[0]);
+                    break;
+                case KurisuAppProperty.WindowWidth:
+                    break;
+                case KurisuAppProperty.WindowHeight:
+                    break;
+                case KurisuAppProperty.WindowTitle:
+                    break;
+                case KurisuAppProperty.WindowUrl:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");
+            }
         }
 
-        public void StopApp() => App.Stop();
+        public T? GetAppProperty<T>(KurisuAppProperty property)
+        {
+            object? returnValue = null;
 
-        // AppWindowService
-        public void SetAppWindowState(KurisuAppWindowState state) => App.AppWindowManager.SetWindowState(state);
+            switch (property)
+            {
+                case KurisuAppProperty.WindowState:
+                    returnValue = App.AppWindowManager.GetWindowState();
+                    break;
+                case KurisuAppProperty.WindowWidth:
 
-        public KurisuAppWindowState GetAppWindowState() => App.AppWindowManager.GetWindowState();
+                    break;
+                case KurisuAppProperty.WindowHeight:
+                    break;
+                case KurisuAppProperty.WindowTitle:
+                    break;
+                case KurisuAppProperty.WindowUrl:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");
+            }
+
+            return (T?)returnValue;
+        }
+
+        public T? ExecuteAppCommand<T>(KurisuAppCommand command, params object[] modelArgs)
+        {
+            object? returnValue = null;
+
+            switch (command)
+            {
+                case KurisuAppCommand.StopApp:
+                    App.Stop();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(command), command, "没有合乎的命令");
+            }
+
+            return (T?)returnValue;
+        }
+
+        public void ExecuteAppCommand(KurisuAppCommand command, params object[] modelArgs) =>
+            ExecuteAppCommand<object>(command, modelArgs);
+    }
+
+    public enum KurisuAppProperty
+    {
+        WindowState,
+        WindowWidth,
+        WindowHeight,
+        WindowTitle,
+        WindowUrl,
+    }
+
+    public enum KurisuAppCommand
+    {
+        StopApp,
     }
 
     // TODO:解耦Browser（Window），以后支持WinUI3，并且Browser要实现EmitWebEvent的接口

@@ -10,15 +10,17 @@ namespace Me.EarzuChan.Ryo.Editor
         private static void Main(string[] args)
         {
             KurisuApp
-                .CreateBuilder(new()
-                {
+                .CreateBuilder(new(
+                    Icon: "AppResources/icon_ryo_app.ico",
+                    StartUpUrl: "https://ryo_web_frontend/index.html",
+                    DebugStartUpUrl: "http://localhost:5173/",
+                    Name: "Ryo App",
+                    DebugStartUpWithDebugUrl: true,
+                    VirtualHostName: "ryo_web_frontend",
 #if DEBUG
-                    DebugMode = true,
-                    UseIcon = false,
-                    /*DebugAutomaticOpenDevTool = false,
-                    DebugStartUpWithDebugUrl = false,*/
+                    DebugMode: true
 #endif
-                })
+                ))
                 .UseDefaultWindowBackend()
                 .ProvideDependency<MassManager>()
                 .Build()

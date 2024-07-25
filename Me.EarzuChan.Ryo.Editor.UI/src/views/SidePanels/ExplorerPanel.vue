@@ -36,7 +36,7 @@ const filterText = ref("")
 <style scoped>
 #panel {
   display: flex;
-  flex: 1;
+  min-height: 100%;
 
   flex-direction: column;
 }

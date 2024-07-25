@@ -19,7 +19,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
     const activeTabPage = ref<any>(null)
 
     const openedTabs = ref<TabModel[]>([
-        {
+        /*{
             name: "项目页1",
             page: markRaw(ItemPage),
             data: 0
@@ -29,17 +29,17 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             page: markRaw(ItemPage),
             data: 1
         },
-        {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},
+        {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
     ])
     const activeTabIndex = ref(0)
     const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
 
-    const openedFiles = ref<MassFile[]>([{
+    const openedFiles = ref<MassFile[]>([/*{
         name: "假文件1",
         items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]
-    }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}])
+    }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}*/])
     const openedItems = ref<ItemModel[]>([
-        {
+        /*{
             id: 1919810, parseSuccess: true,
             type: appState.getRyoTypeByName("sengine.graphics2d.FontSprites[]"),
             data: [{
@@ -55,9 +55,17 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 }, isArray: true, typeName: "java.lang.String"
             },
             data: ["man"]
-        }])
+        }*/])
 
     const dialogState = useDialogStateStore()
+
+    function openFile() {
+        emitWebEvent(makeWebLetter('OpenFile'))
+    }
+
+    function newFile() {
+        emitWebEvent(makeWebLetter('NewFile'))
+    }
 
     function clickTab(index: number) {
         activeTabIndex.value = index
@@ -186,9 +194,9 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         try {
             console.log(TAG, "Start init")
 
-            addWebEventListener("OpenedFilesChanged", (args: MassFile[]) => {
-                console.log(TAG, "OpenedFilesChanged", args)
-                openedFiles.value = args
+            addWebEventListener("OpenedFilesChanged", (args: MassFile[][]) => {
+                console.log(TAG, "OpenedFilesChanged", args[0])
+                openedFiles.value = args[0]
             })
             console.log(TAG, "OpenedFilesChanged监听器已创建")
             emitWebEvent(makeWebLetter('NotifyOpenedFiles'))
@@ -220,6 +228,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         pageUndo,
         pageSave,
         getIsTabUnsaved,
-        openTab
+        openTab,
+        openFile,
+        newFile
     }
 })

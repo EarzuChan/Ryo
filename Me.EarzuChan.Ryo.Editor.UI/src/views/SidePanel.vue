@@ -82,7 +82,8 @@ function clickPanelTab(item: SidePanelItem, index: number) {
   width: 288px;
   margin-right: 8px;
   padding: 12px;
-  display: flex;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   background-color: var(--ryo-color-surface-container-high);
 }

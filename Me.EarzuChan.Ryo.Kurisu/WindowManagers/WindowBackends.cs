@@ -48,7 +48,7 @@ namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers
             // 当浏览器加载好
 
             // 资源拨弄成虚拟主机
-            WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(App.Profile.VirtualHostNameName, App.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
+            WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(App.Profile.VirtualHostName, App.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
 
             // TODO:FIX BABE
             WebView.CoreWebView2.Navigate(App.Profile.DebugMode && App.Profile.DebugStartUpWithDebugUrl ? App.Profile.DebugStartUpUrl : App.Profile.StartUpUrl);

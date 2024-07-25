@@ -6,6 +6,9 @@ using Me.EarzuChan.Ryo.Kurisu.WebCalls;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
+using System.IO;
+using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Editor.Utils;
 using Me.EarzuChan.Ryo.Kurisu.WindowManagers;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers
@@ -17,13 +20,19 @@ namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers
             new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
     }
 
-    [WebEventHandler("StopApp")]
-    public class StopAppHandler : IWebEventHandler
+    [WebEventHandler("OpenFile")]
+    public class OpenFileHandler : IWebEventHandler
     {
         public void Handle(KurisuAppContext context)
         {
-            Trace.WriteLine("结束应用程序");
-            context.StopApp();
+            var massManager = context.Inject<MassManager>();
+
+            var filePath = MiscUtils.OpenFileByDialog("MassFile", "fs");
+            if (filePath is null) return;
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            massManager.LoadMassFile(filePath, fileName);
+            
+            MiscUtils.EmitOpenedMasses(context);
         }
     }
 
@@ -35,33 +44,5 @@ namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers
             FileName = link,
             UseShellExecute = true
         });
-    }
-
-    [WebEventHandler("SetAppWindowState")]
-    public class SetAppWindowStateHandler : IWebEventHandler
-    {
-        private readonly KurisuAppWindowState State;
-
-        public SetAppWindowStateHandler(long state) => State = (KurisuAppWindowState)state;
-
-        public void Handle(KurisuAppContext context) => context.SetAppWindowState(State);
-    }
-
-    [AppEventHandler(AppEventType.AppWindowStateChanged)]
-    public class AppWindowStateChangedHandler : IAppEventHandler
-    {
-        private readonly KurisuAppWindowState AppWindowState;
-
-        public AppWindowStateChangedHandler(KurisuAppWindowState state) => AppWindowState = state;
-
-        public void Handle(KurisuAppContext context) =>
-            context.EmitWebEvent(new WebLetter("AppWindowStateChanged", AppWindowState));
-    }
-
-    [WebEventHandler("NotifyAppWindowState")]
-    public class NotifyAppWindowStateHandler : IWebEventHandler
-    {
-        public void Handle(KurisuAppContext context) =>
-            context.EmitWebEvent(new WebLetter("AppWindowStateChanged", context.GetAppWindowState()));
     }
 }

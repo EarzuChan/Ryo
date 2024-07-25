@@ -513,7 +513,7 @@ namespace Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories
 
                         //每层的格式
                         RyoPixmap.FORMAT format = (RyoPixmap.FORMAT)reader.ReadUnsignedByte();
-                        bool isJPG = format == RyoPixmap.FORMAT.RGB888 || format == RyoPixmap.FORMAT.RGB565;
+                        bool isJPG = format is RyoPixmap.FORMAT.RGB888 or RyoPixmap.FORMAT.RGB565;
 
                         // 横切数
                         int levelWidthClipCount = TextureUtils.CalculateClipCount(clipSize, levelWidth);

@@ -36,7 +36,10 @@ namespace Me.EarzuChan.Ryo.Kurisu.Utils
             if (model.Name == null) throw new IllegalWebEventException($"无效WebLetter：{str}\nModel的Name为Null");
 
             model.Name = model.Name.Trim();
-            model.Args ??= Array.Empty<object>();
+            model.Args ??= [];
+
+            // 尝试把值在int内的long转化为int
+            model.Args = model.Args.Select(it => it is long l ? (int)l : it).ToArray();
 
             return model;
         }

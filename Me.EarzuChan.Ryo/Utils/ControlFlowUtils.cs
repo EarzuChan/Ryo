@@ -4,10 +4,16 @@ namespace Me.EarzuChan.Ryo.Utils
 {
     public static class ControlFlowUtils
     {
-        public static void TryCatchingThenThrow(string errorPrefix, Action action, Dictionary<Type, String>? exceptionReplacements = null) =>
-        TryCatchingThenThrow<object>(errorPrefix, () => { action(); return null; }, exceptionReplacements);
+        public static void TryCatchingThenThrow(string errorPrefix, Action action,
+            Dictionary<Type, String>? exceptionReplacements = null) =>
+            TryCatchingThenThrow<object>(errorPrefix, () =>
+            {
+                action();
+                return null;
+            }, exceptionReplacements);
 
-        public static T TryCatchingThenThrow<T>(string errorPrefix, Func<T> action, Dictionary<Type, String>? exceptionReplacements = null)
+        public static T? TryCatchingThenThrow<T>(string errorPrefix, Func<T?> action,
+            Dictionary<Type, String>? exceptionReplacements = null)
         {
             try
             {
@@ -15,16 +21,13 @@ namespace Me.EarzuChan.Ryo.Utils
             }
             catch (Exception ex)
             {
-                if (exceptionReplacements != null)
+                if (exceptionReplacements == null)
+                    throw new RyoException($"{errorPrefix}, due to {ex.Message.MakeFirstCharLower()}.", ex);
+
+                foreach (var customEx in exceptionReplacements.Where(customEx => ex.GetType() == customEx.Key))
                 {
-                    foreach (var customEx in exceptionReplacements)
-                    {
-                        if (ex.GetType() == customEx.Key)
-                        {
-                            ex = new RyoException(customEx.Value);
-                            break;
-                        }
-                    }
+                    ex = new RyoException(customEx.Value);
+                    break;
                 }
 
                 throw new RyoException($"{errorPrefix}, due to {ex.Message.MakeFirstCharLower()}.", ex);
