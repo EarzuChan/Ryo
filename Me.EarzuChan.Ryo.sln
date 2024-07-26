@@ -2,11 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.WPFImageConverter", "Me.EarzuChan.Ryo.WPFImageConverter\Me.EarzuChan.Ryo.WPFImageConverter.csproj", "{303592A5-C115-4146-9C00-C3D12C701104}"
-	ProjectSection(ProjectDependencies) = postProject
-		{C8509C38-12F0-4EBD-9116-762B5D6A94C7} = {C8509C38-12F0-4EBD-9116-762B5D6A94C7}
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.ConsoleFrontEnd", "Me.EarzuChan.Ryo.ConsoleFrontEnd\Me.EarzuChan.Ryo.ConsoleFrontEnd.csproj", "{80A96100-E16D-48CD-B0CC-17E2C8F571FE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Me.EarzuChan.Ryo.Core", "Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj", "{9C74C3E4-56BB-4EDE-BD59-0A000C9DFBA6}"
@@ -39,15 +34,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Release|x64.ActiveCfg = Release|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Release|x86.ActiveCfg = Release|Any CPU
-		{303592A5-C115-4146-9C00-C3D12C701104}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80A96100-E16D-48CD-B0CC-17E2C8F571FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{80A96100-E16D-48CD-B0CC-17E2C8F571FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80A96100-E16D-48CD-B0CC-17E2C8F571FE}.Debug|ARM64.ActiveCfg = Debug|Any CPU

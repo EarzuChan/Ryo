@@ -1,62 +1,61 @@
 ﻿using ICSharpCode.SharpZipLib.Zip.Compression;
 
-namespace Me.EarzuChan.Ryo.Utils
+namespace Me.EarzuChan.Ryo.Utils;
+
+public static class CompressionUtils
 {
-    public static class CompressionUtils
+    // 是否抛出要看策略
+
+    public static byte[] Inflate(byte[] input, int offset, int length)
     {
-        // 是否抛出要看策略
-
-        public static byte[] Inflate(byte[] input, int offset, int length)
+        try
         {
-            try
+            var inflater = new Inflater();
+            inflater.SetInput(input, offset, length);
+
+            var buffer = new byte[1024];
+
+            List<byte> outputList = [];
+
+            while (!inflater.IsFinished)
             {
-                var inflater = new Inflater();
-                inflater.SetInput(input, offset, length);
-
-                var buffer = new byte[1024];
-
-                List<byte> outputList = [];
-
-                while (!inflater.IsFinished)
-                {
-                    var count = inflater.Inflate(buffer);
-                    outputList.AddRange(buffer.Take(count));
-                }
-
-                return outputList.ToArray();
+                var count = inflater.Inflate(buffer);
+                outputList.AddRange(buffer.Take(count));
             }
-            catch (Exception e)
-            {
-                LogUtils.PrintError("解压出错", e);
-                return [];
-            }
+
+            return outputList.ToArray();
         }
-
-        public static byte[] Deflate(byte[] indexBytes, int offset, int length)
+        catch (Exception e)
         {
-            try
+            LogUtils.PrintError("解压出错", e);
+            return [];
+        }
+    }
+
+    public static byte[] Deflate(byte[] indexBytes, int offset, int length)
+    {
+        try
+        {
+            Deflater deflater = new();
+            deflater.SetInput(indexBytes, offset, length);
+            deflater.Finish();
+
+            var buffer = new byte[1024];
+
+            List<byte> outputList = [];
+
+            while (!deflater.IsFinished)
             {
-                Deflater deflater = new();
-                deflater.SetInput(indexBytes, offset, length);
-                deflater.Finish();
-
-                var buffer = new byte[1024];
-
-                List<byte> outputList = [];
-
-                while (!deflater.IsFinished)
-                {
-                    var count = deflater.Deflate(buffer);
-                    outputList.AddRange(buffer.Take(count));
-                }
-
-                return outputList.ToArray();
+                var count = deflater.Deflate(buffer);
+                outputList.AddRange(buffer.Take(count));
             }
-            catch (Exception e)
-            {
-                LogUtils.PrintError("压缩出错", e);
-                return [];
-            }
+
+            return outputList.ToArray();
+        }
+        catch (Exception e)
+        {
+            LogUtils.PrintError("压缩出错", e);
+            return [];
         }
     }
 }
