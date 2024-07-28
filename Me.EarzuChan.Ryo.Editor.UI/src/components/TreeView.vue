@@ -3,7 +3,7 @@
                    @focusout="clearLastClicked">
     <div class="tree-node-container" :style="'padding-left:' + (node.level * props.indent) + 'px'"
          v-for="node in processedTree" :key="node.indexPath.toString()"
-         @click="handleClickNode(node)" @contextmenu.prevent.stop="handleRightClickNode(node)"
+         @click="handleClickNode(node)" @contextmenu.prevent.stop="e=>handleRightClickNode(e,node)"
          :class="{'last-clicked':isEqual(lastClicked,node.indexPath)}">
       <div class="tree-node">
         <Icon class="tree-node-icon" :filled-icon="node.isStem?false:isEqual(lastClicked,node.indexPath)"
@@ -25,6 +25,8 @@ import type {TreeNodeModel} from "@/models/UIModels"
 import Icon from "./Icon.vue"
 
 const TAG = "TreeView"
+
+// TODO:虚拟列表
 
 interface InternalTreeNode {
   name: string
@@ -109,9 +111,9 @@ function handleClickNode(node: InternalTreeNode) {
     emit('nodeClick', node.indexPath)
 }
 
-function handleRightClickNode(node: InternalTreeNode) {
+function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
   console.log(TAG, 'Node right clicked:', node, node.indexPath)
-  emit('nodeRightClick', node.indexPath)
+  emit('nodeRightClick', node.indexPath, e)
 }
 </script>
 
@@ -132,6 +134,7 @@ function handleRightClickNode(node: InternalTreeNode) {
   margin: 0 24px 0 12px;
   display: flex;
   flex: 1;
+  overflow: hidden;
   align-items: center;
   gap: 12px;
 }

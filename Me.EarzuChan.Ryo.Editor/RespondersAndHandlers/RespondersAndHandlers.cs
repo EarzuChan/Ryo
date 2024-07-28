@@ -48,9 +48,14 @@ public class AppInitializedHandler : IAppEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
-        Trace.WriteLine("App Initialized");
-
         context.Inject<MassManager>()!.MassFilesChanged +=
             (masses) => MiscUtils.EmitOpenedMasses(context, masses);
     }
+}
+
+[WebEventHandler("NotifyOpenedFiles")]
+public class NotifyOpenedFilesHandler : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) =>
+        MiscUtils.EmitOpenedMasses(context, context.Inject<MassManager>()!.MassFiles);
 }

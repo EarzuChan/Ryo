@@ -189,6 +189,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         activeTabPage.value?.undo()
     }
 
+    function mentionItem(massName: string, itemId: number) {
+        console.log(TAG, "提及项目", massName, itemId)
+    }
+
+    function saveMass(massName: string) {
+    }
+
+    function closeMass(massName: string) {
+    }
+
 // Async Init
     (async () => {
         try {
@@ -230,6 +240,9 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         getIsTabUnsaved,
         openTab,
         openFile,
-        newFile
+        newFile,
+        mentionItem,
+        saveMass,
+        closeMass,
     }
 })

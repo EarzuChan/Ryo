@@ -22,6 +22,7 @@ public enum KurisuWindowState
 internal class WpfKurisuWindowManager : IKurisuWindowManager
 {
     private KurisuApp? App;
+
     private readonly WebView2 WebView = new();
     private readonly Application WpfApp = new();
     private readonly Window WpfWindow = new();
@@ -55,9 +56,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
             app.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
 
         // TODO:FIX BABE
-        WebView.CoreWebView2.Navigate(app.Profile is { DebugMode: true, DebugStartUpWithDebugUrl: true }
-            ? app.Profile.DebugStartUpUrl
-            : app.Profile.StartUpUrl);
+        // WebView.CoreWebView2.Navigate();
 
         // 提供对象 互操作
         WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppApiBridge(app));
@@ -91,7 +90,10 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         if (app.Profile.UseIcon)
             WpfWindow.Icon = new BitmapImage(new Uri(app.Profile.Icon, UriKind.RelativeOrAbsolute));
 
-        WpfWindow.Content = WebView;
+        WpfWindow.Content = WebView.Also(it =>
+            it.Source = new Uri(app.Profile is { DebugMode: true, DebugStartUpWithDebugUrl: true }
+                ? app.Profile.DebugStartUpUrl
+                : app.Profile.StartUpUrl));
 
         if (app.Profile.WindowBorderless)
             WindowChrome.SetWindowChrome(WpfWindow, new WindowChrome()
