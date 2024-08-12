@@ -143,6 +143,7 @@ function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
   flex: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .tree-node-icon {

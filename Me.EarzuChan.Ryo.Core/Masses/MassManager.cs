@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 using Me.EarzuChan.Ryo.Core.Utils;
@@ -51,7 +52,7 @@ public class MassManager
         {
             throw new FileLoadException("集成文件时出错，" + ex.Message, ex);
         }
-            
+
         // MassFile里弄个事件，在这里监听以触发FilesChanged事件
 
         MassFilesChanged?.Invoke(MassFiles);

@@ -406,9 +406,9 @@ public class ImportDialogueTreeCommand : ICommand
 {
     public string FileName;
     public string JsonFilePath;
-    public string ItemName;
+    public string? ItemName;
 
-    public ImportDialogueTreeCommand(string fileName, string jsonFilePath, string itemName)
+    public ImportDialogueTreeCommand(string fileName, string jsonFilePath, string? itemName)
     {
         FileName = fileName;
         JsonFilePath = jsonFilePath;

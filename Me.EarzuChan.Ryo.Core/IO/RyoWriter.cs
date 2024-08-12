@@ -36,7 +36,7 @@ public class RyoWriter : IDisposable
 
     public void WriteBytes(byte[] pixels) => Writer.Write(pixels);
 
-    public void WrintString(string v)
+    public void WrintString(string? v)
     {
         byte[] vytes = Encoding.UTF8.GetBytes(v);
         WriteInt(vytes.Length);

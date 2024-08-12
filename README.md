@@ -126,7 +126,8 @@ A small WPF application for users to convert textures and images bidirectionally
 
 - **Teio**: A launcher for Simulacra series games (using SEngine) across Windows and Android. It will support mods, use
   any game resource package, and include various modded resources markets.
-- **Hachimi**: An IDE for Simulacra players interested in creating mods and derivative versions. It will facilitate
+- **TeioAPI**: A set of APIs for Teio Mod Developers to interact with the launcher and manipulate game and resources.
+- **Soyorin**: An IDE for Simulacra players interested in creating mods and derivative versions. It will facilitate
   unpacking original game apps (users must provide their own copies), managing game resources, one-click packing of mod
   resources, and integration with Ryo Editor.
 

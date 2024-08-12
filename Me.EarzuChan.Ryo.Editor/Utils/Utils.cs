@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu;
 using Microsoft.Win32;
 
@@ -19,20 +20,21 @@ public static class MiscUtils
         return openFileDialog.ShowDialog() == true ? openFileDialog.FileName : null;
     }
 
-    public static void EmitOpenedMasses(KurisuAppContext context, ConcurrentDictionary<string, MassFile> dic)
+    public static void EmitOpenedVolumes(KurisuAppContext context, Dictionary<LocalVolume, LocalVolumeMetaData> dic)
     {
         var openedMasses =
             dic.Select(pair => new
             {
-                name = pair.Key,
-                items = pair.Value.IdStrPairs.Select(item => new
-                {
-                    id = item.Value,
-                    name = item.Key
-                })
+                name = pair.Key.VolumeName,
+                items = pair.Key.IdStrPairs.Select(item =>
+                    new
+                    {
+                        id = item.Value,
+                        name = item.Key,
+                    })
             });
 
         context.EmitWebEvent(new
-            ("OpenedFilesChanged", openedMasses));
+            ("OpenedVolumesChanged", openedMasses));
     }
 }

@@ -82,7 +82,7 @@ public class MassFile : Mass
 
     public MassFile() => ExtendedName = "FileSystem";
 
-    public enum ADDTYPE
+    public enum AddType
     {
         Add, Replace
     }
@@ -108,16 +108,15 @@ public class MassFile : Mass
         }
     }
 
-    public ADDTYPE Add(string token, object obj)
+    public AddType Add(string token, object obj)
     {
-        int objId = Add(obj);
-        if (IdStrPairs.ContainsKey(token))
-        {
-            IdStrPairs[token] = objId;
-            return ADDTYPE.Replace;
-        }
-        IdStrPairs.Add(token, objId);
-        return ADDTYPE.Add;
+        var objId = Add(obj);
+        
+        if (IdStrPairs.TryAdd(token, objId)) return AddType.Add;
+        
+        IdStrPairs[token] = objId;
+        return AddType.Replace;
+
     }
 
     // 看明白了，原版是抛弃原有，添加同名即替换而不删除原来的块，指向新块，所以原来的Put可以不Put
@@ -126,25 +125,25 @@ public class MassFile : Mass
 public class TextureFile : Mass
 {
     // 成员
-    public readonly List<List<int>> ImageIDsArray = new();
+    public readonly List<List<int>> ImageIDsArray = [];
 
-    public TextureFile() : base() => ExtendedName = "TextureFile";
+    public TextureFile() => ExtendedName = "TextureFile";
 
     protected override void AfterLoadingIndex(RyoReader reader)
     {
         // 从读者类输入流中读取对象个数信息，并构建表
-        int imageCount = reader.ReadInt();
+        var imageCount = reader.ReadInt();
         //ImageIDsArray = new int[inflatedDataReader.ReadInt()][];
 
         // 构建表
-        for (int i = 0; i < imageCount; i++)
+        for (var i = 0; i < imageCount; i++)
         {
             // ImageIDsArray[i] = new int[reader.ReadInt()];
             var subList = new List<int>();
-            int clipCount = reader.ReadInt();
+            var clipCount = reader.ReadInt();
 
             // 读取每个对象的个数信息
-            for (int j = 0; j < clipCount; j++) subList.Add(reader.ReadInt());
+            for (var j = 0; j < clipCount; j++) subList.Add(reader.ReadInt());
 
             ImageIDsArray.Add(subList);
         }
@@ -153,10 +152,10 @@ public class TextureFile : Mass
     protected override void AfterSavingIndex(RyoWriter writer)
     {
         writer.WriteInt(ImageIDsArray.Count);
-        foreach (List<int> sublist in ImageIDsArray)
+        foreach (var sublist in ImageIDsArray)
         {
             writer.WriteInt(sublist.Count);
-            foreach (int item in sublist) writer.WriteInt(item);
+            foreach (var item in sublist) writer.WriteInt(item);
         }
 
     }

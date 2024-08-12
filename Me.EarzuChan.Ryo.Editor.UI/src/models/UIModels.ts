@@ -15,6 +15,7 @@ export interface DialogModel {
     headline?: string
     description?: string
     showOverlay?: boolean
+    closeOnOverlayClick?: boolean
     actions?: DialogActionButtonModel[]
     onClosed?: () => void
     onClose?: () => void

@@ -5,7 +5,7 @@ namespace Me.EarzuChan.Ryo.Core.Utils;
 
 public static class ReadWriteTypesUtils
 {
-    public static object Read(Type itemType, RyoReader reader, Mass mass, bool isFieldMode = false) =>
+    public static object? Read(Type itemType, RyoReader reader, Mass mass, bool isFieldMode = false) =>
         (itemType == typeof(int)) ? reader.ReadInt() :
         (itemType == typeof(string) && !isFieldMode) ? reader.ReadString() :
         (itemType == typeof(float)) ? reader.ReadFloat() :

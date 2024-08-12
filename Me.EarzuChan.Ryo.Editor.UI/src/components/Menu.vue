@@ -179,7 +179,6 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
   max-height: 80vh;
 
   min-width: 112px;
-  max-width: 280px;
 
   border-radius: 4px;
   background-color: var(--ryo-color-surface-container);
@@ -199,6 +198,10 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
   align-items: center;
   cursor: pointer;
   color: var(--ryo-color-on-surface);
+
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .menu-item.disabled {

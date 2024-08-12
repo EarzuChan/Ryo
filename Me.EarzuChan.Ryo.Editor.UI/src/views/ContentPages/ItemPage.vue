@@ -37,7 +37,7 @@ import {useAppStateStore} from "@/stores/AppState"
 import Select from "@/components/Select.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import {type ItemModel} from "@/models/AppModels"
+import {type FileModel} from "@/models/AppModels"
 
 const TAG = "ItemPage"
 
@@ -52,7 +52,7 @@ const props = defineProps({
   data: Number
 })
 
-const itemData = computed<ItemModel>(() => {
+const itemData = computed<FileModel>(() => {
   console.debug(TAG, "获取项目数据", props.data, workspaceState.openedItems.length)
   if (ensure(props.data) && props.data! > -1 && props.data! < workspaceState.openedItems.length) {
     const item = workspaceState.openedItems[props.data!]

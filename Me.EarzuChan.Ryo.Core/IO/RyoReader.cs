@@ -42,17 +42,9 @@ public class RyoReader : IDisposable
         return sb.ToString();
     }
 
-    public string ReadString()
-    {
-        int length = ReadInt();
-        return ReadString(length);
-    }
+    public string ReadString() => ReadString(ReadInt());
 
-    public string ReadString(int length)
-    {
-        byte[] bytes = Reader.ReadBytes(length);
-        return Encoding.UTF8.GetString(bytes);
-    }
+    private string ReadString(int length) => Encoding.UTF8.GetString(Reader.ReadBytes(length));
 
     public bool CheckHasString(string str) => ReadString(Encoding.UTF8.GetBytes(str).Length) == str;
 

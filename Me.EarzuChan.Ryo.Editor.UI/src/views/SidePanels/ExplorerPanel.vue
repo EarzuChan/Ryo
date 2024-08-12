@@ -12,7 +12,7 @@ import {computed, ref} from "vue"
 import TreeView from "@/components/TreeView.vue"
 import type {MenuItem, TreeNodeModel} from "@/models/UIModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import type {MassFile} from "@/models/AppModels"
+import type {VolumeModel} from "@/models/AppModels"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {showMenu} from "@/utils/MenuUtils"
 
@@ -22,28 +22,38 @@ const workspaceState = useWorkspaceStateStore()
 const dialogState = useDialogStateStore()
 
 const computedMassFiles = computed(() => {
-  const ori = workspaceState.openedFiles as MassFile[]
+  const ori = workspaceState.openedVolumes as VolumeModel[]
 
   // 把MassFile[]弄成TreeNodeModels
   let result: TreeNodeModel[] = []
+
   ori?.forEach(mf => {
-    let childrenLTreeNodeModel: TreeNodeModel[] = []
+    let childrenTreeNodeModel: TreeNodeModel[] = []
     mf.items?.forEach(child => {
-      childrenLTreeNodeModel.push({name: child.name})
+      childrenTreeNodeModel.push({name: child.name})
     })
-    result.push({name: mf.name, children: childrenLTreeNodeModel})
+
+    result.push({name: mf.name, children: childrenTreeNodeModel})
   })
+
   return result
 })
 
 const filterText = ref("")
 
 function treeNodeClicked(nodePath: number[]) {
-  const [item] = parsePath(nodePath)
+  const [item, _, dad] = parsePath(nodePath)
   dialogState.order({
     headline: '点击了项目',
-    description: `节点路径：${nodePath.join('/')}\n项目名称：${item.name}`,
-    actions: [{text: '了解'}],
+    description: `节点路径：${nodePath.join('/')}\n项目名称：${item.name}\n项目ID：${item.id}`,
+    closeOnOverlayClick: true,
+    actions: [
+      {
+        text: "打开", onClick() {
+          workspaceState.mentionItem(dad.name, item.id)
+        },
+      },
+      {text: '了解'}],
   })
 }
 
@@ -60,16 +70,16 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
   ]
 
   if (stuff !== undefined) {
-    if (isItem) items.push({
+    if (isItem) items.push({name: `项目ID${stuff.id}`, disabled: true}, {
       name: '打开项目',
       action: () => workspaceState.mentionItem(dad.name, stuff.id)
     })
     else items.push({
       name: '保存Mass',
-      action: () => workspaceState.saveMass(stuff.name)
+      action: () => workspaceState.saveVolume(stuff.name)
     }, {
       name: '关闭Mass',
-      action: () => workspaceState.closeMass(stuff.name)
+      action: () => workspaceState.closeVolume(stuff.name)
     })
   }
 
@@ -77,7 +87,7 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
 }
 
 function parsePath(path: number[]): any[] {
-  const file = workspaceState.openedFiles[path[0]]
+  const file = workspaceState.openedVolumes[path[0]]
   if (!file) {
     console.error(TAG, `No file found at index ${path[0]}`)
     return [undefined, false, undefined]

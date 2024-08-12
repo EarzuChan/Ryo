@@ -53,7 +53,7 @@ public class DirectReadRawBytesAdapter : IAdapter
 {
     // public string JavaClz => "sengine.mass.serializers.FailedSerializer";
 
-    public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadAllBytes();
+    public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadAllBytes();
 
     public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteBytes((byte[])obj);
 }

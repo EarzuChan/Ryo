@@ -40,7 +40,7 @@ public class CustomFormatAdapterFactory : IAdapterFactory
 
         // string IAdapter.JavaClz => "sengine.mass.serializers.MassSerializableSerializer";
 
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             ConstructorInfo? ctor = null;
             List<Type>? paramTypes = null;
@@ -59,7 +59,7 @@ public class CustomFormatAdapterFactory : IAdapterFactory
             }
 
             // 一个一个参数来读取
-            object[] args = new object[paramTypes.Count];
+            object?[] args = new object[paramTypes.Count];
             for (int i = 0; i < paramTypes.Count; i++)
             {
                 Type itemType = paramTypes[i];
@@ -118,16 +118,16 @@ public class CustomFormatAdapterFactory : IAdapterFactory
         private readonly FieldInfo[] FieldInfos;
         private readonly Type ObjectType;
 
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
-            object item = Activator.CreateInstance(ObjectType)!;
+            object? item = Activator.CreateInstance(ObjectType)!;
             // 所以顺序必须按照Java 紧密排序！
             for (int i = 0; i < FieldInfos.Length; i++)
             {
                 FieldInfo field = FieldInfos[i];
                 try
                 {
-                    object value = ReadWriteTypesUtils.Read(field.FieldType, reader, mass, true);
+                    object? value = ReadWriteTypesUtils.Read(field.FieldType, reader, mass, true);
                     // LogUtils.PrintInfo($"读取第{i + 1}：{value.GetType()}");
                     field.SetValue(item, value);
                 }
@@ -245,26 +245,26 @@ public class NormalTypeAdapterFactory : IAdapterFactory
 
     public class IntAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
 
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteInt((int)obj);
     }
 
     public class StringAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WrintString((string)obj);
     }
 
     public class EnumAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType type)
+        public object? From(Mass mass, RyoReader reader, RyoType type)
         {
             bool isEnum = type.CsType!.IsEnum;
             Type enumType = type.CsType!;
             if (!isEnum) enumType = type.CsType;
-            return ((Enum[])Enum.GetValues(enumType))[reader.ReadInt()];
+            return ((Enum?[])Enum.GetValues(enumType))[reader.ReadInt()];
         }
 
 
@@ -308,7 +308,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
 
     public class IntArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             int i = reader.ReadInt();
             int[] iArr = new int[i];
@@ -330,7 +330,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
     // Untested
     public class ShortArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             int i = reader.ReadInt();
             short[] sArr = new short[i];
@@ -355,7 +355,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
     // Untested
     public class FloatArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             int i = reader.ReadInt();
             float[] fArr = new float[i];
@@ -379,7 +379,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
 
     public class ObjectArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
@@ -388,7 +388,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
             Type itemType = oriItemType ?? typeof(object);
 
             // 读个数
-            Array objArr = Array.CreateInstance(itemType, reader.ReadInt());
+            Array? objArr = Array.CreateInstance(itemType, reader.ReadInt());
             // LogUtils.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
 
             //mass.Reference(objArr);
@@ -403,7 +403,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
                 // LogUtils.INSTANCE.PrintInfo("额外重写匹配 类型为" + itemType);
                 if (itemType != typeof(object))
                 {
-                    Array newArray = Array.CreateInstance(itemType, objArr.Length);
+                    Array? newArray = Array.CreateInstance(itemType, objArr.Length);
 
                     for (int i = 0; i < objArr.Length; i++)
                     {
@@ -434,7 +434,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
 
     public class ByteArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
 
         public void To(object obj, Mass mass, RyoWriter writer)
         {
@@ -446,17 +446,17 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
 
     public class StringArrayAdapter : IAdapter
     {
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             int i = reader.ReadInt();
-            var strArr = new string[i];
+            string?[] strArr = new string[i];
             for (int i2 = 0; i2 < i; i2++) strArr[i2] = reader.ReadString();
             return strArr;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer)
         {
-            string[] strArr = (string[])obj;
+            string?[] strArr = (string?[])obj;
             writer.WriteInt(strArr.Length);
             foreach (var item in strArr) writer.WrintString(item);
         }
@@ -489,7 +489,7 @@ public class SpecialFormatAdapterFactory : IAdapterFactory
     public class FragmentalImageAdapter : IAdapter
     {
 
-        public object From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             int jpgLength;// 保留
 

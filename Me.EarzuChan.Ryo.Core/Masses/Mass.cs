@@ -1,5 +1,4 @@
 ﻿using Me.EarzuChan.Ryo.Core.Adaptations;
-using Me.EarzuChan.Ryo.Core.Exceptions;
 using Me.EarzuChan.Ryo.Core.IO;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Exceptions;
@@ -19,11 +18,11 @@ public interface IMass
 
     T Get<T>(int id);
 
-    int Add(object obj);
+    int Add<T>(T obj);
 
     void Remove(int id);
 
-    void Set(int id, object obj);
+    void Set<T>(int id, T obj);
 
     /* 加载时绑定数据块的适配项
      * 单独注册项
@@ -35,7 +34,7 @@ public interface IMass
     // T Read<T>(); // 需要被取缔
 }
 
-public class Mass : IMass
+public abstract class Mass : IMass
 {
     protected string ExtendedName = "Mass";
 
@@ -49,7 +48,7 @@ public class Mass : IMass
 
     private bool IsPutting;
 
-    private Dictionary<int, object>? SavedItems = null;
+    private Dictionary<int, object>? SavedItems;
 
     public class ItemBlob
     {
@@ -71,11 +70,11 @@ public class Mass : IMass
     {
         //public int AdaptionId;
 
-        public string DataJavaClz;
+        public string? DataJavaClz;
 
-        public string AdapterJavaClz;
+        public string? AdapterJavaClz;
 
-        public ItemAdaption(string dataJavaClz, string adapterFactoryJavaClz)
+        public ItemAdaption(string? dataJavaClz, string? adapterFactoryJavaClz)
         {
             //AdaptionId = adaptionId;
             DataJavaClz = dataJavaClz;
@@ -97,7 +96,8 @@ public class Mass : IMass
         var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
         if (result != null) return ItemAdaptions.IndexOf(result);
 
-        var adapterRyoType = ryoType.DataRyoTypeFindAdapterRyoType() ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
+        var adapterRyoType = ryoType.DataRyoTypeFindAdapterRyoType() ??
+                             throw new FormatException("该类型没有可用的适配器：" + ryoType);
 
         var adapterJavaClz = adapterRyoType.ToJavaClass()!;
         var itemAdaption = new ItemAdaption(javaClz, adapterJavaClz);
@@ -106,7 +106,7 @@ public class Mass : IMass
         return ItemAdaptions.IndexOf(itemAdaption);
     }
 
-    public int Add(object obj)
+    public int Add<T>(T obj)
     {
         try
         {
@@ -117,7 +117,7 @@ public class Mass : IMass
 
             // if (id > 10) Environment.Exit(1919810);
 
-            ItemBlobs.Add(new ItemBlob(114514, 1919810, Array.Empty<byte>()));// 占位耳
+            ItemBlobs.Add(new ItemBlob(114514, 1919810, [])); // 占位耳
 
             // 代表正在序列化，托管给原主
             // 收集单
@@ -127,6 +127,7 @@ public class Mass : IMass
                 // LogUtil.INSTANCE.PrintInfo($"直接返回：{id}");
                 return id;
             }
+
             SavedItems = new() { { id, obj } };
 
             int nowId = id;
@@ -148,7 +149,8 @@ public class Mass : IMass
                 adapter.To(nowObj, this, writer);
                 writer.PositionToZero();
 
-                ItemBlobs[nowId] = new ItemBlob(adaptionId, StickyMetaDatas.Count, new RyoReader(writer).ReadAllBytes());
+                ItemBlobs[nowId] =
+                    new ItemBlob(adaptionId, StickyMetaDatas.Count, new RyoReader(writer).ReadAllBytes());
                 //LogUtil.INSTANCE.PrintInfo($"ID：{id} 适配后_循环第：{nowId} 粘连索引：{StickyMetaDatas.Count}");
 
                 nowId++;
@@ -207,7 +209,7 @@ public class Mass : IMass
         // LogUtils.INSTANCE.PrintInfo("长度", workBuffer.Length.ToString());
 
         // 从Blob建立对象
-        T item = (T)adapter.From(this, (RyoReader)WorkingBuffer.Buffer, dataRyoType);
+        var item = (T)adapter.From(this, WorkingBuffer.Buffer, dataRyoType);
 
         // 还回数据
         WorkingBuffer = workBuffer;
@@ -220,7 +222,7 @@ public class Mass : IMass
         return item;
     }
 
-    public T Read<T>()
+    public T? Read<T>()
     {
         // 子项不能等于父项
         if (SavedItemBlobMinusOneStickyId == SavedItemBlobStickyId) throw new InvalidDataException("无子项的项目不能被当作父项读");
@@ -242,7 +244,7 @@ public class Mass : IMass
         // 必须满足要求
         return (metaOfIdMinusOne & 3) switch
         {
-            0 => default,// 本该返回NULL
+            0 => default, // 本该返回NULL
             3 => Get<T>(subitemId),
             _ => throw new NotSupportedException($"元数据的类型（{metaOfIdMinusOne & 3}）暂不支持"), // 1抛NULL、2内联还不支持
         };
@@ -255,7 +257,7 @@ public class Mass : IMass
     }
 
     // 子项怎么办
-    public void Set(int id, object obj)
+    public void Set<T>(int id, T obj)
     {
         throw new NotSupportedException("暂不支持！");
 
@@ -293,7 +295,10 @@ public class Mass : IMass
 
             //return id;
         }
-        catch (Exception ex) { throw new RyoException("不能设置对象，因为" + ex.Message, ex); }
+        catch (Exception ex)
+        {
+            throw new RyoException("不能设置对象，因为" + ex.Message, ex);
+        }
     }
 
     public void Load(FileStream fileStream)
@@ -306,7 +311,9 @@ public class Mass : IMass
         var indexInfo = reader.ReadInt();
         var isDeflated = (indexInfo & 1) != 0;
         var deflateLen = indexInfo >> 1;
-        var indexBlob = isDeflated ? CompressionUtils.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen) : reader.ReadBytes(deflateLen);
+        var indexBlob = isDeflated
+            ? CompressionUtils.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen)
+            : reader.ReadBytes(deflateLen);
 
         List<bool> isItemBlobDeflatedList = new();
         List<int> itemBlobEndPositions = new();
@@ -391,7 +398,7 @@ public class Mass : IMass
         for (int i = 0; i < objCount; i++) indexWriter.WriteInt(ItemBlobs[i].StickyIndex);
 
         // 元数据
-        for (int i4 = 0; i4 < StickyMetaDatas.Count; i4++) indexWriter.WriteInt(StickyMetaDatas[i4]);
+        foreach (var t in StickyMetaDatas) indexWriter.WriteInt(t);
 
         // 写出适配项
         if (ItemAdaptions == null || ItemAdaptions.Count == 0) indexWriter.WriteInt(0);
@@ -414,7 +421,7 @@ public class Mass : IMass
 
         // 写入索引
         indexWriter.PositionToZero();
-        byte[] indexBytes = new RyoReader((Stream)indexWriter).ReadAllBytes();
+        byte[] indexBytes = new RyoReader(indexWriter).ReadAllBytes();
         byte[] deflatedBytes = CompressionUtils.Deflate(indexBytes, 0, indexBytes.Length);
         if (deflated && indexBytes.Length / deflatedBytes.Length >= 1.2F)
         {
@@ -431,9 +438,13 @@ public class Mass : IMass
         foreach (var blob in ItemBlobs) fileWriter.WriteBytes(blob.Data);
     }
 
-    protected virtual void AfterLoadingIndex(RyoReader reader) { }
+    protected virtual void AfterLoadingIndex(RyoReader reader)
+    {
+    }
 
-    protected virtual void AfterSavingIndex(RyoWriter writer) { }
+    protected virtual void AfterSavingIndex(RyoWriter writer)
+    {
+    }
 
     // TODO:依托答辩
     public void Write<T>(T obj)
@@ -459,7 +470,6 @@ public class Mass : IMass
 
             Set(subitemId, obj);
             //读到的MetaIndex的Meta作为Set的Id，在Set中要更新MetaIndex。
-
         }
         else
         {
@@ -488,6 +498,7 @@ public class Mass : IMass
                 newStickyMetaData = (Add(obj) << 2) | 3;
                 //ItemBlobs[newItemId].StickyId++;
             } // Switch3
+
             StickyMetaDatas.Add(newStickyMetaData);
         }
     }

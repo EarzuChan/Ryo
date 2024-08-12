@@ -83,8 +83,8 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'file':
       currentMenu.value = showMenu({
         items: [
-          {name: '新建', action: () => workspaceState.newFile()},
-          {name: '打开', action: () => workspaceState.openFile()},
+          {name: '新建', action: () => workspaceState.newVolume()},
+          {name: '打开', action: () => workspaceState.openVolume()},
           {name: '保存', action: () => console.log('保存')},
           {name: '另存为', action: () => console.log('另存为')},
           {name: '关闭', action: () => console.log('关闭')},

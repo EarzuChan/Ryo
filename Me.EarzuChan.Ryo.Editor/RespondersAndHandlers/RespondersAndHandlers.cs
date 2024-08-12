@@ -7,8 +7,10 @@ using System.Diagnostics;
 using System.IO;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Editor.Utils;
+using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
+using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
@@ -19,17 +21,17 @@ public class GetAllDataTypesResponder : IWebCallResponder
         new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
 }
 
-[WebEventHandler("OpenFile")]
+[WebEventHandler("OpenVolume")]
 public class OpenFileHandler : IWebEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
-        var massManager = context.Inject<MassManager>()!;
+        var massManager = context.Inject<LocalVolumeManager>()!;
 
         var filePath = MiscUtils.OpenFileByDialog("MassFile", "fs");
         if (filePath is null) return;
-        var fileName = Path.GetFileNameWithoutExtension(filePath);
-        massManager.LoadMassFile(filePath, fileName);
+
+        massManager.OpenLocalVolume(filePath);
     }
 }
 
@@ -48,14 +50,50 @@ public class AppInitializedHandler : IAppEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
-        context.Inject<MassManager>()!.MassFilesChanged +=
-            (masses) => MiscUtils.EmitOpenedMasses(context, masses);
+        context.Inject<LocalVolumeManager>()!.VolumesChanged +=
+            (volumes) => MiscUtils.EmitOpenedVolumes(context, volumes);
     }
 }
 
-[WebEventHandler("NotifyOpenedFiles")]
+[WebEventHandler("NotifyOpenedVolumes")]
 public class NotifyOpenedFilesHandler : IWebEventHandler
 {
     public void Handle(KurisuAppContext context) =>
-        MiscUtils.EmitOpenedMasses(context, context.Inject<MassManager>()!.MassFiles);
+        MiscUtils.EmitOpenedVolumes(context, context.Inject<LocalVolumeManager>()!.Volumes);
+}
+
+[WebEventHandler("CloseVolume")]
+public class CloseVolumeHandler(string volumeName) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) =>
+        context.Inject<LocalVolumeManager>()!.Also(it =>
+        {
+            var volume = it.GetVolumeByName(volumeName);
+            volume?.Also(it.Close);
+        });
+}
+
+[WebEventHandler("SaveVolume")]
+public class SaveVolumeHandler(string volumeName) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) =>
+        context.Inject<LocalVolumeManager>()!.Also(it =>
+        {
+            var volume = it.GetVolumeByName(volumeName);
+            volume?.Also(vol => it.Save(vol, () => MiscUtils.OpenFileByDialog("MassFile", "fs")));
+        });
+}
+
+[WebCallResponder("GetFullFileModel")]
+public class GetFullFileModelResponder(string volumeName, int fileId) : IWebCallResponder
+{
+    public WebResponse Respond(KurisuAppContext context)
+    {
+        var volumeManager = context.Inject<LocalVolumeManager>()!;
+        var volume = volumeManager.GetVolumeByName(volumeName);
+
+        if (volume is null) return new(WebResponseState.Failure, "LocalVolume not found");
+
+        return new(WebResponseState.Success, volume[fileId]);
+    }
 }

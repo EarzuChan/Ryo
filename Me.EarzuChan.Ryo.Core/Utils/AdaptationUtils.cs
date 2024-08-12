@@ -55,7 +55,7 @@ public static class AdaptationUtils
         hasRyoTypesRegistered = true;
     }
 
-    public static Type? SearchAdaptableFormationsByJavaClass(this string clzName)
+    public static Type? SearchAdaptableFormationsByJavaClass(this string? clzName)
     {
         Type? baseType = null;
         var types = TypeUtils.GetAppAllTypes();
@@ -90,7 +90,7 @@ public static class AdaptationUtils
     // FIXME:貌似非法输入如“[[Ljava.lang.Byte”，没有“;”，会还原出时死循环
     // 貌似解决了
     // 有新写法，忘了
-    public static RyoType JavaClassToRyoType(this string clzName)
+    public static RyoType JavaClassToRyoType(this string? clzName)
     {
         LogUtils.PrintInfo($"Resolve Ryo Type by Java Class: {clzName}");
 
