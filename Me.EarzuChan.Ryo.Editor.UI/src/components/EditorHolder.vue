@@ -28,13 +28,13 @@ const props = defineProps({
 })
 
 const editorType = computed(() => {
-  if (isError.value) return getError("编辑器错误：" + errorMsg.value)
+  if (isError.value) return getError("编辑器错误：\n" + errorMsg.value)
   else if (!ensure(model.value)) return getError("数据错误：绑定的数据为空")
   // TODO: 确保提供的类型和实际数据类型一致
   else if (props.type) {
     console.log(TAG, "给Ryo类型查找编辑器", props.type)
 
-    if (!appState.ensureRyoType(props.type, model.value)) return getError("数据错误：数据类型不匹配")
+    if (!appState.ensureRyoType(props.type, model.value)) return getError(`数据错误：数据类型不匹配：\n应为${props.type.typeName}，实为${typeof model.value}，内容：\n${model.value}`)
 
     const editors = appState.getEditorsByRyoType(props.type)
     if (editors.length === 0) return getError("编辑器错误：没有可用的编辑器")

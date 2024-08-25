@@ -6,11 +6,13 @@ using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
 using System.IO;
 using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Editor.Utils;
 using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
 using Me.EarzuChan.Ryo.Utils;
+using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
@@ -22,7 +24,7 @@ public class GetAllDataTypesResponder : IWebCallResponder
 }
 
 [WebEventHandler("OpenVolume")]
-public class OpenFileHandler : IWebEventHandler
+public class OpenVolumeHandler : IWebEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
@@ -62,6 +64,54 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
         MiscUtils.EmitOpenedVolumes(context, context.Inject<LocalVolumeManager>()!.Volumes);
 }
 
+// TODO:如果是基本类型，参数不是JObject，懆称冯的福
+[WebCallResponder("SaveItem")]
+public class SaveItemHandler(string volumeName, string itemName, object data) : IWebCallResponder
+{
+    public WebResponse Respond(KurisuAppContext context)
+    {
+        int newId = -1;
+
+        context.Inject<LocalVolumeManager>()!.Also(it =>
+        {
+            Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
+
+            it.GetVolumeByName(volumeName)
+                .Ensure(vol => vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType().Ensure(typ =>
+                {
+                    Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
+                    switch (data)
+                    {
+                        case JObject jobj:
+                            Trace.WriteLine("Data is JObject");
+                            jobj.ToObject(typ).Ensure(obj =>
+                            {
+                                vol.Add(itemName, obj);
+                                newId = vol[itemName].Id;
+                            });
+                            break;
+                        case JArray jarr when typ.IsArray:
+                            Trace.WriteLine($"Data is JArray, {jarr.Count} items");
+                            jarr.ToObject(typ).Ensure(arr =>
+                            {
+                                vol.Add(itemName, arr);
+                                newId = vol[itemName].Id;
+                            });
+                            break;
+                        default:
+                            Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
+                            vol.Add(itemName, data);
+                            break;
+                    }
+                }));
+        });
+
+        return newId == -1
+            ? new WebResponse(WebResponseState.Failure)
+            : new WebResponse(WebResponseState.Success, newId);
+    }
+}
+
 [WebEventHandler("CloseVolume")]
 public class CloseVolumeHandler(string volumeName) : IWebEventHandler
 {
@@ -74,13 +124,14 @@ public class CloseVolumeHandler(string volumeName) : IWebEventHandler
 }
 
 [WebEventHandler("SaveVolume")]
-public class SaveVolumeHandler(string volumeName) : IWebEventHandler
+public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandler
 {
     public void Handle(KurisuAppContext context) =>
         context.Inject<LocalVolumeManager>()!.Also(it =>
         {
+            Trace.WriteLine($"保存{volumeName} {saveAs}");
             var volume = it.GetVolumeByName(volumeName);
-            volume?.Also(vol => it.Save(vol, () => MiscUtils.OpenFileByDialog("MassFile", "fs")));
+            volume?.Also(vol => it.Save(vol, () => MiscUtils.SaveFileByDialog("MassFile", "fs"), saveAs));
         });
 }
 

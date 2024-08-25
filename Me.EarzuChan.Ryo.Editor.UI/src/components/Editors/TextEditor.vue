@@ -10,6 +10,7 @@
 <script lang="ts" setup>
 import {nextTick, onMounted, ref, watch} from "vue"
 import IconButton from "../IconButton.vue"
+import {ensure} from "@/utils/UsefulUtils";
 
 const textField = ref<any>(null)
 
@@ -24,8 +25,10 @@ async function clearText() {
 
 const fitHeight = () => {
   // console.log("调教", textField.value.scrollHeight)
-  textField.value.style.height = '14px'
-  textField.value.style.height = (textField.value.scrollHeight + 2) + 'px'
+  if (ensure(textField.value)) {
+    textField.value.style.height = '14px'
+    textField.value.style.height = (textField.value.scrollHeight + 2) + 'px'
+  }
 }
 
 onMounted(() => watch(model, async (newValue) => {

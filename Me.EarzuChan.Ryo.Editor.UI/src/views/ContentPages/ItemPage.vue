@@ -6,7 +6,7 @@
         <div class="info ryo-typography-body-large">ID：{{
             itemData.id
           }}<br>名称：{{ itemData.name ? itemData.name : "（无名内联项目）" }}<br>类型：{{
-            itemData.type ? itemData.type.typeName : "（未知类型）"
+            itemData.ryoType ? itemData.ryoType.typeName : "（未知类型）"
           }}
         </div>
         <div class="info ryo-typography-body-large">解析状态：{{
@@ -15,7 +15,7 @@
         </div>
       </div>
     </div>
-    <EditorHolder ref="holder" card-surrounded :type="itemData.type" v-model="itemData.tempData"
+    <EditorHolder ref="holder" card-surrounded :type="itemData.ryoType" v-model="itemData.tempData"
                   :prefer-editor="preferEditor">
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
@@ -68,7 +68,7 @@ const itemData = computed<FileModel>(() => {
   }
 })
 const supportedEditors = computed(() => {
-  const type = itemData.value.type
+  const type = itemData.value.ryoType
   if (type) {
     return appState.getEditorsByRyoType(type).map(et => getSfcName(et))
   }
@@ -76,7 +76,7 @@ const supportedEditors = computed(() => {
   return ["未知类型 无可用编辑器"]
 })
 const inOutMethods = computed(() => {
-  const typeName = itemData.value.type
+  const typeName = itemData.value.ryoType
 
   return [TODO(TAG, "获取导入导出方法")]
 })
@@ -94,8 +94,17 @@ function save() {
       {text: "取消"},
       {
         text: "确定", onClick() {
-          itemData.value.data = deepCopy(itemData.value.tempData)
-          console.log(TAG, "保存成功", itemData.value.tempData, itemData.value.data)
+          (async () => {
+            console.log(TAG, "异步保存")
+
+            itemData.value.data = deepCopy(itemData.value.tempData)
+
+            const newItemId = await workspaceState.saveItem(itemData.value.fromFile!, itemData.value.name!, itemData.value.data)
+
+            console.log(TAG, "保存成功", newItemId)
+
+            itemData.value.id = newItemId
+          })()
         }
       },
     ]

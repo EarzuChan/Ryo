@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
+using Me.EarzuChan.Ryo.Extensions.Utils;
 using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Extensions.MassExtensions;
@@ -31,6 +32,14 @@ public class LocalVolumeManager
 
     public LocalVolume OpenLocalVolume(string localPath, string? fileName = null)
     {
+        // 先检查是否已经打开，抛出
+        if (Volumes.Values.Any(meta => meta.LocalPath == localPath))
+        {
+            var err = new FileLoadException("文件已经打开！");
+            LogUtils.PrintError(Tag, err);
+            throw err;
+        }
+
         var massFile = new MassFile();
 
         // Load the mass file from the local path
@@ -44,33 +53,36 @@ public class LocalVolumeManager
         return volume;
     }
 
-    public bool Save(LocalVolume localVolume, Func<string?>? pathProvider = null)
+    public bool Save(LocalVolume localVolume, Func<string?>? pathProvider = null, bool mustUsePathProvider = false)
     {
+        LogUtils.PrintInfo(Tag, "正在保存文件：" + localVolume.VolumeName);
+
         var meta = Volumes[localVolume];
 
-        if (meta.LocalPath != null) pathProvider = () => meta.LocalPath;
+        if (meta.LocalPath != null && !mustUsePathProvider) pathProvider = () => meta.LocalPath;
         else if (pathProvider == null)
         {
-            LogUtils.PrintWarning(Tag, "保存失败！既无LocalPath，又无PathProvider");
+            LogUtils.PrintWarning(Tag, "欲保存失败！既无LocalPath，又无PathProvider");
             return false;
         }
 
-        return SaveAs(localVolume, pathProvider);
+        return InternalSave(localVolume, pathProvider);
     }
 
-    public bool SaveAs(LocalVolume localVolume, Func<string?> localPathProvider)
+    private bool InternalSave(LocalVolume localVolume, Func<string?> localPathProvider)
     {
         var actualPath = localPathProvider();
 
         if (actualPath is null)
         {
-            LogUtils.PrintWarning("另存为失败！没有提供路径！");
+            LogUtils.PrintWarning("保存失败！没有提供路径！");
             return false;
         }
 
         try
         {
-            using (var fileStream = FileUtils.OpenFile(actualPath, true, true)) localVolume.Save(fileStream);
+            using var fileStream = FileUtils.OpenFile(actualPath, true, true);
+            localVolume.Save(fileStream);
         }
         catch (Exception ex)
         {
@@ -78,7 +90,7 @@ public class LocalVolumeManager
             return false;
         }
 
-        if (Volumes[localVolume].LocalPath == null) Volumes[localVolume] = new LocalVolumeMetaData(actualPath);
+        Volumes[localVolume] = new LocalVolumeMetaData(actualPath);
 
         return true;
     }
@@ -152,16 +164,18 @@ public class LocalVolume
         var file = MassFile.Get<object>(id);
 
         // TODO:检测不了是否Parse成功
+        var jwc = MassFile.ItemAdaptions[MassFile.ItemBlobs[id].AdaptionId].DataJavaClz;
 
         return new LocalVolumeFileModel(id, VolumeName,
             name ?? MassFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
-            MassFile.ItemAdaptions[MassFile.ItemBlobs[id].AdaptionId].DataJavaClz
+            jwc.JavaClassToRyoType()
+                .ResolveDataTypeName(), jwc
             , file, true);
     }
 
-    public object this[string key] => GetWrappedFile(IdStrPairs[key], key);
+    public LocalVolumeFileModel this[string key] => GetWrappedFile(IdStrPairs[key], key);
 
-    public object this[int key] => GetWrappedFile(key);
+    public LocalVolumeFileModel this[int key] => GetWrappedFile(key);
 
     public void Save(FileStream fs) => MassFile.Save(fs);
 }
@@ -171,6 +185,7 @@ public record LocalVolumeFileModel(
     string FromFile,
     string? Name,
     string? Type,
+    string? RawJavaClass,
     object Data,
     bool ParseSuccess
 );

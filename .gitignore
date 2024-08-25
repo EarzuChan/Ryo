@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+Me.EarzuChan.Ryo.Editor/WebResources
 
 .idea
 

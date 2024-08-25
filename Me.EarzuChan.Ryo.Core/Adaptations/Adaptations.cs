@@ -33,10 +33,13 @@ public class RyoType
     public override string ToString()
     {
         // return $"[RyoType信息：{AdaptionManager.INSTANCE.GetJavaClzByType(this)}，Java短名：{ShortName}，Java名：{Name}，自定义：{IsCustom}，是列表：{IsArray}，C#类：{BaseType}]";
-        return $"{{RyoType: Java: {JavaClassName}, Java Short Name: {(JavaShortName ?? "None")}, Is Jvm Primitive: {IsJavaPrimitiveType}, Is Adaptable Custom: {IsAdaptableCustom}, Is Adapted with Constructor: {IsAdaptWithCtor}, Is Array: {IsArray}( Is List Array: {IsListInternally}), C#: {CsType}}}";
+        return
+            $"{{RyoType - Java: {JavaClassName}, JavaShort: {(JavaShortName ?? "None")}, JvmPrimitive: {IsJavaPrimitiveType}, AdaptableCustom: {IsAdaptableCustom}, AdaptedWithCtor: {IsAdaptWithCtor}, Array: {IsArray}( ListArray: {IsListInternally}), C#: {CsType}, Uid: {GetHashCode()}}}";
     }
 
-    internal RyoType() { }
+    internal RyoType()
+    {
+    }
 }
 
 public interface IAdapter
@@ -63,7 +66,9 @@ public interface ICtorAdaptable
     // TODO:一、我希望能动态构建类；二、如果真没多个Mass构造器，那就改成根据类公开成员的顺序进行输入输出类型的构建
 
     [AttributeUsage(AttributeTargets.Constructor, AllowMultiple = false)]
-    public class AdaptableConstructor : Attribute { }
+    public class AdaptableConstructor : Attribute
+    {
+    }
 
     object[] GetAdaptedArray();
 }

@@ -20,6 +20,17 @@ public static class MiscUtils
         return openFileDialog.ShowDialog() == true ? openFileDialog.FileName : null;
     }
 
+    public static string? SaveFileByDialog(string fileDescription, string fileExtension)
+    {
+        var saveFileDialog = new SaveFileDialog
+        {
+            Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}",
+            Title = $"保存{fileDescription}"
+        };
+
+        return saveFileDialog.ShowDialog() == true ? saveFileDialog.FileName : null;
+    }
+
     public static void EmitOpenedVolumes(KurisuAppContext context, Dictionary<LocalVolume, LocalVolumeMetaData> dic)
     {
         var openedMasses =

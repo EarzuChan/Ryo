@@ -123,9 +123,11 @@ The framework's name is from Makise Kurisu from Steins;Gate, she is my assistant
 - **Teio**: A launcher for Simulacra series games (using SEngine) across Windows and Android. It will support mods, use
   any game resource package, and include various modded resources markets.
 - **TeioAPI**: A set of APIs for Teio Mod Developers to interact with the launcher and manipulate game and resources.
-- **Soyorin**: An IDE for Simulacra players interested in creating mods and derivative versions. It will facilitate
+- **~~Soyorin~~No Name Yet**: An IDE for Simulacra players interested in creating mods and derivative versions. It will facilitate
   unpacking original game apps (users must provide their own copies), managing game resources, one-click packing of mod
   resources, and integration with Ryo Editor.
+- **Sakiko**: Next-generation JvmHook framework, planned to support desktop and Android platforms, providing the ability
+  to register game lifecycle events and custom hooks for TeioAPI.
 
 ## Contact
 

@@ -1,4 +1,5 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+﻿using System.Collections.Concurrent;
+using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories;
 using Me.EarzuChan.Ryo.Core.Exceptions.AdaptationExceptions;
 using Me.EarzuChan.Ryo.Core.Formations.HelperFormations;
@@ -11,9 +12,11 @@ namespace Me.EarzuChan.Ryo.Core.Utils;
 
 public static class AdaptationUtils
 {
+    private static readonly ConcurrentDictionary<string, RyoType> JavaClassToRyoTypeCache = new();
+    private static readonly ConcurrentDictionary<Type, RyoType> CsTypeToRyoTypeCache = new();
     public static HashSet<RyoType> RyoTypes = new();
     public static HashSet<RyoType> BasicRyoTypes = new();
-    private static bool hasRyoTypesRegistered = false;
+    private static bool hasRyoTypesRegistered;
 
     // 静态构造函数
     static AdaptationUtils() => RegDefaultRyoTypes();
@@ -92,8 +95,14 @@ public static class AdaptationUtils
     // 有新写法，忘了
     public static RyoType JavaClassToRyoType(this string? clzName)
     {
+        if (JavaClassToRyoTypeCache.TryGetValue(clzName, out var cachedRyoType))
+        {
+            LogUtils.PrintInfo($"Already have {cachedRyoType} for Java: {clzName}");
+            return cachedRyoType;
+        }
+        
         LogUtils.PrintInfo($"Resolve Ryo Type by Java Class: {clzName}");
-
+        var rawClzName = clzName;
 
         // 是否是列表
         bool isArray = clzName.StartsWith('[');
@@ -140,6 +149,8 @@ public static class AdaptationUtils
         }
         ryoType.IsArray = isArray;
 
+        JavaClassToRyoTypeCache[rawClzName] = ryoType;
+        LogUtils.PrintInfo($"Cache {ryoType} by Java: {rawClzName}");
         return ryoType;
     }
 
@@ -147,7 +158,7 @@ public static class AdaptationUtils
     // 会有问题，影响外面的实例
     public static string? ToJavaClass(this RyoType ryoType)
     {
-        LogUtils.PrintInfo($"Resolve Java Class for: {ryoType}: {ryoType.GetHashCode()}");
+        LogUtils.PrintInfo($"Resolve Java Class for: {ryoType}");
 
         var typeNamePrefix = new StringBuilder("");
         while (ryoType.IsArray)
@@ -159,16 +170,16 @@ public static class AdaptationUtils
 
         if (ryoType.JavaClassName == null) return null;
 
-        return typeNamePrefix.Length != 0 ? ryoType.JavaShortName != null ? typeNamePrefix.ToString() + ryoType.JavaShortName : typeNamePrefix.ToString() + 'L' + ryoType.JavaClassName + ';' : ryoType.JavaClassName;
+        return typeNamePrefix.Length != 0 ? ryoType.JavaShortName != null ? typeNamePrefix + ryoType.JavaShortName : typeNamePrefix.ToString() + 'L' + ryoType.JavaClassName + ';' : ryoType.JavaClassName;
     }
 
     // GetCsByRyo
     // 会有问题，影响外面的实例
     public static Type? ToCsType(this RyoType ryoType)
     {
-        LogUtils.PrintInfo($"Resolve C# Type for: {ryoType}: {ryoType.GetHashCode()}");
+        LogUtils.PrintInfo($"Resolve C# Type for: {ryoType}");
 
-        List<int> arrayLevelAndTypes = new();
+        List<int> arrayLevelAndTypes = [];
         while (ryoType.IsArray)
         {
             arrayLevelAndTypes.Add(ryoType.IsListInternally ? 1 : 0);
@@ -182,14 +193,7 @@ public static class AdaptationUtils
 
         foreach (int arrayType in arrayLevelAndTypes)
         {
-            if (arrayType == 0)
-            {
-                baseType = baseType.MakeArrayType();
-            }
-            else
-            {
-                baseType = typeof(List<>).MakeGenericType(baseType);
-            }
+            baseType = arrayType == 0 ? baseType.MakeArrayType() : typeof(List<>).MakeGenericType(baseType);
         }
 
         return baseType;
@@ -198,7 +202,14 @@ public static class AdaptationUtils
     // GetRyoByCs
     public static RyoType ToRyoType(this Type type)
     {
+        if (CsTypeToRyoTypeCache.TryGetValue(type, out var cachedRyoType))
+        {
+            LogUtils.PrintInfo($"Already have {cachedRyoType} for C#: {type}");
+            return cachedRyoType;
+        }
+        
         LogUtils.PrintInfo($"Resolve Ryo Type by C# Type: {type}");
+        var rawType = type;
 
         // 列表相关
         bool isArray = type.IsArray;
@@ -238,6 +249,8 @@ public static class AdaptationUtils
         ryoType.IsArray = isArray;
         ryoType.IsListInternally = isList;
 
+        CsTypeToRyoTypeCache[rawType] = ryoType;
+        LogUtils.PrintInfo($"Cache {ryoType} for C#: {rawType}");
         return ryoType;
     }
 

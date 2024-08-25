@@ -87,12 +87,16 @@ function showMenuOf(menuType: MenuBarItem) {
         {name: '打开', action: () => workspaceState.openVolume()}]
       if (ensure(workspaceState.activeVolume)) {
         items.push({
-          name: '保存' + workspaceState.activeVolume!,
-          action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
-        }, {
-          name: '关闭' + workspaceState.activeVolume!,
-          action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
-        })
+              name: '保存' + workspaceState.activeVolume!,
+              action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
+            }, {
+              name: '关闭' + workspaceState.activeVolume!,
+              action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
+            },
+            {
+              name: '将' + workspaceState.activeVolume! + '另存为',
+              action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
+            })
       }
       items.push({name: '全部保存', action: () => console.log('全部保存')},
           {name: '全部关闭', action: () => console.log('全部关闭')},

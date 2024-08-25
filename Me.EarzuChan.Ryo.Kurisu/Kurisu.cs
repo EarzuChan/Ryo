@@ -108,7 +108,8 @@ public class KurisuApp
                 }
                 catch (Exception e)
                 {
-                    Trace.WriteLine(TextUtils.MakeErrorMsgText($"执行WebEvent {hdl.Key.EventName} 失败", e, true));
+                    Trace.WriteLine(TextUtils.MakeErrorMsgText($"响应WebEvent {hdl.Key.EventName} 失败", e, true));
+                    //TODO:向前端发送错误信息
                 }
 
                 return;
