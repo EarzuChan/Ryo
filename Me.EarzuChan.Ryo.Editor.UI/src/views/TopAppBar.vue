@@ -28,7 +28,7 @@ import TextButton from "@/components/TextButton.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {showMenu} from "@/utils/MenuUtils"
 import {ref} from "vue"
-import type {MenuBarItem} from "@/models/UIModels"
+import type {MenuBarItem, MenuItem} from "@/models/UIModels"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {KurisuWindowState} from "@/models/KurisuModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
@@ -82,16 +82,16 @@ function showMenuOf(menuType: MenuBarItem) {
 
   switch (menuType.id) {
     case 'file':
-      const items = [
+      const items: MenuItem[] = [
         {name: '新建', action: () => workspaceState.newVolume()},
         {name: '打开', action: () => workspaceState.openVolume()}]
       if (ensure(workspaceState.activeVolume)) {
         items.push({
-          name: '保存' + workspaceState.activeVolume,
-          action: () => workspaceState.saveVolume(workspaceState.activeVolume)
+          name: '保存' + workspaceState.activeVolume!,
+          action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
         }, {
-          name: '关闭' + workspaceState.activeVolume,
-          action: () => workspaceState.closeVolume(workspaceState.activeVolume)
+          name: '关闭' + workspaceState.activeVolume!,
+          action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
         })
       }
       items.push({name: '全部保存', action: () => console.log('全部保存')},
