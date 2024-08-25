@@ -34,7 +34,7 @@ const editorType = computed(() => {
   else if (props.type) {
     console.log(TAG, "给Ryo类型查找编辑器", props.type)
 
-    if (!appState.ensureRyoType(props.type, model.value)) return getError("数据错误：数据类型不匹配")
+    if (!appState.ensureRyoType(props.type, model.value)) return getError(`数据错误：数据类型不匹配：${props.type.typeName}-${typeof model.value}-${model.value}`)
 
     const editors = appState.getEditorsByRyoType(props.type)
     if (editors.length === 0) return getError("编辑器错误：没有可用的编辑器")

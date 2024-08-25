@@ -18,9 +18,9 @@ public static class StartUp
                 DebugStartUpUrl: "http://localhost:5173/",
                 Name: "Ryo App",
                 DebugStartUpWithDebugUrl: true,
-                VirtualHostName: "ryo_web_frontend",
+                VirtualHostName: "ryo_web_frontend"
 #if DEBUG
-                DebugMode: true
+                ,DebugMode: true
 #endif
             ))
             .UseDefaultWindowBackend()

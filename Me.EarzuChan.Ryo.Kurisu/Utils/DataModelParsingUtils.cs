@@ -34,7 +34,11 @@ public static class DataModelParsingUtils
         model.Args ??= [];
 
         // 尝试把值在int内的long转化为int
-        model.Args = model.Args.Select(it => it is long l ? (int)l : it).ToArray();
+        model.Args = model.Args.Select(it =>
+        {
+            Trace.WriteLine($"{it}: {it.GetType()}");
+            return it is long l ? (int)l : it;
+        }).ToArray();
 
         return model;
     }

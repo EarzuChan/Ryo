@@ -40,7 +40,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const activeTabIndex = ref(0)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
         const activeVolume = computed(() => activeItem.value?.fromFile)
-        const activeItem = computed(() => openedItems.value[activeTab.value.data])
+        const activeItem = computed(() => openedItems.value[activeTab.value?.data])
 
         const openedVolumes = ref<VolumeModel[]>([/*{
         name: "假文件1",
@@ -231,7 +231,15 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function saveVolume(massName: string) {
-            emitWebEvent(makeWebLetter('SaveVolume', massName))
+            emitWebEvent(makeWebLetter('SaveVolume', massName, false))
+        }
+
+        function saveVolumeAs(massName: string) {
+            emitWebEvent(makeWebLetter('SaveVolume', massName, true))
+        }
+
+        async function saveItem(massName: string, itemName: string, data: any) {
+            return (await sendWebCallAndTakeItsReturnValues(makeWebLetter('SaveItem', massName, itemName, data)))[0]
         }
 
         function closeVolume(massName: string) {
@@ -261,31 +269,33 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         })()
 
         return {
-            available,
-            openedVolumes,
+            activeItem,
+            activeTab,
+            activeTabIndex,
+            activeTabPage,
             activeVolume,
-            openedItems,
             anchorTab,
+            available,
             clickTab,
             closeTab,
-            activeItem,
-            openedTabs,
-            activeTabIndex,
-            activeTab,
-            activeTabPage,
-            setActiveTabPage,
-            pageDiscard,
-            pageReload,
-            pageRedo,
-            pageUndo,
-            pageSave,
+            closeVolume,
             getIsTabUnsaved,
+            mentionItem,
+            newVolume,
             openTab,
             openVolume,
-            newVolume,
-            mentionItem,
+            openedItems,
+            openedTabs,
+            openedVolumes,
+            pageDiscard,
+            pageRedo,
+            pageReload,
+            pageSave,
+            pageUndo,
             saveVolume,
-            closeVolume,
+            saveVolumeAs,
+            saveItem,
+            setActiveTabPage,
         }
     }
 )

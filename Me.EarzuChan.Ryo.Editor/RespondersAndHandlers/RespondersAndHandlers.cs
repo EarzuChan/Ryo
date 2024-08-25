@@ -6,11 +6,13 @@ using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
 using System.IO;
 using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Editor.Utils;
 using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
 using Me.EarzuChan.Ryo.Utils;
+using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
@@ -62,6 +64,36 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
         MiscUtils.EmitOpenedVolumes(context, context.Inject<LocalVolumeManager>()!.Volumes);
 }
 
+// TODO:如果是基本类型，参数不是JObject，懆称冯的福
+[WebCallResponder("SaveItem")]
+public class SaveItemHandler(string volumeName, string itemName, JObject data) : IWebCallResponder
+{
+    public WebResponse Respond(KurisuAppContext context)
+    {
+        int newId = -1;
+
+        context.Inject<LocalVolumeManager>()!.Also(it =>
+        {
+            Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}\n{data}");
+
+            it.GetVolumeByName(volumeName)
+                .Ensure(vol => vol[itemName].Type.JavaClassToRyoType().ToCsType().Ensure(typ =>
+                {
+                    Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
+                    data.ToObject(typ).Ensure(obj =>
+                    {
+                        vol.Add(itemName, obj);
+                        newId = vol[itemName].Id;
+                    });
+                }));
+        });
+
+        return newId == -1
+            ? new WebResponse(WebResponseState.Failure)
+            : new WebResponse(WebResponseState.Success, newId);
+    }
+}
+
 [WebEventHandler("CloseVolume")]
 public class CloseVolumeHandler(string volumeName) : IWebEventHandler
 {
@@ -74,13 +106,14 @@ public class CloseVolumeHandler(string volumeName) : IWebEventHandler
 }
 
 [WebEventHandler("SaveVolume")]
-public class SaveVolumeHandler(string volumeName) : IWebEventHandler
+public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandler
 {
     public void Handle(KurisuAppContext context) =>
         context.Inject<LocalVolumeManager>()!.Also(it =>
         {
+            Trace.WriteLine($"保存{volumeName} {saveAs}");
             var volume = it.GetVolumeByName(volumeName);
-            volume?.Also(vol => it.Save(vol, () => MiscUtils.OpenFileByDialog("MassFile", "fs")));
+            volume?.Also(vol => it.Save(vol, () => MiscUtils.SaveFileByDialog("MassFile", "fs"), saveAs));
         });
 }
 

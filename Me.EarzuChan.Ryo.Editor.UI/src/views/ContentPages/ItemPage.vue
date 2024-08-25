@@ -94,8 +94,17 @@ function save() {
       {text: "取消"},
       {
         text: "确定", onClick() {
-          itemData.value.data = deepCopy(itemData.value.tempData)
-          console.log(TAG, "保存成功", itemData.value.tempData, itemData.value.data)
+          (async () => {
+            console.log(TAG, "异步保存")
+
+            itemData.value.data = deepCopy(itemData.value.tempData)
+
+            const newItemId = await workspaceState.saveItem(itemData.value.fromFile!, itemData.value.name!, itemData.value.data)
+
+            console.log(TAG, "保存成功", newItemId)
+
+            itemData.value.id = newItemId
+          })()
         }
       },
     ]

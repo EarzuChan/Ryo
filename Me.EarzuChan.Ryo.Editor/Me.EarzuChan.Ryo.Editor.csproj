@@ -19,7 +19,23 @@
 
     <ItemGroup>
         <!-- 定义一个 ItemGroup 来包含所有需要复制的文件 -->
-        <DistFiles Include="..\Me.EarzuChan.Ryo.Nxt\dist\**\*" />
+        <DistFiles Include="..\Me.EarzuChan.Ryo.Editor.UI\\dist\**\*" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="WebResources\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="WebResources\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Page Remove="WebResources\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="WebResources\**" />
     </ItemGroup>
 
     <!--<Target Name="PreBuild" BeforeTargets="Build">

@@ -26,7 +26,7 @@ export interface FileModel {
     fromFile?: string
     name?: string
     unsaved?: boolean
-    type?: RyoType
+    type?: string
     parseSuccess: boolean
     data?: any
     history?: HistoryRecord[]
