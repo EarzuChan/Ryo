@@ -3,7 +3,10 @@ on:
   push:
     branches:
       - remaster
-
+permissions:
+  contents: write
+  pages: write
+  actions: read
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -24,9 +27,7 @@ jobs:
         with:
           branch: gh-pages # The branch the action should deploy to.
           folder: Me.EarzuChan.Ryo.Editor.UI/dist # The folder the action should deploy.
-          repository: earzuchan/earzuchan.github.io # The repository the action should deploy to. Can be located in the same repo, or in a different one.
+          repository-name: EarzuChan/earzuchan.github.io # The repository the action should deploy to. Can be located in the same repo, or in a different one.
           clean: true # Automatically remove deleted files from the deploy branch
           commit-message: Deploy to GitHub Pages 🚀
-          git-name: "GitHub Actions"
-          git-email: "github-actions@github.com"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN }}
