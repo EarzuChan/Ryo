@@ -109,10 +109,6 @@ WebCall（类似于 RESTful 请求）和 WebEvent（双向通信）。
 
 这个框架的名称来源于命运石之门的牧濑红莉栖，她是我的助手~~老婆~~，不许加上蒂娜啊Kora！
 
-### Me.EarzuChan.Ryo.WPFImageConverter
-
-一个小型 WPF 应用程序，用户可以双向转换纹理和图像。
-
 ## 未来的姊妹解决方案
 
 - **Teio**：一个跨 Windows 和安卓平台的 Simulacra 系列游戏启动器（使用 SEngine），支持 Mod，可使用任意游戏资源包，并包含各种改版资源市场。

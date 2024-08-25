@@ -39,8 +39,7 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  actions: Array as PropType<DialogActionButtonModel[]>,
-  afterClosed: Function
+  actions: Array as PropType<DialogActionButtonModel[]>
 })
 
 const emit = defineEmits(['open', 'opened', 'close', 'closed'])

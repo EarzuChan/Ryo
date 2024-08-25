@@ -39,6 +39,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         ])
         const activeTabIndex = ref(0)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
+        const activeVolume = computed(() => activeItem.value?.fromFile)
+        const activeItem = computed(() => openedItems.value[activeTab.value.data])
 
         const openedVolumes = ref<VolumeModel[]>([/*{
         name: "假文件1",
@@ -145,16 +147,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             console.debug(TAG, "已设置当前Tab", page)
         }
 
-        function openTab(tabType: TabType, index: number = -1) {
-            console.debug(TAG, "打开Tab", tabType, index)
+        function openTab(tabType: TabType, data?: any) {
+            console.debug(TAG, "打开Tab", tabType, data)
             switch (tabType) {
                 case TabType.Empty:
                     internalOpenTab({name: "空白页", nonResident: true})
                     break
                 case TabType.Item:
-                    let name = openedItems.value[index]?.name
+                    let name = openedItems.value[data]?.name
                     if (name === undefined) name = "无名项目"
-                    internalOpenTab({name, page: markRaw(ItemPage), data: index, nonResident: true})
+                    internalOpenTab({name, page: markRaw(ItemPage), data, nonResident: true})
                     // TODO: 项目一旦unsaved，就常驻
                     break
                 case TabType.Welcome:
@@ -261,10 +263,12 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         return {
             available,
             openedVolumes,
+            activeVolume,
             openedItems,
             anchorTab,
             clickTab,
             closeTab,
+            activeItem,
             openedTabs,
             activeTabIndex,
             activeTab,

@@ -32,8 +32,9 @@ import type {MenuBarItem} from "@/models/UIModels"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {KurisuWindowState} from "@/models/KurisuModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import {TODO} from "@/utils/UsefulUtils"
+import {ensure, TODO} from "@/utils/UsefulUtils"
 import {TabType} from "@/models/AppModels"
+import AboutDialog from "@/views/Dialogs/AboutDialog.vue";
 
 const TAG = 'TopAppBar'
 
@@ -81,14 +82,19 @@ function showMenuOf(menuType: MenuBarItem) {
 
   switch (menuType.id) {
     case 'file':
-      currentMenu.value = showMenu({
-        items: [
-          {name: '新建', action: () => workspaceState.newVolume()},
-          {name: '打开', action: () => workspaceState.openVolume()},
-          {name: '保存', action: () => console.log('保存')},
-          {name: '另存为', action: () => console.log('另存为')},
-          {name: '关闭', action: () => console.log('关闭')},
-          {name: '全部保存', action: () => console.log('全部保存')},
+      const items = [
+        {name: '新建', action: () => workspaceState.newVolume()},
+        {name: '打开', action: () => workspaceState.openVolume()}]
+      if (ensure(workspaceState.activeVolume)) {
+        items.push({
+          name: '保存' + workspaceState.activeVolume,
+          action: () => workspaceState.saveVolume(workspaceState.activeVolume)
+        }, {
+          name: '关闭' + workspaceState.activeVolume,
+          action: () => workspaceState.closeVolume(workspaceState.activeVolume)
+        })
+      }
+      items.push({name: '全部保存', action: () => console.log('全部保存')},
           {name: '全部关闭', action: () => console.log('全部关闭')},
           {name: '添加资源', action: () => console.log('添加资源')},
           {name: '导出当前资源', action: () => console.log('导出当前资源')},
@@ -101,8 +107,9 @@ function showMenuOf(menuType: MenuBarItem) {
                 ]
           },
           {name: '重启软件', action: () => console.log('重启软件')},
-          {name: '退出', action: () => kurisuState.stopApp()}
-        ], attachToId: menuType.id, onClose() {
+          {name: '退出', action: () => kurisuState.stopApp()})
+      currentMenu.value = showMenu({
+        items, attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
       })
@@ -127,10 +134,15 @@ function showMenuOf(menuType: MenuBarItem) {
         },
       })
       break
-    case 'view':
+    case
+    'view'
+    :
       currentMenu.value = showMenu({
         items: [
-          {name: '侧边栏收起', action: () => console.log('侧边栏收起')}, {
+          {
+            name: "侧边栏" + (appState.sidePanelExpanded ? "收起" : "展开"),
+            action: () => appState.sidePanelExpanded = !appState.sidePanelExpanded
+          }, {
             name: '工具窗口', children:
                 [{name: 'TexturePacker', action: () => console.log('TexturePacker')},]
           },
@@ -142,7 +154,9 @@ function showMenuOf(menuType: MenuBarItem) {
         },
       })
       break
-    case 'help':
+    case
+    'help'
+    :
       currentMenu.value = showMenu({
         items: [
           {name: '显示欢迎页', action: () => workspaceState.openTab(TabType.Welcome)}, {
@@ -155,7 +169,7 @@ function showMenuOf(menuType: MenuBarItem) {
                 ]
           },
           {name: '建议和反馈', action: () => console.log('建议和反馈')},
-          {name: '关于Ryo', action: () => console.log('关于Ryo')},
+          {name: '关于Ryo', action: () => dialogState.orderSpecial(AboutDialog)},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },

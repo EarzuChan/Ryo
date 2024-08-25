@@ -118,10 +118,6 @@ WebEvent (bidirectional communication).
 
 The framework's name is from Makise Kurisu from Steins;Gate, she is my assistant ~~wife~~, no adding Tina Kora!
 
-### Me.EarzuChan.Ryo.WPFImageConverter
-
-A small WPF application for users to convert textures and images bidirectionally.
-
 ## Future Sister Solutions
 
 - **Teio**: A launcher for Simulacra series games (using SEngine) across Windows and Android. It will support mods, use

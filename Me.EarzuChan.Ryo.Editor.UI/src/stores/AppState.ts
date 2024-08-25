@@ -19,6 +19,7 @@ const TAG = "AppState"
 export const useAppStateStore = defineStore('app-state', () => {
         const available = ref(false)
         const dataTypeSchemas = ref<TypeSchema[]>([])
+        const sidePanelExpanded = ref(true)
 
         function getEditorsByRyoType(ryoType: RyoType) {
             const editors = []
@@ -27,9 +28,9 @@ export const useAppStateStore = defineStore('app-state', () => {
                 editors.push(ArrayEditor)
             } else if (ryoType.baseType) switch (ryoType.baseType.type) {
                 case "java.lang.String":
-                case "java.lang.Character":
                     editors.push(TextEditor)
                     break
+                case "java.lang.Character":
                 case "java.lang.Integer":
                 case "java.lang.Long":
                 case "java.lang.Float":
@@ -73,8 +74,8 @@ export const useAppStateStore = defineStore('app-state', () => {
                 return []
             } else if (type.baseType) switch (type.baseType.type) {
                 case "java.lang.String":
-                case "java.lang.Character":
                     return ""
+                case "java.lang.Character":
                 case "java.lang.Integer":
                 case "java.lang.Long":
                 case "java.lang.Float":
@@ -88,7 +89,11 @@ export const useAppStateStore = defineStore('app-state', () => {
                     return false
                 default:
                     // TODO: 初始化各字段？
-                    return {}
+                    const obj = {}
+                    type.baseType.members?.forEach(field => {
+                        obj[field.name] = getInitValue(getRyoTypeByName(field.type))
+                    })
+                    return obj
             }
         }
 
@@ -145,6 +150,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             getEditorsByRyoType,
             getRyoTypeByName,
             typeSchemaToRyoType,
+            sidePanelExpanded
         }
     }
 )
