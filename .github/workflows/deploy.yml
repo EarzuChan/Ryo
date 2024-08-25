@@ -29,3 +29,4 @@ jobs:
           commit-message: Deploy to GitHub Pages 🚀
           git-name: "GitHub Actions"
           git-email: "github-actions@github.com"
+          token: ${{ secrets.GITHUB_TOKEN }}
