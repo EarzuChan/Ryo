@@ -30,7 +30,7 @@ const computedMassFiles = computed(() => {
   ori?.forEach(mf => {
     let childrenTreeNodeModel: TreeNodeModel[] = []
     mf.items?.forEach(child => {
-      childrenTreeNodeModel.push({name: child.name})
+      childrenTreeNodeModel.push({name: child.name!})
     })
 
     result.push({name: mf.name, children: childrenTreeNodeModel})

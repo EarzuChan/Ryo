@@ -89,7 +89,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                     return false
                 default:
                     // TODO: 初始化各字段？
-                    const obj = {}
+                    const obj: { [key: string]: any } = {}
                     type.baseType.members?.forEach(field => {
                         obj[field.name] = getInitValue(getRyoTypeByName(field.type))
                     })

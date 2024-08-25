@@ -57,10 +57,10 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
 
                 if (ensureObject(info.dialogModel)) {
                     return h(dialog, {
-                        ...info.dialogModel,
+                        ...info.dialogModel!,
                         onClose: () => {
-                            if (info.dialogModel.onClose) {
-                                info.dialogModel.onClose()
+                            if (info.dialogModel!.onClose) {
+                                info.dialogModel!.onClose()
                             }
                         },
                         onClosed: () => {
@@ -69,8 +69,8 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
 
                             showNextDialog()
 
-                            if (info.dialogModel.onClosed) {
-                                info.dialogModel.onClosed()
+                            if (info.dialogModel!.onClosed) {
+                                info.dialogModel!.onClosed()
                             }
                         }
                     })
