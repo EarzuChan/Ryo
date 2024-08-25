@@ -1,0 +1,31 @@
+﻿name: Build and Deploy
+on:
+  push:
+    branches:
+      - remaster
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2 # If you're using actions/checkout@v2 you must set persist-credentials to false in most cases for the deployment to work correctly.
+        with:
+          persist-credentials: false
+
+      - name: Install and Build 🔧 # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
+        run: |
+          npm install
+          npm run build
+        working-directory: Me.EarzuChan.Ryo.Editor.UI
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.1.5
+        with:
+          branch: gh-pages # The branch the action should deploy to.
+          folder: dist # The folder the action should deploy.
+          repository: earzuchan/earzuchan.github.io # The repository the action should deploy to. Can be located in the same repo, or in a different one.
+          clean: true # Automatically remove deleted files from the deploy branch
+          commit-message: Deploy to GitHub Pages 🚀
+          git-name: "GitHub Actions"
+          git-email: "github-actions@github.com"
