@@ -224,7 +224,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         async function getFullFileModel(massName: string, itemId: number) {
             console.log(TAG, "获取项目", massName, itemId)
             const fileModel = (await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetFullFileModel', massName, itemId)))[0] as FileModel
-            fileModel.type = appState.getRyoTypeByName(fileModel.type as any as string)
+            fileModel.ryoType = appState.getRyoTypeByName(fileModel.type!)
             console.log(TAG, "获取到项目", massName, itemId, fileModel)
 
             return fileModel

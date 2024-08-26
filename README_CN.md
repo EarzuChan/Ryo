@@ -113,8 +113,10 @@ WebCall（类似于 RESTful 请求）和 WebEvent（双向通信）。
 
 - **Teio**：一个跨 Windows 和安卓平台的 Simulacra 系列游戏启动器（使用 SEngine），支持 Mod，可使用任意游戏资源包，并包含各种改版资源市场。
 - **TeioAPI**：一套提供给 Teio Mod 开发者的 API，用于与启动器进行交互，以及对游戏和资源进行操作。
-- **Soyorin**：一个为 Simulacra 玩家制作的 IDE，旨在创作 Mod 和衍生版本。它将方便解包原版游戏应用（用户需自行提供原版包）、管理游戏资源、一键打包改版资源，并与
+- **~~Soyorin~~没想好名字**：一个为 Simulacra 玩家制作的 IDE，旨在创作 Mod
+  和衍生版本。它将方便解包原版游戏应用（用户需自行提供原版包）、管理游戏资源、一键打包改版资源，并与
   鿌 Editor 联动。
+- **Sakiko**：次世代JvmHook框架，计划支持桌面和安卓平台，为TeioAPI提供游戏生命周期事件注册与自定义Hook的能力。
 
 ## 联系方式
 

@@ -32,6 +32,14 @@ public class LocalVolumeManager
 
     public LocalVolume OpenLocalVolume(string localPath, string? fileName = null)
     {
+        // 先检查是否已经打开，抛出
+        if (Volumes.Values.Any(meta => meta.LocalPath == localPath))
+        {
+            var err = new FileLoadException("文件已经打开！");
+            LogUtils.PrintError(Tag, err);
+            throw err;
+        }
+
         var massFile = new MassFile();
 
         // Load the mass file from the local path
@@ -156,11 +164,12 @@ public class LocalVolume
         var file = MassFile.Get<object>(id);
 
         // TODO:检测不了是否Parse成功
+        var jwc = MassFile.ItemAdaptions[MassFile.ItemBlobs[id].AdaptionId].DataJavaClz;
 
         return new LocalVolumeFileModel(id, VolumeName,
             name ?? MassFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
-            MassFile.ItemAdaptions[MassFile.ItemBlobs[id].AdaptionId].DataJavaClz.JavaClassToRyoType()
-                .ResolveDataTypeName()
+            jwc.JavaClassToRyoType()
+                .ResolveDataTypeName(), jwc
             , file, true);
     }
 
@@ -176,6 +185,7 @@ public record LocalVolumeFileModel(
     string FromFile,
     string? Name,
     string? Type,
+    string? RawJavaClass,
     object Data,
     bool ParseSuccess
 );

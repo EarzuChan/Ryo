@@ -24,7 +24,7 @@ public class GetAllDataTypesResponder : IWebCallResponder
 }
 
 [WebEventHandler("OpenVolume")]
-public class OpenFileHandler : IWebEventHandler
+public class OpenVolumeHandler : IWebEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
@@ -66,7 +66,7 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
 
 // TODO:如果是基本类型，参数不是JObject，懆称冯的福
 [WebCallResponder("SaveItem")]
-public class SaveItemHandler(string volumeName, string itemName, JObject data) : IWebCallResponder
+public class SaveItemHandler(string volumeName, string itemName, object data) : IWebCallResponder
 {
     public WebResponse Respond(KurisuAppContext context)
     {
@@ -74,17 +74,35 @@ public class SaveItemHandler(string volumeName, string itemName, JObject data) :
 
         context.Inject<LocalVolumeManager>()!.Also(it =>
         {
-            Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}\n{data}");
+            Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
 
             it.GetVolumeByName(volumeName)
-                .Ensure(vol => vol[itemName].Type.JavaClassToRyoType().ToCsType().Ensure(typ =>
+                .Ensure(vol => vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType().Ensure(typ =>
                 {
                     Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
-                    data.ToObject(typ).Ensure(obj =>
+                    switch (data)
                     {
-                        vol.Add(itemName, obj);
-                        newId = vol[itemName].Id;
-                    });
+                        case JObject jobj:
+                            Trace.WriteLine("Data is JObject");
+                            jobj.ToObject(typ).Ensure(obj =>
+                            {
+                                vol.Add(itemName, obj);
+                                newId = vol[itemName].Id;
+                            });
+                            break;
+                        case JArray jarr when typ.IsArray:
+                            Trace.WriteLine($"Data is JArray, {jarr.Count} items");
+                            jarr.ToObject(typ).Ensure(arr =>
+                            {
+                                vol.Add(itemName, arr);
+                                newId = vol[itemName].Id;
+                            });
+                            break;
+                        default:
+                            Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
+                            vol.Add(itemName, data);
+                            break;
+                    }
                 }));
         });
 

@@ -94,7 +94,7 @@ function showMenuOf(menuType: MenuBarItem) {
               action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
             },
             {
-              name: '另存为',
+              name: '将' + workspaceState.activeVolume! + '另存为',
               action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
             })
       }
