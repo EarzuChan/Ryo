@@ -1,17 +1,19 @@
 <template>
   <div id="item-page">
     <div class="info-group">
-      <div class="ryo-typography-label-large">项目元数据</div>
+      <div class="ryo-typography-label-large">{{ t('itemMetadata') }}</div>
       <div class="horizontal-layout">
-        <div class="info ryo-typography-body-large">ID：{{
-            itemData.id
-          }}<br>名称：{{ itemData.name ? itemData.name : "（无名内联项目）" }}<br>类型：{{
-            itemData.ryoType ? itemData.ryoType.typeName : "（未知类型）"
-          }}
+        <div class="info ryo-typography-body-large">{{
+            t('id', {id: itemData.id})
+          }}<br>{{
+            t('name', {name: itemData.name ? itemData.name : t('unnamedInlineItem')})
+          }}<br>{{ t('type', {type: itemData.ryoType ? itemData.ryoType.typeName : t('unknownType')}) }}
         </div>
-        <div class="info ryo-typography-body-large">解析状态：{{
-            boolToText(itemData.parseSuccess)
-          }}<br>编辑器：{{ arrayToText(supportedEditors) }}<br>导入导出：{{ arrayToText(inOutMethods) }}
+        <div class="info ryo-typography-body-large">{{
+            t('parseStatus', {status: boolToText(itemData.parseSuccess)})
+          }}<br>{{
+            t('editors', {editors: arrayToText(supportedEditors)})
+          }}<br>{{ t('importExport', {methods: arrayToText(inOutMethods)}) }}
         </div>
       </div>
     </div>
@@ -21,14 +23,14 @@
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
         <Select id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
-        <TextButton button-style="filled" id="save-button" @click="save">保存</TextButton>
+        <TextButton button-style="filled" id="save-button" @click="save">{{ t('save') }}</TextButton>
       </div>
     </EditorHolder>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed, getCurrentInstance, onActivated, onDeactivated, ref, watch} from "vue"
+import {computed, getCurrentInstance, onActivated, onDeactivated, ref} from "vue"
 import {arrayToText, boolToText, deepCopy, ensure, getSfcName, TODO} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
@@ -38,8 +40,11 @@ import Select from "@/components/Select.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import {type FileModel} from "@/models/AppModels"
+import {useI18n} from "vue-i18n"
 
 const TAG = "ItemPage"
+
+const {t} = useI18n()
 
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
@@ -78,7 +83,7 @@ const supportedEditors = computed(() => {
 const inOutMethods = computed(() => {
   const typeName = itemData.value.ryoType
 
-  return [TODO(TAG, "获取导入导出方法")]
+  return [TODO(TAG, "Get Import/Export Methods")]
 })
 
 const holder = ref<any>(null)
@@ -88,13 +93,14 @@ function save() {
   console.log(TAG, "保存", itemData.value.tempData, itemData.value.data)
 
   dialogState.order({
-    headline: "保存",
-    description: "您确定要保存吗？",
+    headline: t('save'),
+    description: t('areYouSureToSave'),
     actions: [
-      {text: "取消"},
+      {text: t('cancel')},
       {
-        text: "确定", onClick() {
+        text: t('confirm'), onClick() {
           (async () => {
+            // HACK: 可能不稳定
             console.log(TAG, "异步保存")
 
             itemData.value.data = deepCopy(itemData.value.tempData)
@@ -115,13 +121,13 @@ function discard() {
   console.log(TAG, "放弃未保存更改")
 
   dialogState.order({
-    icon: "discard", headline: "放弃未保存更改",
-    description: "您确定要放弃未保存的更改吗？\n这将恢复编辑器到上次保存的状态",
+    icon: "discard", headline: t('discardUnsavedChanges'),
+    description: t('areYouSureToDiscard'),
     actions: [
-      {text: "取消"},
-      {text: "确定", onClick: () => itemData.value.tempData = deepCopy(itemData.value.data)},
+      {text: t('cancel')},
+      {text: t('confirm'), onClick: () => itemData.value.tempData = deepCopy(itemData.value.data)},
       {
-        text: "确定并重载", onClick() { // TODO:重不重载弄个偏好设置
+        text: t('confirmAndReload'), onClick() { // TODO:重不重载弄个偏好设置
           itemData.value.tempData = deepCopy(itemData.value.data)
           reload(true)
         }
@@ -135,11 +141,11 @@ function reload(fromSystem: boolean = false) {
 
   if (fromSystem) holder.value.reload()
   else dialogState.order({
-    icon: "reload", headline: "重载编辑器",
-    description: "您确定要重载编辑器吗？\n这将放弃未写入暂存的编辑中不正确数据",
+    icon: "reload", headline: t('reloadEditor'),
+    description: t('areYouSureToReload'),
     actions: [
-      {text: "取消"},
-      {text: "确定", onClick: () => holder.value.reload()},
+      {text: t('cancel')},
+      {text: t('confirm'), onClick: () => holder.value.reload()},
     ]
   })
 }
@@ -161,11 +167,11 @@ defineExpose({
 })
 
 onActivated(() => {
-  workspaceState.setActiveTabPage(getCurrentInstance()!.exposed)
+  workspaceState.setActiveTabExposed(getCurrentInstance()!.exposed)
 })
 
 onDeactivated(() => {
-  if (workspaceState.activeTabPage === ref(getCurrentInstance()!.exposed).value) workspaceState.setActiveTabPage(null)
+  if (workspaceState.activeTabExposed === ref(getCurrentInstance()!.exposed).value) workspaceState.setActiveTabExposed(null)
 })
 </script>
 

@@ -6,16 +6,16 @@
           <img src="/assets/images/illustration_colored_icon.svg">
         </div>
         <div class="column">
-          <div class="ryo-typography-headline-small primary">Ryo</div>
-          <div class="ryo-typography-title-medium surface">by Earzu Chan</div>
+          <div class="ryo-typography-headline-small primary">{{ appInfo.name }}</div>
+          <div class="ryo-typography-title-medium surface">by {{ appInfo.author }}<br>{{ appInfo.version }}</div>
         </div>
       </div>
       <div id="row2">
-        <div class="ryo-typography-title-small surface-variant">哈哈，你想
-          <div class="primary inline"> 支持</div>
-          吗<br>怎么，你不
-          <div class="primary inline"> 关注</div>
-          吗
+        <div class="ryo-typography-title-small surface-variant">{{ $t('哈哈，你想') }}
+          <div class="primary inline" @click="openLink(appInfo.repoLink)"> {{ $t('support') }}</div>
+          {{ $t('吗') }}<br>{{ $t('怎么，你不') }}
+          <div class="primary inline" @click="openLink(appInfo.authorLink)"> {{ $t('follow') }}</div>
+          {{ $t('吗') }}
         </div>
       </div>
     </div>
@@ -25,6 +25,10 @@
 <script setup lang="ts">
 import {defineProps, onMounted, ref} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
+import {inject} from "@vue/runtime-core"
+import {openLink} from "@/utils/UsefulUtils";
+
+const appInfo: any = inject('app_info')
 
 const props = defineProps({
   closeOnOverlayClick: {
@@ -67,7 +71,9 @@ function closeDialog() {
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 8px;
   padding: 24px;
+  min-width: 232px;
 }
 
 #row1 {
@@ -110,5 +116,6 @@ function closeDialog() {
 
 .inline {
   display: inline;
+  cursor: pointer;
 }
 </style>

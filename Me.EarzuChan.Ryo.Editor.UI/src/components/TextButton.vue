@@ -62,7 +62,7 @@ const paddingHorizontal = computed(() => {
 }
 
 .text-button.disabled {
-  cursor: not-allowed;
+  cursor: unset;
 }
 
 .text-button::after {

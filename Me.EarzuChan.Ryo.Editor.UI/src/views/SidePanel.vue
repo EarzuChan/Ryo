@@ -9,7 +9,7 @@
       <div id="side-panel-control-buttons">
         <IconButton :size="48" :icon="appState.sidePanelExpanded?'panel_narrow':'panel'"
                     @click="appState.sidePanelExpanded=!appState.sidePanelExpanded"/>
-        <IconButton :size="48" icon="settings" @click="openSettings"/>
+        <IconButton :size="48" disabled icon="settings" @click="openSettings"/>
       </div>
     </div>
     <div id="side-panel-content" v-if="appState.sidePanelExpanded">

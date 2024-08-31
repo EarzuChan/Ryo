@@ -14,6 +14,7 @@ import {type FileModel, type VolumeModel, TabType} from "@/models/AppModels"
 import type {TabModel} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, TODO} from "@/utils/UsefulUtils"
+import {useI18n} from "vue-i18n"
 
 const TAG = "WorkspaceState"
 
@@ -22,7 +23,9 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         const appState = useAppStateStore()
 
-        const activeTabPage = ref<any>(null)
+        const {t} = useI18n()
+
+        const activeTabExposed = ref<any>(null)
 
         const openedTabs = ref<TabModel[]>([
             /*{
@@ -37,7 +40,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             },
             {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
         ])
-        const activeTabIndex = ref(0)
+        const activeTabIndex = ref(-1)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
         const activeVolume = computed(() => activeItem.value?.fromFile)
         const activeItem = computed(() => openedItems.value[activeTab.value?.data])
@@ -142,8 +145,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             }
         }
 
-        function setActiveTabPage(page: any) {
-            activeTabPage.value = page
+        function setActiveTabExposed(page: any) {
+            activeTabExposed.value = page
             console.debug(TAG, "已设置当前Tab", page)
         }
 
@@ -151,16 +154,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             console.debug(TAG, "打开Tab", tabType, data)
             switch (tabType) {
                 case TabType.Empty:
-                    internalOpenTab({name: "空白页", nonResident: true})
+                    internalOpenTab({name: t('emptyPage'), nonResident: true})
                     break
                 case TabType.Item:
                     let name = openedItems.value[data]?.name
-                    if (name === undefined) name = "无名项目"
+                    if (name === undefined) name = t('noNameItem')
                     internalOpenTab({name, page: markRaw(ItemPage), data, nonResident: true})
                     // TODO: 项目一旦unsaved，就常驻
                     break
                 case TabType.Welcome:
-                    internalOpenTab({name: "欢迎", page: markRaw(WelcomePage), nonResident: true})
+                    internalOpenTab({name: t('welcome'), page: markRaw(WelcomePage), nonResident: true})
             }
         }
 
@@ -178,23 +181,23 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function pageDiscard() {
-            activeTabPage.value?.discard()
+            activeTabExposed.value?.discard()
         }
 
         function pageReload(fromSystem: boolean = false) {
-            activeTabPage.value?.reload(fromSystem)
+            activeTabExposed.value?.reload(fromSystem)
         }
 
         function pageSave() {
-            activeTabPage.value?.save()
+            activeTabExposed.value?.save()
         }
 
         function pageRedo() {
-            activeTabPage.value?.redo()
+            activeTabExposed.value?.redo()
         }
 
         function pageUndo() {
-            activeTabPage.value?.undo()
+            activeTabExposed.value?.undo()
         }
 
         async function mentionItem(massName: string, itemId: number) {
@@ -272,7 +275,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeItem,
             activeTab,
             activeTabIndex,
-            activeTabPage,
+            activeTabExposed,
             activeVolume,
             anchorTab,
             available,
@@ -295,7 +298,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             saveVolume,
             saveVolumeAs,
             saveItem,
-            setActiveTabPage,
+            setActiveTabExposed,
         }
     }
 )

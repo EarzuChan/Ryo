@@ -62,7 +62,7 @@ defineProps({
 }
 
 .icon-button.disabled {
-  cursor: not-allowed;
+  cursor: unset;
 }
 
 .icon-button::after {

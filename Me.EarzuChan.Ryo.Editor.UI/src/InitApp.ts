@@ -1,14 +1,20 @@
-// import './assets/main.css'
-
 import {createApp} from 'vue'
 import {createPinia} from 'pinia'
 import App from './App.vue'
+import AppError from '@/views/AppError.vue'
 import './styles/style-default.scss'
 import './styles/color-default.scss'
-import AppError from "@/views/AppError.vue"
+import {i18n} from "@/misc/I18n"
 
 const TAG = "InitApp"
-const APP_INFO = {version: "2024.0607", name: "Ryo"}
+const APP_INFO = {
+    version: "2024.0831",
+    name: "Ryo",
+    author: "Earzu Chan",
+    repoLink: "https://github.com/EarzuChan/Ryo",
+    authorLink: "https://github.com/EarzuChan",
+    issueLink: "https://github.com/EarzuChan/Ryo/issues",
+}
 
 console.log(TAG, "Start init")
 
@@ -16,12 +22,13 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.config.errorHandler = (err, instance, info) => {
-    console.log(`应用爆了`, err)
+    console.log(TAG, 'App crashed:', err)
     app.unmount()
 
-    createApp(AppError).provide('err', err).provide('app_info', APP_INFO).mount('body')
+    createApp(AppError).use(i18n).provide('err', err).provide('app_info', APP_INFO).mount('body')
 }
 app.use(pinia)
+app.use(i18n)
 app.provide('app_info', APP_INFO)
 app.mount('body')
 
