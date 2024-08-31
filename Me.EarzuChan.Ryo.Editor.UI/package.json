@@ -14,7 +14,8 @@
   "dependencies": {
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
-    "vue-draggable-plus": "^0.5.2"
+    "vue-draggable-plus": "^0.5.2",
+    "vue-i18n": "^9.14.0"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",

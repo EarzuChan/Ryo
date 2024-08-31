@@ -84,7 +84,7 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'file':
       const items: MenuItem[] = [
         {name: '新建', action: () => workspaceState.newVolume()},
-        {name: '打开', action: () => workspaceState.openVolume()}]
+        {name: '打开', action: () => workspaceState.openVlume()}]
       if (ensure(workspaceState.activeVolume)) {
         items.push({
               name: '保存' + workspaceState.activeVolume!,
