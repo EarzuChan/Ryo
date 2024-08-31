@@ -161,11 +161,11 @@ defineExpose({
 })
 
 onActivated(() => {
-  workspaceState.setActiveTabPage(getCurrentInstance()!.exposed)
+  workspaceState.setActiveTabExposed(getCurrentInstance()!.exposed)
 })
 
 onDeactivated(() => {
-  if (workspaceState.activeTabPage === ref(getCurrentInstance()!.exposed).value) workspaceState.setActiveTabPage(null)
+  if (workspaceState.activeTabExposed === ref(getCurrentInstance()!.exposed).value) workspaceState.setActiveTabExposed(null)
 })
 </script>
 

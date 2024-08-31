@@ -60,7 +60,7 @@ export enum TabType {
 export interface HistoryRecord {
 }
 
-export interface LearningResourceModel {
+export interface ResLinkModel {
     title: string
     description: string
     link: string

@@ -3,10 +3,13 @@ import {createApp, h, ref} from "vue"
 import type {DialogModel} from "@/models/UIModels"
 import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
 import {ensureObject} from "@/utils/UsefulUtils";
+import {inject} from "@vue/runtime-core";
 
 const TAG = "DialogState"
 export const useDialogStateStore = defineStore("dialog-state", () => {
     // 创建一个队列来存储对话框配置
+
+    const appInfo = inject('app_info')
 
     interface InternalDialogInfo {
         dialogModel?: DialogModel,
@@ -87,6 +90,7 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
             }
         })
 
+        app.provide('app_info', appInfo)
         app.mount(div)
     }
 

@@ -22,6 +22,7 @@ import {AttachMethod, type MenuItem} from "@/models/UIModels"
 import {showMenu} from "@/utils/MenuUtils"
 import {delayExecution, isScrollbarVisible} from "@/utils/UsefulUtils"
 
+// TODO: 有子项的菜单项不能被点按
 const TAG = 'Menu'
 
 const props = defineProps({

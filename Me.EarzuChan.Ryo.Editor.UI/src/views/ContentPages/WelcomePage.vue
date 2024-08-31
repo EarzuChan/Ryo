@@ -32,19 +32,23 @@
 <script setup lang="ts">
 import {ref} from "vue"
 import type {RecentFile} from "@/models/AppModels"
-import type {LearningResourceModel} from "@/models/AppModels"
+import type {ResLinkModel} from "@/models/AppModels"
 import {openLink} from "@/utils/UsefulUtils"
+import {inject} from "@vue/runtime-core";
 
 const TAG = 'WelcomePage'
 
+const appInfo:any = inject('app_info')
+
 const recentFiles = ref<RecentFile[]>([{name: 'test', path: 'man'}])
-const resources = ref<LearningResourceModel[]>(
-    [
-      {title: '快速上手', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-      {title: '深度指南', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-      {title: 'Ryo存储库', description: 'Github', link: 'https://www.github.com/EarzuChan/Ryo'},
-      {title: '使用Ryo库', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-    ])
+const resources: ResLinkModel[] = [
+  {title: '快速上手', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: '深度指南', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: '使用Ryo库', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: 'Ryo存储库', description: 'Github', link: appInfo.repoLink},
+  {title: '建议和反馈', description: 'Github', link: appInfo.issueLink},
+  {title: '开发者主页', description: 'Github', link: appInfo.authorLink},
+]
 </script>
 
 <style scoped>

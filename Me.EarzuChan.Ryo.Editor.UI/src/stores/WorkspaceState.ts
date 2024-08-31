@@ -22,7 +22,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         const appState = useAppStateStore()
 
-        const activeTabPage = ref<any>(null)
+        const activeTabExposed = ref<any>(null)
 
         const openedTabs = ref<TabModel[]>([
             /*{
@@ -37,7 +37,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             },
             {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
         ])
-        const activeTabIndex = ref(0)
+        const activeTabIndex = ref(-1)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
         const activeVolume = computed(() => activeItem.value?.fromFile)
         const activeItem = computed(() => openedItems.value[activeTab.value?.data])
@@ -142,8 +142,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             }
         }
 
-        function setActiveTabPage(page: any) {
-            activeTabPage.value = page
+        function setActiveTabExposed(page: any) {
+            activeTabExposed.value = page
             console.debug(TAG, "已设置当前Tab", page)
         }
 
@@ -178,23 +178,23 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function pageDiscard() {
-            activeTabPage.value?.discard()
+            activeTabExposed.value?.discard()
         }
 
         function pageReload(fromSystem: boolean = false) {
-            activeTabPage.value?.reload(fromSystem)
+            activeTabExposed.value?.reload(fromSystem)
         }
 
         function pageSave() {
-            activeTabPage.value?.save()
+            activeTabExposed.value?.save()
         }
 
         function pageRedo() {
-            activeTabPage.value?.redo()
+            activeTabExposed.value?.redo()
         }
 
         function pageUndo() {
-            activeTabPage.value?.undo()
+            activeTabExposed.value?.undo()
         }
 
         async function mentionItem(massName: string, itemId: number) {
@@ -272,7 +272,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeItem,
             activeTab,
             activeTabIndex,
-            activeTabPage,
+            activeTabExposed,
             activeVolume,
             anchorTab,
             available,
@@ -295,7 +295,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             saveVolume,
             saveVolumeAs,
             saveItem,
-            setActiveTabPage,
+            setActiveTabExposed,
         }
     }
 )
