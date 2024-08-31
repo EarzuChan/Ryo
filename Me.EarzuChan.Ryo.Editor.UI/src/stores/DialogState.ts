@@ -4,6 +4,7 @@ import type {DialogModel} from "@/models/UIModels"
 import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
 import {ensureObject} from "@/utils/UsefulUtils";
 import {inject} from "@vue/runtime-core";
+import {i18n} from "@/misc/I18n";
 
 const TAG = "DialogState"
 export const useDialogStateStore = defineStore("dialog-state", () => {
@@ -91,6 +92,7 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
         })
 
         app.provide('app_info', appInfo)
+        app.use(i18n)
         app.mount(div)
     }
 

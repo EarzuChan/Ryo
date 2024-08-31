@@ -1,25 +1,25 @@
 <template>
   <div id="welcome-page">
     <div class="text-group">
-      <div class="ryo-typography-display-large white">Ryo</div>
-      <div class="ryo-typography-headline-large on-surface">觉醒编集の力</div>
-      <div class="ryo-typography-headline-large on-surface">铸造次世代の伝说剧情</div>
+      <div class="ryo-typography-display-large white">{{ appInfo.name }}</div>
+      <div class="ryo-typography-headline-large on-surface">{{ $t('觉醒编集の力') }}</div>
+      <div class="ryo-typography-headline-large on-surface">{{ $t('铸造次世代の伝说剧情') }}</div>
     </div>
     <div id="task-group">
       <div class="text-group">
-        <div class="ryo-typography-title-large white">启动</div>
-        <div class="ryo-typography-body-large primary">新建文件</div>
-        <div class="ryo-typography-body-large primary">打开文件</div>
+        <div class="ryo-typography-title-large white">{{ $t('launch') }}</div>
+        <div class="ryo-typography-body-large primary action">{{ $t('newFile') }}</div>
+        <div class="ryo-typography-body-large primary action">{{ $t('openFile') }}</div>
       </div>
       <div class="text-group">
-        <div class="ryo-typography-title-large white">最近</div>
+        <div class="ryo-typography-title-large white">{{ $t('recent') }}</div>
         <div v-for="file in recentFiles" class="horizontal-group">
           <div class="ryo-typography-body-large primary">{{ file.name }}</div>
           <div class="ryo-typography-body-large on-surface-variant">{{ file.path }}</div>
         </div>
       </div>
       <div class="text-group">
-        <div class="ryo-typography-title-large white">资源</div>
+        <div class="ryo-typography-title-large white">{{ $t('resources') }}</div>
         <div v-for="resource in resources" class="horizontal-group" @click="openLink(resource.link)">
           <div class="ryo-typography-body-large primary">{{ resource.title }}</div>
           <div class="ryo-typography-body-large on-surface-variant">{{ resource.description }}</div>
@@ -35,19 +35,21 @@ import type {RecentFile} from "@/models/AppModels"
 import type {ResLinkModel} from "@/models/AppModels"
 import {openLink} from "@/utils/UsefulUtils"
 import {inject} from "@vue/runtime-core";
+import {useI18n} from "vue-i18n";
 
 const TAG = 'WelcomePage'
 
-const appInfo:any = inject('app_info')
+const appInfo: any = inject('app_info')
+const {t} = useI18n()
 
 const recentFiles = ref<RecentFile[]>([{name: 'test', path: 'man'}])
 const resources: ResLinkModel[] = [
-  {title: '快速上手', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-  {title: '深度指南', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-  {title: '使用Ryo库', description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
-  {title: 'Ryo存储库', description: 'Github', link: appInfo.repoLink},
-  {title: '建议和反馈', description: 'Github', link: appInfo.issueLink},
-  {title: '开发者主页', description: 'Github', link: appInfo.authorLink},
+  {title: t('quickStart'), description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: t('deepGuidance'), description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: t('useRyoLibrary'), description: 'RyoDocs', link: 'https://www.earzuchan.me/'},
+  {title: t('ryoRepository'), description: 'Github', link: appInfo.repoLink},
+  {title: t('advicesAndFeedback'), description: 'Github', link: appInfo.issueLink},
+  {title: t('authorLink'), description: 'Github', link: appInfo.authorLink},
 ]
 </script>
 
@@ -87,6 +89,10 @@ const resources: ResLinkModel[] = [
   display: flex;
   flex-direction: row;
   gap: 8px;
+  cursor: pointer;
+}
+
+.action {
   cursor: pointer;
 }
 

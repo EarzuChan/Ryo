@@ -2,7 +2,7 @@
   <div class="label-holder" :class="labelHolderStyle"
        ref="labelHolder" tabindex="0" @click="toggleItemsMenu">
     <div class="label ryo-typography-label-large" id="mamba-out">
-      {{ selected !== -1 ? items[selected] : "未选择" }}
+      {{ selected !== -1 ? items[selected] : $t('unselected') }}
     </div>
     <IconButton v-if="currentMenu!==null" icon="unfold_less"
                 :size="iconButtonSize" @mousedown.left="toggleItemsMenu"/>

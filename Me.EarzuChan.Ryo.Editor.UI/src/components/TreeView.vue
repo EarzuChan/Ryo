@@ -10,7 +10,7 @@
               :class="{'rotate' : node.expanded}" :icon="node.isStem?'chevron':'file'"/>
         <div class="tree-node-label ryo-typography-label-large">{{ node.name }}</div>
         <div class="tree-node-info ryo-typography-label-large ">{{
-            node.isStem ? node.childrenCount + ' 项目' : '资源'
+            node.isStem ? node.childrenCount + " " + $t('items') : $t('item')
           }}
         </div>
       </div>

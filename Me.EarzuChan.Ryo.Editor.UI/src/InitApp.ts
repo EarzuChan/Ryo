@@ -7,6 +7,7 @@ import './styles/style-default.scss'
 import './styles/color-default.scss'
 import en from './locales/en.json'
 import zh from './locales/zh.json'
+import {i18n} from "@/misc/I18n"
 
 const TAG = "InitApp"
 const APP_INFO = {
@@ -20,24 +21,14 @@ const APP_INFO = {
 
 console.log(TAG, "Start init")
 
-const userLang = navigator.language.startsWith('zh') ? 'zh' : 'en'
-
 const app = createApp(App)
 const pinia = createPinia()
-const i18n = createI18n({
-    locale: userLang,
-    fallbackLocale: 'zh',
-    messages: {
-        en,
-        zh
-    }
-})
 
 app.config.errorHandler = (err, instance, info) => {
-    console.log('App crashed:', err, info)
+    console.log('App crashed:', err)
     app.unmount()
 
-    createApp(AppError).provide('err', err).provide('info', info).provide('app_info', APP_INFO).mount('body')
+    createApp(AppError).use(i18n).provide('err', err).provide('app_info', APP_INFO).mount('body')
 }
 app.use(pinia)
 app.use(i18n)

@@ -36,6 +36,7 @@ import {ensure, openLink, TODO} from "@/utils/UsefulUtils"
 import {TabType} from "@/models/AppModels"
 import AboutDialog from "@/views/Dialogs/AboutDialog.vue"
 import {inject} from "@vue/runtime-core"
+import {useI18n} from "vue-i18n";
 
 const TAG = 'TopAppBar'
 
@@ -48,12 +49,13 @@ const kurisuState = useKurisuStateStore()
 const workspaceState = useWorkspaceStateStore()
 
 const appInfo: any = inject('app_info')
+const {t} = useI18n()
 
 const menuBarItems: MenuBarItem[] = [
-  {id: 'file', name: '文件'},
-  {id: 'edit', name: '编辑'},
-  {id: 'view', name: '视图'},
-  {id: 'help', name: '帮助'}
+  {id: 'file', name: t('file')},
+  {id: 'edit', name: t('edit')},
+  {id: 'view', name: t('view')},
+  {id: 'help', name: t('help')},
 ]
 
 function toggleErr() {
@@ -86,46 +88,46 @@ function showMenuOf(menuType: MenuBarItem) {
   switch (menuType.id) {
     case 'file':
       const items: MenuItem[] = [
-        {name: '新建', action: () => workspaceState.newVolume()},
-        {name: '打开', action: () => workspaceState.openVolume()}]
+        {name: t('new'), action: () => workspaceState.newVolume()},
+        {name: t('open'), action: () => workspaceState.openVolume()}]
       if (ensure(workspaceState.activeVolume)) {
         items.push({
-              name: '保存' + workspaceState.activeVolume!,
+              name: t('saveFile', {file: workspaceState.activeVolume!}),
               action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
             }, {
-              name: '关闭' + workspaceState.activeVolume!,
+              name: t('closeFile', {file: workspaceState.activeVolume!}),
               action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
             },
             {
-              name: '将' + workspaceState.activeVolume! + '另存为',
+              name: t('saveFileAs', {file: workspaceState.activeVolume!}),
               action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
             })
       }
-      items.push({name: '全部保存', disabled: true, action: () => console.log('全部保存')},
-          {name: '全部关闭', disabled: true, action: () => console.log('全部关闭')},
-          {name: '添加资源', disabled: true, action: () => console.log('添加资源')},
-          {name: '导出当前资源', disabled: true, action: () => console.log('导出当前资源')},
-          {name: '导入当前资源', disabled: true, action: () => console.log('导入当前资源')}, {
-            name: '最近打开', children:
+      items.push({name: t('saveAll'), disabled: true, action: () => console.log('全部保存')},
+          {name: t('closeAll'), disabled: true, action: () => console.log('全部关闭')},
+          {name: t('addItem'), disabled: true, action: () => console.log('添加资源')},
+          {name: t('exportCurrentItem'), disabled: true, action: () => console.log('导出当前资源')},
+          {name: t('importCurrentItem'), disabled: true, action: () => console.log('导入当前资源')}, {
+            name: t('recentFiles'), disabled: true, children:
                 [
                   {name: '文件1', action: () => console.log('文件1')},
                   {name: '文件2', action: () => console.log('文件2')},
                   {name: '文件3', action: () => console.log('文件3')},
                 ]
           },
-          {name: '重启软件', disabled: true, action: () => console.log('重启软件')},
+          {name: t('restartApp'), disabled: true, action: () => console.log('重启软件')},
           {
-            name: '退出', action: () => {
+            name: t('exit'), action: () => {
               dialogState.order({
                 icon: 'ryo',
                 headline: '退出Ryo',
                 description: '您确定要退出Ryo吗？',
                 actions: [
                   {
-                    text: '取消'
+                    text: t('cancel')
                   },
                   {
-                    text: '退出',
+                    text: t('exit'),
                     onClick: () => kurisuState.stopApp()
                   }
                 ]
@@ -141,62 +143,57 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'edit':
       currentMenu.value = showMenu({
         items: [
-          {name: '撤销', disabled: pageNotOk, action: () => workspaceState.pageUndo()},
-          {name: '重做', disabled: pageNotOk, action: () => workspaceState.pageRedo()},
-          {name: '重载编辑器', disabled: pageNotOk, action: () => workspaceState.pageReload()},
-          {name: '抛弃未保存更改', disabled: pageNotOk, action: () => workspaceState.pageDiscard()},
-          {name: '保存当前标签页', disabled: pageNotOk, action: () => workspaceState.pageSave()},
+          {name: t('undo'), disabled: pageNotOk, action: () => workspaceState.pageUndo()},
+          {name: t('redo'), disabled: pageNotOk, action: () => workspaceState.pageRedo()},
+          {name: t('reloadEditor'), disabled: pageNotOk, action: () => workspaceState.pageReload()},
+          {name: t('discardUnsavedChanges'), disabled: pageNotOk, action: () => workspaceState.pageDiscard()},
+          {name: t('saveCurrentTab'), disabled: pageNotOk, action: () => workspaceState.pageSave()},
           {
-            name: '关闭当前标签页',
+            name: t('closeCurrentTab'),
             disabled: workspaceState.activeTabIndex === -1,
             action: () => workspaceState.closeTab(workspaceState.activeTabIndex)
           },
-          {name: '在标签页中查找', disabled: true, action: () => TODO(TAG, '在标签页中查找')},
-          {name: '在所有文件中查找', disabled: true, action: () => TODO(TAG, '在所有文件中查找')},
-          {name: '在资源管理器中查找', disabled: true, action: () => TODO(TAG, '在资源管理器中查找')},
+          {name: t('searchInCurrentTab'), disabled: true, action: () => TODO(TAG, '在标签页中查找')},
+          {name: t('searchInAllFiles'), disabled: true, action: () => TODO(TAG, '在所有文件中查找')},
+          {name: t('searchInExplorer'), disabled: true, action: () => TODO(TAG, '在资源管理器中查找')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
       })
       break
-    case
-    'view'
-    :
+    case 'view':
       currentMenu.value = showMenu({
         items: [
           {
-            name: "侧边栏" + (appState.sidePanelExpanded ? "收起" : "展开"),
+            name: (appState.sidePanelExpanded ? t('narrow') : t('expand')) + t('sidePanel'),
             action: () => appState.sidePanelExpanded = !appState.sidePanelExpanded
           }, {
-            name: '工具窗口', disabled: true, children:
+            name: t('toolWindow'), disabled: true, children:
                 [{name: 'TexturePacker', action: () => console.log('TexturePacker')},]
           },
-          {name: '保存全部标签页', disabled: true, action: () => console.log('保存全部标签页')},
-          {name: '关闭全部标签页', disabled: true, action: () => console.log('关闭全部标签页')},
-          {name: '偏好设置', disabled: true, action: () => console.log('偏好设置')},
+          {name: t('saveAllTabs'), disabled: true, action: () => console.log('保存全部标签页')},
+          {name: t('closeAllTabs'), disabled: true, action: () => console.log('关闭全部标签页')},
+          {name: t('preferences'), disabled: true, action: () => console.log('偏好设置')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
       })
       break
-    case
-    'help'
-    :
+    case 'help':
       currentMenu.value = showMenu({
         items: [
-          {name: '显示欢迎页', action: () => workspaceState.openTab(TabType.Welcome)}, {
-            name: '资源', children:
+          {name: t('showWelcomePage'), action: () => workspaceState.openTab(TabType.Welcome)}, {
+            name: t('resources'), children:
                 [
-                  {name: '快速上手', action: () => console.log('快速上手')}, // TODO
-                  {name: '深度指南', action: () => console.log('深度指南')},
-                  {name: '使用Ryo库', action: () => console.log('使用Ryo库')},
-                  {name: 'Ryo存储库', action: () => openLink(appInfo.repoLink)},
-                  {name: '建议和反馈', action: () => openLink(appInfo.issueLink)},
-                  {name: '开发者主页', action: () => openLink(appInfo.authorLink)}
+                  {name: t('quickStart'), action: () => console.log('快速上手')}, // TODO
+                  {name: t('deepGuidance'), action: () => console.log('深度指南')},
+                  {name: t('useRyoLibrary'), action: () => console.log('使用Ryo库')},
+                  {name: t('ryoRepository'), action: () => openLink(appInfo.repoLink)},
+                  {name: t('authorLink'), action: () => openLink(appInfo.authorLink)}
                 ]
           },
-          {name: '建议和反馈', action: () => openLink(appInfo.issue)},
-          {name: '关于Ryo', action: () => dialogState.orderSpecial(AboutDialog)},
+          {name: t('advicesAndFeedback'), action: () => openLink(appInfo.issue)},
+          {name: t('aboutRyo'), action: () => dialogState.orderSpecial(AboutDialog)},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },

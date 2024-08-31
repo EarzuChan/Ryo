@@ -4,23 +4,23 @@
       <div id="contents">
         <div id="contents-scroll-wrapper">
           <div id="contents-container">
-            <div class="ryo-typography-headline-large info-text">不是，哥们：应用崩溃了</div>
+            <div class="ryo-typography-headline-large info-text">{{ t('appCrashed') }}</div>
             <div id="details-container">
-              <div class="ryo-typography-body-medium info-text">错误详情：</div>
+              <div class="ryo-typography-body-medium info-text">{{ t('errorDetails') }}</div>
               <CodeBlock>{{ getUpToNLines(errText, 3) }}</CodeBlock>
-              <div class="ryo-typography-body-medium info-text">应用版本：</div>
+              <div class="ryo-typography-body-medium info-text"> {{ t('appVersion') }}</div>
               <CodeBlock>{{ appInfo.name + ' v' + appInfo.version }}</CodeBlock>
-              <div class="ryo-typography-body-medium info-text">建议的操作：</div>
-              <CodeBlock>重新加载试试看？</CodeBlock>
-              <div class="ryo-typography-body-medium info-text">哥们可在控制台获得更多信息</div>
+              <div class="ryo-typography-body-medium info-text">{{ t('suggestedAction') }}</div>
+              <CodeBlock>{{ t('reloadSuggestion') }}</CodeBlock>
+              <div class="ryo-typography-body-medium info-text">{{ t('moreInfoConsole') }}</div>
             </div>
           </div>
         </div>
       </div>
       <div id="actions">
-        <TextButton @click="repoErr">报告错误</TextButton>
-        <TextButton @click="copyErr">复制错误信息</TextButton>
-        <TextButton button-style="filled" @click="reloadApp">重新加载应用程序</TextButton>
+        <TextButton @click="repoErr">{{ t('reportError') }}</TextButton>
+        <TextButton @click="copyErr">{{ t('copyError') }}</TextButton>
+        <TextButton button-style="filled" @click="reloadApp">{{ t('reloadApp') }}</TextButton>
       </div>
     </div>
   </div>
@@ -31,21 +31,23 @@ import TextButton from "@/components/TextButton.vue"
 import {inject} from "@vue/runtime-core"
 import {copyTextToClipboard, getUpToNLines} from "@/utils/UsefulUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
-import CodeBlock from "@/components/CodeBlock.vue";
+import CodeBlock from "@/components/CodeBlock.vue"
+import {useI18n} from "vue-i18n";
 
 const dialogState = useDialogStateStore()
 const err: any = inject('err')
 const errText = `${err.stack}`
 const appInfo: any = inject('app_info')
+const {t} = useI18n()
 
 function repoErr() {
   dialogState.order({
     icon: "close",
-    headline: "这这不能",
-    description: "抱歉，此功能尚未实现。",
+    headline: t('featureNotImplemented'),
+    description: t('featureNotImplementedDescription'),
     actions: [
       {
-        text: "唉"
+        text: t('sigh')
       }
     ]
   })

@@ -33,11 +33,11 @@ export function isEqual(a: number[], b: number[]): boolean {
     return a.length === b.length && a.every((val, index) => val === b[index])
 }
 
-export function boolToText(value?: boolean, yes: string = "成功", no: string = "失败"): string {
+export function boolToText(value?: boolean, yes: string = 'YES', no: string = 'NO'): string {
     return value === true ? yes : no
 }
 
-export function arrayToText(arr: any[], empty: string = "数组为空"): string {
+export function arrayToText(arr: any[], empty: string = 'EMPTY ARRAY'): string {
     if (arr.length === 0) return empty
     return arr.join(", ")
 }

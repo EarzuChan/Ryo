@@ -11,11 +11,11 @@
         </div>
       </div>
       <div id="row2">
-        <div class="ryo-typography-title-small surface-variant">哈哈，你想
-          <div class="primary inline" @click="openLink(appInfo.repoLink)"> 支持</div>
-          吗<br>怎么，你不
-          <div class="primary inline" @click="openLink(appInfo.authorLink)"> 关注</div>
-          吗
+        <div class="ryo-typography-title-small surface-variant">{{ $t('哈哈，你想') }}
+          <div class="primary inline" @click="openLink(appInfo.repoLink)"> {{ $t('support') }}</div>
+          {{ $t('吗') }}<br>{{ $t('怎么，你不') }}
+          <div class="primary inline" @click="openLink(appInfo.authorLink)"> {{ $t('follow') }}</div>
+          {{ $t('吗') }}
         </div>
       </div>
     </div>

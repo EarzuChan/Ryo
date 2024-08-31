@@ -14,6 +14,7 @@ import {type FileModel, type VolumeModel, TabType} from "@/models/AppModels"
 import type {TabModel} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, TODO} from "@/utils/UsefulUtils"
+import {useI18n} from "vue-i18n"
 
 const TAG = "WorkspaceState"
 
@@ -21,6 +22,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const available = ref(false)
 
         const appState = useAppStateStore()
+
+        const {t} = useI18n()
 
         const activeTabExposed = ref<any>(null)
 
@@ -151,16 +154,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             console.debug(TAG, "打开Tab", tabType, data)
             switch (tabType) {
                 case TabType.Empty:
-                    internalOpenTab({name: "空白页", nonResident: true})
+                    internalOpenTab({name: t('emptyPage'), nonResident: true})
                     break
                 case TabType.Item:
                     let name = openedItems.value[data]?.name
-                    if (name === undefined) name = "无名项目"
+                    if (name === undefined) name = t('noNameItem')
                     internalOpenTab({name, page: markRaw(ItemPage), data, nonResident: true})
                     // TODO: 项目一旦unsaved，就常驻
                     break
                 case TabType.Welcome:
-                    internalOpenTab({name: "欢迎", page: markRaw(WelcomePage), nonResident: true})
+                    internalOpenTab({name: t('welcome'), page: markRaw(WelcomePage), nonResident: true})
             }
         }
 
