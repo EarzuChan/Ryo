@@ -1,12 +1,11 @@
 import {defineStore} from "pinia"
 import {computed, markRaw, ref} from "vue"
-import ItemPage from "@/views/ContentPages/ItemPage.vue"
-import WelcomePage from "@/views/ContentPages/WelcomePage.vue"
+import ItemPage from "@/views/Pages/ItemPage.vue"
+import WelcomePage from "@/views/Pages/WelcomePage.vue"
 import {
     addWebEventListener,
     emitWebEvent,
     makeWebLetter,
-    sendWebCall,
     sendWebCallAndTakeItsReturnValues
 } from "@/utils/KurisuUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
@@ -168,6 +167,14 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function internalOpenTab(tab: TabModel) {
+            // 如果Tab不是ItemPage，就看看有没有打开过，有就简单切换至就行了
+            if (tab.page !== markRaw(ItemPage)) {
+                let index = openedTabs.value.findIndex(t => t.page === tab.page)
+                if (index !== -1) {
+                    activeTabIndex.value = index
+                    return
+                }
+            }
             // 遍历是否有非常驻，有就顶掉
             let nonResidentIndex = openedTabs.value.findIndex(tab => tab.nonResident)
             console.debug(TAG, "内部打开Tab", tab, nonResidentIndex)

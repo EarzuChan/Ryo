@@ -1,4 +1,4 @@
-import {ref} from 'vue'
+import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {
     addWebEventListener,
@@ -13,6 +13,7 @@ import TextEditor from "@/components/Editors/TextEditor.vue"
 import BooleanEditor from "@/components/Editors/BooleanEditor.vue"
 import ArrayEditor from "@/components/Editors/ArrayEditor.vue"
 import FieldEditor from "@/components/Editors/FieldEditor.vue"
+import {i18n, setLanguage, sysLang} from "@/misc/I18n";
 
 const TAG = "AppState"
 
@@ -20,6 +21,14 @@ export const useAppStateStore = defineStore('app-state', () => {
         const available = ref(false)
         const dataTypeSchemas = ref<TypeSchema[]>([])
         const sidePanelExpanded = ref(true)
+        const reffedAppLanguage = ref(sysLang)
+        const appLanguage = computed({
+            get: () => reffedAppLanguage.value,
+            set(value: string) {
+                console.log(TAG, "设置语言", value)
+                if (setLanguage(value)) reffedAppLanguage.value = value
+            }
+        })
 
         function getEditorsByRyoType(ryoType: RyoType) {
             const editors = []
@@ -133,6 +142,11 @@ export const useAppStateStore = defineStore('app-state', () => {
                 console.log(TAG, "Start init")
 
                 await fetchDataSchemas()
+
+                const fetchedLanguage = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("Preference:Language", reffedAppLanguage.value)))[0]
+                console.log(TAG, "Language fetched", fetchedLanguage)
+                appLanguage.value = fetchedLanguage
+
                 available.value = true
             } catch (err) {
                 console.error(TAG, "Init failed", err)
@@ -146,6 +160,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             available,
             dataTypeSchemas,
             fetchDataSchemas,
+            appLanguage,
             getInitValue,
             getEditorsByRyoType,
             getRyoTypeByName,
