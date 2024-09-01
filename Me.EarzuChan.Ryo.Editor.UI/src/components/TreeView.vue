@@ -47,7 +47,7 @@ const props = defineProps({
 })
 
 function clearLastClicked() {
-  console.log("不有焦点了")
+  console.log(TAG, "不有焦点了")
   lastClicked.value = []
 }
 

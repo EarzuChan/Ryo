@@ -103,19 +103,19 @@ function showMenuOf(menuType: MenuBarItem) {
               action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
             })
       }
-      items.push({name: t('saveAll'), disabled: true, action: () => console.log('全部保存')},
-          {name: t('closeAll'), disabled: true, action: () => console.log('全部关闭')},
-          {name: t('addItem'), disabled: true, action: () => console.log('添加资源')},
-          {name: t('exportCurrentItem'), disabled: true, action: () => console.log('导出当前资源')},
-          {name: t('importCurrentItem'), disabled: true, action: () => console.log('导入当前资源')}, {
+      items.push({name: t('saveAll'), disabled: true, action: () => console.log(TAG,'全部保存')},
+          {name: t('closeAll'), disabled: true, action: () => console.log(TAG,'全部关闭')},
+          {name: t('addItem'), disabled: true, action: () => console.log(TAG,'添加资源')},
+          {name: t('exportCurrentItem'), disabled: true, action: () => console.log(TAG,'导出当前资源')},
+          {name: t('importCurrentItem'), disabled: true, action: () => console.log(TAG,'导入当前资源')}, {
             name: t('recentFiles'), disabled: true, children:
                 [
-                  {name: '文件1', action: () => console.log('文件1')},
-                  {name: '文件2', action: () => console.log('文件2')},
-                  {name: '文件3', action: () => console.log('文件3')},
+                  {name: '文件1', action: () => console.log(TAG,'文件1')},
+                  {name: '文件2', action: () => console.log(TAG,'文件2')},
+                  {name: '文件3', action: () => console.log(TAG,'文件3')},
                 ]
           },
-          {name: t('restartApp'), disabled: true, action: () => console.log('重启软件')},
+          {name: t('restartApp'), disabled: true, action: () => console.log(TAG,'重启软件')},
           {
             name: t('exit'), action: () => {
               dialogState.order({
@@ -169,11 +169,11 @@ function showMenuOf(menuType: MenuBarItem) {
             action: () => appState.sidePanelExpanded = !appState.sidePanelExpanded
           }, {
             name: t('toolWindow'), disabled: true, children:
-                [{name: 'TexturePacker', action: () => console.log('TexturePacker')},]
+                [{name: 'TexturePacker', action: () => console.log(TAG,'TexturePacker')},]
           },
-          {name: t('saveAllTabs'), disabled: true, action: () => console.log('保存全部标签页')},
-          {name: t('closeAllTabs'), disabled: true, action: () => console.log('关闭全部标签页')},
-          {name: t('preferences'), disabled: true, action: () => console.log('偏好设置')},
+          {name: t('saveAllTabs'), disabled: true, action: () => console.log(TAG,'保存全部标签页')},
+          {name: t('closeAllTabs'), disabled: true, action: () => console.log(TAG,'关闭全部标签页')},
+          {name: t('preferences'), disabled: true, action: () => console.log(TAG,'偏好设置')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null
         },
@@ -185,9 +185,9 @@ function showMenuOf(menuType: MenuBarItem) {
           {name: t('showWelcomePage'), action: () => workspaceState.openTab(TabType.Welcome)}, {
             name: t('resources'), children:
                 [
-                  {name: t('quickStart'), action: () => console.log('快速上手')}, // TODO
-                  {name: t('deepGuidance'), action: () => console.log('深度指南')},
-                  {name: t('useRyoLibrary'), action: () => console.log('使用Ryo库')},
+                  {name: t('quickStart'), action: () => console.log(TAG,'快速上手')}, // TODO
+                  {name: t('deepGuidance'), action: () => console.log(TAG,'深度指南')},
+                  {name: t('useRyoLibrary'), action: () => console.log(TAG,'使用Ryo库')},
                   {name: t('ryoRepository'), action: () => openLink(appInfo.repoLink)},
                   {name: t('authorLink'), action: () => openLink(appInfo.authorLink)}
                 ]
@@ -211,13 +211,13 @@ function testDialog() {
       {
         text: '取消',
         onClick: () => {
-          console.log('点击了取消')
+          console.log(TAG,'点击了取消')
         }
       },
       {
         text: '确定',
         onClick: () => {
-          console.log('点击了确定')
+          console.log(TAG,'点击了确定')
           return false
         }
       },
@@ -232,13 +232,13 @@ function testDialog() {
               {
                 text: '取消',
                 onClick: () => {
-                  console.log('点击了取消')
+                  console.log(TAG,'点击了取消')
                 }
               },
               {
                 text: '确定',
                 onClick: () => {
-                  console.log('点击了确定')
+                  console.log(TAG,'点击了确定')
                 }
               }
             ]
@@ -256,13 +256,13 @@ function testDialog() {
       {
         text: '取消',
         onClick: () => {
-          console.log('点击了取消')
+          console.log(TAG,'点击了取消')
         }
       },
       {
         text: '确定',
         onClick: () => {
-          console.log('点击了确定')
+          console.log(TAG,'点击了确定')
         }
       }
     ]
@@ -275,13 +275,13 @@ function testDialog() {
       {
         text: '取消',
         onClick: () => {
-          console.log('点击了取消')
+          console.log(TAG,'点击了取消')
         }
       },
       {
         text: '确定',
         onClick: () => {
-          console.log('点击了确定')
+          console.log(TAG,'点击了确定')
         }
       }
     ]

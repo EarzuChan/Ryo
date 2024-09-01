@@ -1,12 +1,9 @@
-import {createApp, ref} from 'vue'
+import {createApp} from 'vue'
 import {createPinia} from 'pinia'
-import {createI18n} from 'vue-i18n'
 import App from './App.vue'
 import AppError from '@/views/AppError.vue'
 import './styles/style-default.scss'
 import './styles/color-default.scss'
-import en from './locales/en.json'
-import zh from './locales/zh.json'
 import {i18n} from "@/misc/I18n"
 
 const TAG = "InitApp"
@@ -25,7 +22,7 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.config.errorHandler = (err, instance, info) => {
-    console.log('App crashed:', err)
+    console.log(TAG, 'App crashed:', err)
     app.unmount()
 
     createApp(AppError).use(i18n).provide('err', err).provide('app_info', APP_INFO).mount('body')
