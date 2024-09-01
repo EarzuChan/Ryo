@@ -19,10 +19,13 @@ export const i18n = createI18n({
     }
 })
 
+type SupportedLang = 'zh' | 'ru' | 'en';
+
 // 添加切换语言的方法
 export function setLanguage(lang: string) {
-    if (i18n.global.availableLocales.includes(lang)) {
-        i18n.global.locale.value = lang
+    const assLang = lang as SupportedLang
+    if (i18n.global.availableLocales.includes(assLang)) {
+        i18n.global.locale.value = assLang
         console.log(TAG, `Language switched to ${lang}`)
         return true
     } else {
