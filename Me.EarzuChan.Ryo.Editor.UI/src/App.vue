@@ -21,7 +21,7 @@ import TabPanel from "@/views/TabPanel.vue"
 import {computed} from "vue";
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import EmptyPage from "@/views/ContentPages/EmptyPage.vue"
+import EmptyPage from "@/views/Pages/EmptyPage.vue"
 
 const appState = useAppStateStore()
 const kurisuState = useKurisuStateStore()

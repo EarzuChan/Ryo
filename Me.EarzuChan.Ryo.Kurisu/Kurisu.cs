@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using Me.EarzuChan.Ryo.Extensions.Utils;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
 using Me.EarzuChan.Ryo.Kurisu.Exceptions;
@@ -80,12 +81,17 @@ public class KurisuApp
                     var property = Enum.Parse<KurisuAppProperty>(multi[1]);
                     Context.SetAppProperty(property, model.Args);
                     break;
+                case "Preference":
+                    var key = multi[1];
+                    var value = model.Args[0];
+                    Context.SetPreference(key, value);
+                    break;
                 case "AppCommand":
                     var command = Enum.Parse<KurisuAppCommand>(multi[1]);
                     Context.ExecuteAppCommand(command, model.Args);
                     break;
                 default:
-                    Trace.WriteLine($"没有内置Api：{multi[0]}");
+                    Trace.WriteLine($"没有该内置Api：{multi[0]}");
                     break;
             }
         }
@@ -137,8 +143,15 @@ public class KurisuApp
                     var property = Enum.Parse<KurisuAppProperty>(multi[1]);
                     var result = Context.GetAppProperty<object>(property);
                     return result == null
-                        ? new(WebResponseState.Failure, $"找不到属性{property}")
+                        ? new(WebResponseState.Failure, $"找不到该属性{property}")
                         : new(WebResponseState.Success, result);
+                case "Preference":
+                    var key = multi[1];
+                    var def = model.Args.Length == 1 ? model.Args[0] : default;
+                    var value = def == null ? Context.GetPreference<object>(key) : Context.GetPreference(key, def);
+                    return value == null
+                        ? new(WebResponseState.Failure, $"找不到该偏好项{key}")
+                        : new(WebResponseState.Success, value);
                 case "AppCommand":
                     var command = Enum.Parse<KurisuAppCommand>(multi[1]);
                     var retVal = Context.ExecuteAppCommand<object>(command, model.Args);
@@ -380,7 +393,7 @@ public class KurisuAppBuilder
 
     public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensure(it =>
     {
-        Stuffs.Add(name, it!);
+        Stuffs.Add(name, it);
     }));
 }
 
@@ -431,17 +444,19 @@ public class KurisuAppContext
                 App.WindowManager.SetWindowState((KurisuWindowState)value[0]);
                 break;
             case KurisuAppProperty.WindowWidth:
-                break;
             case KurisuAppProperty.WindowHeight:
-                break;
             case KurisuAppProperty.WindowTitle:
-                break;
             case KurisuAppProperty.WindowUrl:
-                break;
+                throw new NotImplementedException();
             default:
                 throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");
         }
     }
+
+    public void SetPreference(string key, object value) => PreferenceUtils.SetPreference(key, value);
+
+    public T? GetPreference<T>(string key, T defaultValue = default(T)) =>
+        PreferenceUtils.GetPreference(key, defaultValue);
 
     public T? GetAppProperty<T>(KurisuAppProperty property)
     {
@@ -453,13 +468,10 @@ public class KurisuAppContext
                 returnValue = App.WindowManager.GetWindowState();
                 break;
             case KurisuAppProperty.WindowWidth:
-
-                break;
             case KurisuAppProperty.WindowHeight:
-                break;
             case KurisuAppProperty.WindowTitle:
-                break;
             case KurisuAppProperty.WindowUrl:
+                throw new NotImplementedException();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");

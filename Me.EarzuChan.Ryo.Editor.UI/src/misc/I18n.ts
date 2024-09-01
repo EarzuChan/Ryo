@@ -5,12 +5,12 @@ import ru from "@/locales/ru.json"
 
 const TAG = "I18n"
 
-const sysLang = navigator.language
-const preferLang = sysLang.startsWith('zh') ? 'zh' : sysLang.startsWith('ru') ? 'ru' : 'en'
+const naviLang = navigator.language
+export const sysLang = naviLang.startsWith('zh') ? 'zh' : naviLang.startsWith('ru') ? 'ru' : 'en'
 
 export const i18n = createI18n({
     legacy: false,
-    locale: preferLang,
+    locale: sysLang,
     fallbackLocale: 'zh',
     messages: {
         en,
@@ -18,3 +18,18 @@ export const i18n = createI18n({
         ru
     }
 })
+
+type SupportedLang = 'zh' | 'ru' | 'en';
+
+// 添加切换语言的方法
+export function setLanguage(lang: string) {
+    const assLang = lang as SupportedLang
+    if (i18n.global.availableLocales.includes(assLang)) {
+        i18n.global.locale.value = assLang
+        console.log(TAG, `Language switched to ${lang}`)
+        return true
+    } else {
+        console.warn(TAG, `Language ${lang} is not available`)
+        return false
+    }
+}

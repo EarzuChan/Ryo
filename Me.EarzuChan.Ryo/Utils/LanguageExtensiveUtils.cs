@@ -15,7 +15,7 @@ public static class LanguageExtensiveUtils
     {
         if (obj == null) throw new ArgumentNullException(nameof(obj), "Ensure failed: Value is null");
 
-        action(obj);
+        action(obj!);
     }
 
     public static void TryCatchingThenThrow(string errorPrefix, Action action,
