@@ -5,6 +5,8 @@ import ru from "@/locales/ru.json"
 
 const TAG = "I18n"
 
+type SupportedLang = 'zh' | 'ru' | 'en'
+
 const naviLang = navigator.language
 export const sysLang = naviLang.startsWith('zh') ? 'zh' : naviLang.startsWith('ru') ? 'ru' : 'en'
 
@@ -18,8 +20,6 @@ export const i18n = createI18n({
         ru
     }
 })
-
-type SupportedLang = 'zh' | 'ru' | 'en';
 
 // 添加切换语言的方法
 export function setLanguage(lang: string) {

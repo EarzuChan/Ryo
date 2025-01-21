@@ -16,10 +16,10 @@ using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
-[WebCallResponder("GetAllDataTypes")]
-public class GetAllDataTypesResponder : IWebCallResponder
+[OldWebCallResponder("GetAllDataTypes")]
+public class GetAllDataTypesResponder : IOldWebCallResponder
 {
-    public WebResponse Respond(KurisuAppContext context) =>
+    public OldWebResponse Respond(KurisuAppContext context) =>
         new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
 }
 
@@ -65,10 +65,10 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
 }
 
 // TODO:如果是基本类型，参数不是JObject，懆称冯的福
-[WebCallResponder("SaveItem")]
-public class SaveItemHandler(string volumeName, string itemName, object data) : IWebCallResponder
+[OldWebCallResponder("SaveItem")]
+public class SaveItemHandler(string volumeName, string itemName, object data) : IOldWebCallResponder
 {
-    public WebResponse Respond(KurisuAppContext context)
+    public OldWebResponse Respond(KurisuAppContext context)
     {
         int newId = -1;
 
@@ -107,8 +107,8 @@ public class SaveItemHandler(string volumeName, string itemName, object data) : 
         });
 
         return newId == -1
-            ? new WebResponse(WebResponseState.Failure)
-            : new WebResponse(WebResponseState.Success, newId);
+            ? new OldWebResponse(WebResponseState.Failure)
+            : new OldWebResponse(WebResponseState.Success, newId);
     }
 }
 
@@ -135,10 +135,10 @@ public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandle
         });
 }
 
-[WebCallResponder("GetFullFileModel")]
-public class GetFullFileModelResponder(string volumeName, int fileId) : IWebCallResponder
+[OldWebCallResponder("GetFullFileModel")]
+public class GetFullFileModelResponder(string volumeName, int fileId) : IOldWebCallResponder
 {
-    public WebResponse Respond(KurisuAppContext context)
+    public OldWebResponse Respond(KurisuAppContext context)
     {
         var volumeManager = context.Inject<LocalVolumeManager>()!;
         var volume = volumeManager.GetVolumeByName(volumeName);

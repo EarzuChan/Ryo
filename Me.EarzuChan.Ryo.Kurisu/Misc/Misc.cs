@@ -8,7 +8,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 
 namespace Me.EarzuChan.Ryo.Kurisu.Misc;
 
-public class KurisuAppApiBridge(KurisuApp app)
+public class KurisuAppExposedApiBridge(KurisuApp app)
 {
     public string SendWebCall(string webCallJson)
     {
