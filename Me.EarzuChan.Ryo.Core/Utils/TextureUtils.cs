@@ -16,12 +16,12 @@ public static class TextureUtils
             var image = Image.Load(fileStream) ?? throw new NullReferenceException("Cannot load image texture file");
 
             return image.ToFragmentalImage(512);
-        });
+        })!;
 
     // 每次缩小一倍
     public static Image[] Mipmap(this Image image)
     {
-        List<Image> images = new();
+        List<Image> images = [];
         int newHeight = image.Height;
         int newWidth = image.Width;
 
@@ -35,7 +35,9 @@ public static class TextureUtils
 
             newHeight /= 2;
             newWidth /= 2;
+            
             if (newHeight == newWidth && newHeight == 0) break;
+            
             image = image.Clone(size => size.Resize(newWidth, newHeight));  // 克隆原始图像
         }
 
@@ -49,10 +51,10 @@ public static class TextureUtils
         int clipCountX = CalculateClipCount(clipSize, sourceImage.Width);
         int clipCountY = CalculateClipCount(clipSize, sourceImage.Height);
 
-        List<Image> result = new();
+        List<Image> result = [];
 
         // 保护画质
-        if (sourceImage.Height <= clipSize && sourceImage.Width <= clipSize) return new Image[] { sourceImage };
+        if (sourceImage.Height <= clipSize && sourceImage.Width <= clipSize) return [sourceImage];
 
         // 循环遍历大图中的所有小图
         for (int y = 0; y < clipCountY; y++)

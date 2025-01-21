@@ -9,6 +9,8 @@ using System.Reflection;
 
 namespace Me.EarzuChan.Ryo.ConsoleTest.Commands;
 
+// TODO：应该换用单元测试
+
 [AdaptableFormation("我勒个骚纲")]
 public class 骚纲
 {

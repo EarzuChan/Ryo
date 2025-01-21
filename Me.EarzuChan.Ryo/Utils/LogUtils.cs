@@ -5,17 +5,33 @@ namespace Me.EarzuChan.Ryo.Utils;
 public static class LogUtils
 {
     public static event Action<string>? Logger;
-    private static void TraceLogger(string str) => Trace.WriteLine(str);
 
-    static LogUtils() => UseTraceLogger();
+    private static void InternalTraceLogger(string str) => Trace.WriteLine(str);
+    private static bool usingInternalTraceLogger = false;
 
-    public static void UseTraceLogger() => Logger += TraceLogger;
+    static LogUtils()
+    {
+        UseInternalTraceLogger();
+    }
 
-    public static void StopUsingTraceLogger() => Logger -= TraceLogger;
+    public static void UseInternalTraceLogger()
+    {
+        if (usingInternalTraceLogger) throw new InvalidOperationException("InternalTraceLogger is already in use.");
+        
+        Logger += InternalTraceLogger;
+        usingInternalTraceLogger = true;
+    }
 
-    public const bool AllowPrintDebugInfo = false;
+    public static void StopUsingInternalTraceLogger()
+    {
+        if (!usingInternalTraceLogger) throw new InvalidOperationException("InternalTraceLogger is not in use.");
 
-    public static void PrintError(String info, Exception e, bool printStack = true) => Logger?.Invoke(TextUtils.MakeErrorMsgText(info, e, printStack));
+        Logger -= InternalTraceLogger;
+        usingInternalTraceLogger = false;
+    }
+
+    public static void PrintError(String info, Exception e, bool printStack = true) =>
+        Logger?.Invoke(TextUtils.MakeErrorMsgText(info, e, printStack));
 
     public static void PrintWarning(params string[] args) => Logger?.Invoke(TextUtils.MakeMsgText("Warning", args));
 

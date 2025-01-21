@@ -35,7 +35,7 @@ public class LocalVolumeManager
         // 先检查是否已经打开，抛出
         if (Volumes.Values.Any(meta => meta.LocalPath == localPath))
         {
-            var err = new FileLoadException("文件已经打开！");
+            var err = new FileLoadException("文件已经打开");
             LogUtils.PrintError(Tag, err);
             throw err;
         }

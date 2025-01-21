@@ -391,7 +391,7 @@ public class KurisuAppBuilder
         Dependencies.Add(dependency);
     });
 
-    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensure(it =>
+    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensured(it =>
     {
         Stuffs.Add(name, it);
     }));

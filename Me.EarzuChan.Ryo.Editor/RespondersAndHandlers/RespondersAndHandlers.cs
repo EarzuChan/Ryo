@@ -77,14 +77,14 @@ public class SaveItemHandler(string volumeName, string itemName, object data) : 
             Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
 
             it.GetVolumeByName(volumeName)
-                .Ensure(vol => vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType().Ensure(typ =>
+                .Ensured(vol => LanguageExtensiveUtils.Ensured(vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType(), typ =>
                 {
                     Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
                     switch (data)
                     {
                         case JObject jobj:
                             Trace.WriteLine("Data is JObject");
-                            jobj.ToObject(typ).Ensure(obj =>
+                            jobj.ToObject(typ).Ensured(obj =>
                             {
                                 vol.Add(itemName, obj);
                                 newId = vol[itemName].Id;
@@ -92,7 +92,7 @@ public class SaveItemHandler(string volumeName, string itemName, object data) : 
                             break;
                         case JArray jarr when typ.IsArray:
                             Trace.WriteLine($"Data is JArray, {jarr.Count} items");
-                            jarr.ToObject(typ).Ensure(arr =>
+                            jarr.ToObject(typ).Ensured(arr =>
                             {
                                 vol.Add(itemName, arr);
                                 newId = vol[itemName].Id;

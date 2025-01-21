@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Me.EarzuChan.Ryo.Utils;
+using Newtonsoft.Json;
 
 namespace Me.EarzuChan.Ryo.Extensions.Utils;
 
@@ -44,42 +45,34 @@ public static class PreferenceUtils
 
     public static T? GetPreference<T>(string key, T? defaultValue = default)
     {
-        if (_preferences.TryGetValue(key, out var value))
-        {
-            return (T?)value ?? defaultValue;
-        }
+        if (_preferences.TryGetValue(key, out var value)) return (T?)value;
 
-        if (defaultValue != null)
-        {
-            SetPreference(key, defaultValue);
-        }
+        if (defaultValue != null) SetPreference(key, defaultValue);
 
         return defaultValue;
     }
 
     public static void RemovePreference(string key)
     {
-        if (_preferences.Remove(key))
-        {
-            SavePreferences();
+        if (!_preferences.Remove(key)) return;
 
-            PreferenceChanged?.Invoke(key, null);
-        }
+        SavePreferences();
+
+        PreferenceChanged?.Invoke(key, null);
     }
 
     private static void LoadPreferences()
     {
-        if (File.Exists(PreferencesFilePath))
+        if (!File.Exists(PreferencesFilePath)) return;
+
+        try
         {
-            try
-            {
-                var json = File.ReadAllText(PreferencesFilePath);
-                _preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(json) ?? new();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading preferences: {ex.Message}");
-            }
+            var json = File.ReadAllText(PreferencesFilePath);
+            _preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(json) ?? new();
+        }
+        catch (Exception ex)
+        {
+            LogUtils.PrintError("加载偏好时错误", ex);
         }
     }
 
@@ -92,13 +85,16 @@ public static class PreferenceUtils
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving preferences: {ex.Message}");
+            LogUtils.PrintError("保存偏好时错误", ex);
         }
     }
 
     private static void OnPreferencesChanged(object sender, FileSystemEventArgs e)
     {
         LoadPreferences();
+        
+        // TODO：有空做个比较，只触发修改的事件
+        
         foreach (var key in _preferences.Keys)
         {
             PreferenceChanged?.Invoke(key, _preferences[key]);
@@ -108,10 +104,7 @@ public static class PreferenceUtils
     private static void EnsureDirectoryExists()
     {
         var directory = Path.GetDirectoryName(PreferencesFilePath);
-        if (directory != null)
-        {
-            Directory.CreateDirectory(directory);
-        }
+        if (directory != null) Directory.CreateDirectory(directory);
     }
 
     public static void ClearPreferences()
