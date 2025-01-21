@@ -80,18 +80,14 @@ public static class AdaptationUtils
     // 列表取元素类型
     public static RyoType GetArrayElementRyoType(this RyoType ryoType)
     {
-        if (ryoType.IsArray)
-        {
-            if (ryoType.JavaClassName != null) return ryoType.JavaClassName.JavaClassToRyoType();
-            else if (ryoType.CsType != null) return ryoType.CsType.ToRyoType();
-            else throw new IllegalRyoTypeException("The element Ryo Type can not be resolved without an aspect");
-        }
-        throw new IllegalRyoTypeException("The given Ryo Type is not an array Ryo Type");
+        if (!ryoType.IsArray) throw new IllegalRyoTypeException("The given Ryo Type is not an array Ryo Type");
+        
+        if (ryoType.JavaClassName != null) return ryoType.JavaClassName.JavaClassToRyoType();
+        else if (ryoType.CsType != null) return ryoType.CsType.ToRyoType();
+        else throw new IllegalRyoTypeException("The element Ryo Type can not be resolved without an aspect");
     }
 
     // GetRyoByJava
-    // FIXME:貌似非法输入如“[[Ljava.lang.Byte”，没有“;”，会还原出时死循环
-    // 貌似解决了
     // 有新写法，忘了
     public static RyoType JavaClassToRyoType(this string? clzName)
     {
@@ -270,16 +266,18 @@ public static class AdaptationUtils
         var types = TypeUtils.GetAppAllTypes();
         foreach (var item in types)
         {
-            if (typeof(IAdapterFactory).IsAssignableFrom(item))
-            {
-                try
-                {
-                    result = ((IAdapterFactory)Activator.CreateInstance(item)!).FindAdapterRyoTypeForDataRyoType(ryoType);
-                }
-                catch (Exception) { }
+            if (!typeof(IAdapterFactory).IsAssignableFrom(item)) continue;
 
-                if (result != null) break;
+            try
+            {
+                result = ((IAdapterFactory)Activator.CreateInstance(item)!).FindAdapterRyoTypeForDataRyoType(ryoType);
             }
+            catch
+            {
+                // HACK：暂不理
+            }
+
+            if (result != null) break;
         }
         return result;
     }

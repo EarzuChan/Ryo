@@ -8,9 +8,6 @@ namespace Me.EarzuChan.Ryo.Extensions.Exceptions
 {
     namespace DataTypeSchemaExceptions
     {
-        public class DataTypeSchemaParsingException : Exception
-        {
-            public DataTypeSchemaParsingException(string reason) : base($"Parsing Ts Type error: {reason}") { }
-        }
+        public class DataTypeSchemaParsingException(string reason) : Exception($"解析Ts类型时错误：{reason}");
     }
 }

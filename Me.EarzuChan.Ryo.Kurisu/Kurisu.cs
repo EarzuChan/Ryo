@@ -16,7 +16,7 @@ using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Kurisu;
 
-public class WebLetter(string name, params object[] args)
+public class OldWebLetter(string name, params object[] args)
 {
     public string Name = name;
 
@@ -29,7 +29,7 @@ public class KurisuApp
     internal readonly ArrayList Dependencies;
     internal readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers;
     internal readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers;
-    internal readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders;
+    internal readonly Dictionary<OldWebCallResponderAttribute, Type> WebCallResponders;
     internal readonly IKurisuWindowManager WindowManager;
 
     private readonly KurisuAppContext Context;
@@ -37,7 +37,7 @@ public class KurisuApp
     internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies,
         Dictionary<WebEventHandlerAttribute, Type> webEventHandlers,
         Dictionary<AppEventHandlerAttribute, Type> appEventHandlers,
-        Dictionary<WebCallResponderAttribute, Type> webCallResponders, IKurisuWindowManager window)
+        Dictionary<OldWebCallResponderAttribute, Type> webCallResponders, IKurisuWindowManager window)
     {
         Profile = profile;
         Dependencies = dependencies;
@@ -66,7 +66,7 @@ public class KurisuApp
         WindowManager.Close();
     }
 
-    internal void HandleWebEvent(WebLetter model)
+    internal void HandleWebEvent(OldWebLetter model)
     {
         Trace.WriteLine($"WebEvent名称：{model.Name} 参数数：{model.Args.Length}");
 
@@ -128,7 +128,7 @@ public class KurisuApp
         Trace.WriteLine($"找不到WebEvent {model.Name} 可用的Handler");
     }
 
-    internal WebResponse RespondWebCall(WebLetter model)
+    internal OldWebResponse RespondWebCall(OldWebLetter model)
     {
         Trace.WriteLine($"WebCall名称：{model.Name} 参数数：{model.Args.Length}");
 
@@ -160,7 +160,7 @@ public class KurisuApp
                         : new(WebResponseState.Success, retVal);
                 default:
                     Trace.WriteLine($"没有内置Api：{multi[0]}");
-                    return new WebResponse(WebResponseState.Failure, $"没有内置Api：{multi[0]}");
+                    return new OldWebResponse(WebResponseState.Failure, $"没有内置Api：{multi[0]}");
             }
         }
 
@@ -178,7 +178,7 @@ public class KurisuApp
                 if (model.Args.Length != parameters.Length) continue;
                 try
                 {
-                    var command = (IWebCallResponder)constructor.Invoke(model.Args);
+                    var command = (IOldWebCallResponder)constructor.Invoke(model.Args);
 
                     return command.Respond(Context);
                 }
@@ -200,7 +200,7 @@ public class KurisuApp
         return new(WebResponseState.Failure, noSuchWebEvent);
     }
 
-    internal void EmitWebEvent(WebLetter model)
+    internal void EmitWebEvent(OldWebLetter model)
     {
         // TODO:可能需要验证、解耦（转文本 发送层）
         WindowManager.EmitWebEvent(model);
@@ -211,7 +211,7 @@ public class KurisuApp
     {
         Trace.WriteLine($"AppEvent类型：{appEvent.EventType} 参数数：{appEvent.Args.Length}");
 
-        Context.EmitWebEvent(new WebLetter($"AppEvent:{appEvent.EventType}", appEvent.Args));
+        Context.EmitWebEvent(new OldWebLetter($"AppEvent:{appEvent.EventType}", appEvent.Args));
 
         foreach (var constructors in from hdl in AppEventHandlers
                  where appEvent.EventType == hdl.Key.EventType
@@ -254,7 +254,7 @@ public class KurisuAppBuilder
     private readonly Dictionary<WebEventHandlerAttribute, Type> WebEventHandlers = new();
     private readonly Dictionary<string, object> Stuffs = new();
     private readonly Dictionary<AppEventHandlerAttribute, Type> AppEventHandlers = new();
-    private readonly Dictionary<WebCallResponderAttribute, Type> WebCallResponders = new();
+    private readonly Dictionary<OldWebCallResponderAttribute, Type> WebCallResponders = new();
     private IKurisuWindowManager? AppWindowBackend;
     private bool IsBuilt;
 
@@ -325,8 +325,8 @@ public class KurisuAppBuilder
         var types = TypeUtils.GetAppAllTypes();
         foreach (var type in types)
         {
-            var attribute = type.GetCustomAttribute<WebCallResponderAttribute>();
-            if (attribute != null && typeof(IWebCallResponder).IsAssignableFrom(type))
+            var attribute = type.GetCustomAttribute<OldWebCallResponderAttribute>();
+            if (attribute != null && typeof(IOldWebCallResponder).IsAssignableFrom(type))
             {
                 if (!attribute.Scannable) continue;
 
@@ -353,10 +353,10 @@ public class KurisuAppBuilder
             RegisterAppEventHandlerDirectly(handlerAttribute, handler);
         });
 
-    public KurisuAppBuilder RegisterWebCallResponder(WebCallResponderAttribute responderAttribute, Type handler) =>
+    public KurisuAppBuilder RegisterWebCallResponder(OldWebCallResponderAttribute responderAttribute, Type handler) =>
         this.Also(_ =>
         {
-            if (responderAttribute == null || !typeof(IWebCallResponder).IsAssignableFrom(handler))
+            if (responderAttribute == null || !typeof(IOldWebCallResponder).IsAssignableFrom(handler))
                 throw new KurisuAppBuildingException("检查你注册处理器时提供的参数");
 
             RegisterWebCallResponderDirectly(responderAttribute, handler);
@@ -376,7 +376,7 @@ public class KurisuAppBuilder
         AppEventHandlers.Add(handlerAttribute, handler);
     }
 
-    private void RegisterWebCallResponderDirectly(WebCallResponderAttribute responderAttribute, Type handler)
+    private void RegisterWebCallResponderDirectly(OldWebCallResponderAttribute responderAttribute, Type handler)
     {
         if (responderAttribute.IsDev && !Profile.DebugMode) return;
 
@@ -391,7 +391,7 @@ public class KurisuAppBuilder
         Dependencies.Add(dependency);
     });
 
-    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensure(it =>
+    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensured(it =>
     {
         Stuffs.Add(name, it);
     }));
@@ -433,7 +433,7 @@ public class KurisuAppContext
         new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 
     // AppService
-    public void EmitWebEvent(WebLetter model) => App.EmitWebEvent(model);
+    public void EmitWebEvent(OldWebLetter model) => App.EmitWebEvent(model);
 
 
     public void SetAppProperty(KurisuAppProperty property, params object[] value)
@@ -455,12 +455,12 @@ public class KurisuAppContext
 
     public void SetPreference(string key, object value) => PreferenceUtils.SetPreference(key, value);
 
-    public T? GetPreference<T>(string key, T defaultValue = default(T)) =>
+    public T? GetPreference<T>(string key, T? defaultValue = default) =>
         PreferenceUtils.GetPreference(key, defaultValue);
 
     public T? GetAppProperty<T>(KurisuAppProperty property)
     {
-        object? returnValue = null;
+        object? returnValue;
 
         switch (property)
         {
@@ -472,7 +472,6 @@ public class KurisuAppContext
             case KurisuAppProperty.WindowTitle:
             case KurisuAppProperty.WindowUrl:
                 throw new NotImplementedException();
-                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");
         }

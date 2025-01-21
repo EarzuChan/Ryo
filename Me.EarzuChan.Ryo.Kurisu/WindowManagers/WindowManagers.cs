@@ -47,7 +47,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         await WebView.EnsureCoreWebView2Async(webView2Environment);
     }
 
-    private void InitWebApp(object? _, CoreWebView2InitializationCompletedEventArgs __) => App.Ensure(app =>
+    private void InitWebApp(object? _, CoreWebView2InitializationCompletedEventArgs __) => App.Ensured(app =>
     {
         // 当浏览器加载好
 
@@ -59,7 +59,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         // WebView.CoreWebView2.Navigate();
 
         // 提供对象 互操作
-        WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppApiBridge(app));
+        WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppExposedApiBridge(app));
         // Trace.WriteLine(MassServer.GetMasses());
         // 其实在Js侧写个包也可以做到"Request"，还需要提供专门的Request接口吗
 
@@ -107,7 +107,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         WebView.CoreWebView2InitializationCompleted += InitWebApp;
     }
 
-    public void EmitWebEvent(WebLetter model) =>
+    public void EmitWebEvent(OldWebLetter model) =>
         WebView.CoreWebView2?.PostWebMessageAsJson(model.ToJson());
 
     public void Close() => WpfApp.Shutdown();
@@ -135,6 +135,6 @@ public interface IKurisuWindowManager
 
     public void Init(KurisuApp app);
 
-    public void EmitWebEvent(WebLetter model);
+    public void EmitWebEvent(OldWebLetter model);
     public KurisuWindowState GetWindowState();
 }

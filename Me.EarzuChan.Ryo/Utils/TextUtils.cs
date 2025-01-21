@@ -6,6 +6,8 @@ public static class TextUtils
 
     public static string MakeFirstCharUpper(this string text) => char.ToUpper(text[0]) + text[1..];
 
+    // 以下这两个方法或许移回到 LogUtils 会更合适？
+    
     public static string MakeErrorMsgText(string info, Exception? e, bool withStack = false)
     {
         var str = $"Error: {info}";

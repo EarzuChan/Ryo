@@ -11,15 +11,14 @@ public static class LanguageExtensiveUtils
         return obj;
     }
 
-    public static void Ensure<T>(this T? obj, Action<T> action)
+    public static void Ensured<T>(this T? obj, Action<T> action)
     {
         if (obj == null) throw new ArgumentNullException(nameof(obj), "Ensure failed: Value is null");
 
-        action(obj!);
+        action(obj);
     }
 
-    public static void TryCatchingThenThrow(string errorPrefix, Action action,
-        Dictionary<Type, String>? exceptionReplacements = null) =>
+    public static void TryCatchingThenThrow(string errorPrefix, Action action, Dictionary<Type, string>? exceptionReplacements = null) =>
         TryCatchingThenThrow<object>(errorPrefix, () =>
         {
             action();
@@ -27,7 +26,7 @@ public static class LanguageExtensiveUtils
         }, exceptionReplacements);
 
     public static T? TryCatchingThenThrow<T>(string errorPrefix, Func<T?> action,
-        Dictionary<Type, String>? exceptionReplacements = null)
+        Dictionary<Type, string>? exceptionReplacements = null)
     {
         try
         {
