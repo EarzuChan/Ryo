@@ -11,7 +11,7 @@
 </template>
 
 <script lang="ts" setup>
-import {computed} from "vue";
+import {computed} from "vue"
 
 const props = defineProps({
   disabled: {
@@ -84,16 +84,28 @@ const paddingHorizontal = computed(() => {
 
 /*基本样式*/
 
-.text-button.standard:not(.disabled):hover::after {
+.text-button:is(.standard, .outlined):not(.disabled):hover::after {
   background-color: rgba(var(--ryo-color-state-layers-primary), var(--ryo-opacity-state-layers-008));
 }
 
-.text-button.standard:not(.disabled):active::after {
+.text-button:is(.standard, .outlined):not(.disabled):active::after {
   background-color: rgba(var(--ryo-color-state-layers-primary), var(--ryo-opacity-state-layers-012));
 }
 
-.text-button.standard:not(.disabled) > .text {
+.text-button:is(.standard, .outlined):not(.disabled) > .text {
   color: var(--ryo-color-primary)
+}
+
+/*线框样式*/
+
+.text-button.outlined:not(.disabled) {
+  outline: 1px solid var(--ryo-color-outline);
+  outline-offset: -1px;
+}
+
+.text-button.outlined.disabled {
+  outline: 1px solid rgba(var(--ryo-color-state-layers-on-surface), var(--ryo-opacity-state-layers-012));
+  outline-offset: -1px;
 }
 
 /*填充样式*/

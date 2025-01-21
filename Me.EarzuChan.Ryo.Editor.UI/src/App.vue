@@ -1,14 +1,15 @@
 <template>
   <div id="ryo-viewport" class="ryo-dark">
     <Transition mode="out-in" name="shifter">
-      <div v-if="allAvailable" id="ryo-app" class="flex">
+      <TestingView v-if="justTesting" class="flex"/>
+      <div v-else-if="allAvailable" id="ryo-app" class="flex">
         <TopAppBar/>
         <div id="ryo-app-contents" class="flex">
           <SidePanel/>
           <TabPanel/>
         </div>
       </div>
-      <EmptyPage v-else style="flex: 1"/>
+      <EmptyPage v-else class="flex"/>
     </Transition>
   </div>
 </template>
@@ -18,16 +19,18 @@ import {useAppStateStore} from "@/stores/AppState"
 import TopAppBar from "@/views/TopAppBar.vue"
 import SidePanel from "@/views/SidePanel.vue"
 import TabPanel from "@/views/TabPanel.vue"
-import {computed} from "vue";
+import {computed, ref} from "vue"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import EmptyPage from "@/views/Pages/EmptyPage.vue"
+import TestingView from "@/testing/TestingView.vue"
 
 const appState = useAppStateStore()
 const kurisuState = useKurisuStateStore()
 const openedFilesState = useWorkspaceStateStore()
 
 const allAvailable = computed(() => appState.available && kurisuState.available && openedFilesState.available)
+const justTesting = computed(() => appState.preferTesting && allAvailable.value)
 </script>
 
 <style scoped>
@@ -51,7 +54,6 @@ const allAvailable = computed(() => appState.available && kurisuState.available 
   flex: 1;
   display: flex;
   overflow: hidden;
-
 }
 
 .shifter-enter-active {

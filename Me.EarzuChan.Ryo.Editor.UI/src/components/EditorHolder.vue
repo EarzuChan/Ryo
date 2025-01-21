@@ -1,19 +1,22 @@
 <template>
   <div class="use-flex fulfill" :class="{'with-margin':isComplexEditor&&props.withMargin,
   'editor-holder-card':shouldUseCard}">
-    <Component v-if="ready" :even="realEven" @err="e=>onError(e as string)" :errorMsg="errorMsg"
-               class="fulfill" :is="editorType" v-model="model" :type="type"/>
+    <component v-if="ready" :even="realEven" @err="e=>onError(e as string)" :errorMsg="errorMsg"
+               class="fulfill" :is="editorType" v-model="model" :type="type" v-memo="[model]"/>
+    <!-- 右上 v-memo="[model] 不会搞死原子编辑器 或因只是代办-->
     <slot/>
   </div>
 </template>
 
 <script lang="ts" setup>
+// TODO：编辑器和容器要善用v-memo来提高性能
+
 import {computed, nextTick, type PropType, ref} from "vue"
-import {ensure, sleepFor} from "@/utils/UsefulUtils"
+import {ensure} from "@/utils/UsefulUtils"
 import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
-import ErrorEditor from "@/components/Editors/ErrorEditor.vue"
-import FieldEditor from "@/components/Editors/FieldEditor.vue"
+import ErrorEditor from "@/components/editors/ErrorEditor.vue"
+import FieldEditor from "@/components/editors/FieldEditor.vue"
 
 const TAG = "EditorHolder"
 
@@ -44,12 +47,14 @@ const editorType = computed(() => {
     return chosen
   } else return getError("更多错误：Ryo类型为空？")
 })
+
 const realEven = computed(() => {
   let val = props.even
   if (!shouldUseCard.value) val = !val
 
   return val
 })
+
 const shouldUseCard = computed(() => isComplexEditor.value && !props.notUseCard || props.cardSurrounded)
 
 const model = defineModel<any>()

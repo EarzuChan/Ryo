@@ -98,7 +98,7 @@ function parsePath(path: number[]): any[] {
   }
 
   if (path.length === 2) {
-    const item = file.items?.[path[1]];
+    const item = file.items?.[path[1]]
     if (!item) {
       console.error(TAG, `No item found at index ${path[1]} in file ${file.name}`)
       return [undefined, true, file]

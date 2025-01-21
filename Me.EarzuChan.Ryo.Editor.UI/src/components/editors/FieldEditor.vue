@@ -1,9 +1,10 @@
 <template>
   <div class="field-editor">
     <div class="field-holder">
-      <div v-for="(item,index) in keys" class="field-list-item" :key="item.name" :class="{ 'even': isEven(index) }">
+      <div v-for="(item,index) in keys" class="field-list-item" :key="item.name"
+           :class="{ 'even': isEven(index) }">
         <div class="item-name">{{ item.name }}</div>
-        <div class="item-value-holder" :class="{ 'even': isEven(index) }">
+        <div class="item-value-holder" :class="{ 'even': isEven(index) }"> <!-- 左下 v-memo="item" 会搞死原子编辑器-->
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
                         @update:model-value="a=>trySetMember(item.name,a)"
                         :type="appState.getRyoTypeByName(item.type)" :even="isEven(index)"/>
@@ -33,7 +34,6 @@ const model = defineModel<any>()
 
 // watch(model, v => console.log(TAG, "监测", v), {immediate: true})
 
-// console.log("编辑器：组件加载")
 const keys = computed(() => {
   if (props.type && props.type.baseType) {
     return props.type.baseType.members
@@ -112,9 +112,9 @@ function isEven(index: number) {
 
 .item-name {
   min-width: 188px;
-  padding-left: 12px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-left: 8px;
+  padding-top: 7px; /*这俩7是为了凑36的高*/
+  padding-bottom: 7px;
 
   font-size: 14px;
   color: white;

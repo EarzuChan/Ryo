@@ -204,6 +204,8 @@ onDeactivated(() => {
   padding: 16px;
   gap: 16px;
   display: flex;
+  
+  background-color: var(--ryo-color-surface-container);
 
   box-shadow: 0 -1px 0 var(--ryo-color-outline-varient);
 }
