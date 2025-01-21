@@ -18,7 +18,7 @@ import {useAppStateStore} from "@/stores/AppState"
 import TopAppBar from "@/views/TopAppBar.vue"
 import SidePanel from "@/views/SidePanel.vue"
 import TabPanel from "@/views/TabPanel.vue"
-import {computed} from "vue";
+import {computed} from "vue"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import EmptyPage from "@/views/Pages/EmptyPage.vue"

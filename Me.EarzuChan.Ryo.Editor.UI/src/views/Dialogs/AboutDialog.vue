@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import {defineProps, onMounted, ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
 import {inject} from "@vue/runtime-core"
 import {openLink} from "@/utils/UsefulUtils";

@@ -8,17 +8,18 @@ import {
 } from "@/utils/KurisuUtils"
 import {type MemberType, type RyoType, type TypeSchema} from "@/models/AppModels"
 import {KurisuWindowState} from "@/models/KurisuModels"
-import NumberEditor from "@/components/Editors/NumberEditor.vue"
-import TextEditor from "@/components/Editors/TextEditor.vue"
-import BooleanEditor from "@/components/Editors/BooleanEditor.vue"
-import ArrayEditor from "@/components/Editors/ArrayEditor.vue"
-import FieldEditor from "@/components/Editors/FieldEditor.vue"
+import NumberEditor from "@/components/editors/NumberEditor.vue"
+import TextEditor from "@/components/editors/TextEditor.vue"
+import BooleanEditor from "@/components/editors/BooleanEditor.vue"
+import ArrayEditor from "@/components/editors/ArrayEditor.vue"
+import FieldEditor from "@/components/editors/FieldEditor.vue"
 import {i18n, setLanguage, sysLang} from "@/misc/I18n";
 
 const TAG = "AppState"
 
 export const useAppStateStore = defineStore('app-state', () => {
         const available = ref(false)
+    
         const dataTypeSchemas = ref<TypeSchema[]>([])
         const sidePanelExpanded = ref(true)
         const reffedAppLanguage = ref(sysLang)
@@ -156,15 +157,15 @@ export const useAppStateStore = defineStore('app-state', () => {
         })()
 
         return {
-            ensureRyoType,
+            ensureRyoType, // 应该提取到工具类，否则FakeStore无法模拟行为
             available,
             dataTypeSchemas,
             fetchDataSchemas,
             appLanguage,
-            getInitValue,
-            getEditorsByRyoType,
+            getInitValue, // 应该提取到工具类，否则FakeStore无法模拟行为
+            getEditorsByRyoType, // 应该提取到工具类，否则FakeStore无法模拟行为
             getRyoTypeByName,
-            typeSchemaToRyoType,
+            typeSchemaToRyoType, // 应该提取到工具类，否则FakeStore无法模拟行为
             sidePanelExpanded
         }
     }

@@ -8,12 +8,14 @@
 </template>
 
 <script lang="ts" setup>
+// TODO：编辑器和容器要善用v-memo来提高性能
+
 import {computed, nextTick, type PropType, ref} from "vue"
-import {ensure, sleepFor} from "@/utils/UsefulUtils"
+import {ensure} from "@/utils/UsefulUtils"
 import type {RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
-import ErrorEditor from "@/components/Editors/ErrorEditor.vue"
-import FieldEditor from "@/components/Editors/FieldEditor.vue"
+import ErrorEditor from "@/components/editors/ErrorEditor.vue"
+import FieldEditor from "@/components/editors/FieldEditor.vue"
 
 const TAG = "EditorHolder"
 
