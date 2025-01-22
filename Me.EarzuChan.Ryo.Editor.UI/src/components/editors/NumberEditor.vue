@@ -56,7 +56,7 @@ onMounted(() => watch(model, (newValue) => {
   border: none;
   background-color: transparent;
 
-  --ryo-color-on-surface-variant: white;
+  --ryo-color-on-surface-variant: --ryo-color-on-surface;
 
   margin: 6px;
   min-height: 20px;

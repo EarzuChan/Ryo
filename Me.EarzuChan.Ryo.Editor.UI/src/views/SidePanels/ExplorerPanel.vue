@@ -1,9 +1,7 @@
 <template>
-  <div id="panel">
-    <EditableLabel elegant editable v-model:edit-text="filterText">{{ $t('explorer') }}</EditableLabel>
-    <TreeView :nodes="computedMassFiles" @node-click="treeNodeClicked"
-              @node-right-click="treeNodeRightClicked" :filter-text="filterText"/>
-  </div>
+  <EditableLabel elegant editable v-model:edit-text="filterText">{{ $t('explorer') }}</EditableLabel>
+  <TreeView :nodes="computedMassFiles" @node-click="treeNodeClicked"
+            @node-right-click="treeNodeRightClicked" :filter-text="filterText"/>
 </template>
 
 <script setup lang="ts">
@@ -63,9 +61,15 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
   const [stuff, isItem, dad] = parsePath(nodePath)
 
   const items: MenuItem[] = [
-    {name: t('rightClickNode', {nodeType: stuff === undefined ? t('unknown') : isItem ? t('item') : t('mass')}), disabled: true},
+    {
+      name: t('rightClickNode', {nodeType: stuff === undefined ? t('unknown') : isItem ? t('item') : t('mass')}),
+      disabled: true
+    },
     {name: t('nodePath', {path: nodePath.join('/')}), disabled: true},
-    {name: t('nodeName', {name: stuff === undefined ? t('unknown') : isItem ? dad.name + '/' + stuff.name : stuff.name}), disabled: true},
+    {
+      name: t('nodeName', {name: stuff === undefined ? t('unknown') : isItem ? dad.name + '/' + stuff.name : stuff.name}),
+      disabled: true
+    },
   ]
 
   if (stuff !== undefined) {
@@ -83,8 +87,8 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
         },
         {
           name: t('closeMass'),
-      action: () => workspaceState.closeVolume(stuff.name)
-    })
+          action: () => workspaceState.closeVolume(stuff.name)
+        })
   }
 
   showMenu({top: e.clientY - 8, left: e.clientX, items})
@@ -109,12 +113,3 @@ function parsePath(path: number[]): any[] {
   return [file, false, undefined]
 }
 </script>
-
-<style scoped>
-#panel {
-  display: flex;
-  min-height: 100%;
-
-  flex-direction: column;
-}
-</style>

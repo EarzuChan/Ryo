@@ -43,7 +43,7 @@ onMounted(() => watch(model, async (newValue) => {
 
 <style scoped>
 .text-editor-field {
-  color: white;
+  color: var(--ryo-color-on-surface);
   font-family: inherit;
   font-size: 14px;
   resize: none;
@@ -53,11 +53,11 @@ onMounted(() => watch(model, async (newValue) => {
   border: none;
   background-color: transparent;
 
-  --ryo-color-on-surface-variant: white;
+  --ryo-color-on-surface-variant: var(--ryo-color-on-surface);
 }
 
 #clear-button {
-  --ryo-color-on-surface-variant: white;
+  --ryo-color-on-surface-variant: var(--ryo-color-on-surface);
 }
 
 .button-container {

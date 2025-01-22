@@ -149,7 +149,7 @@ function addItem() {
 }
 
 #add-item-icon {
-  --ryo-color-on-surface-variant: white;
+  --ryo-color-on-surface-variant: var(--ryo-color-on-surface);
   border-radius: 0;
   height: 100% !important;
 }

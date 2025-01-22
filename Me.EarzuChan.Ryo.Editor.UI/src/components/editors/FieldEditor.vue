@@ -117,7 +117,7 @@ function isEven(index: number) {
   padding-bottom: 7px;
 
   font-size: 14px;
-  color: white;
+  color: var(--ryo-color-on-surface);
 
   box-shadow: inset -1px 0 0 0 var(--ryo-color-outline-varient), inset 0 1px 0 0 var(--ryo-color-outline-varient);
 }

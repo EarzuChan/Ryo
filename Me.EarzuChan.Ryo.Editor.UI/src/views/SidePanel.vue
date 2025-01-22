@@ -12,8 +12,10 @@
         <IconButton :size="48" disabled icon="settings" @click="openSettings"/>
       </div>
     </div>
-    <div id="side-panel-content" v-if="appState.sidePanelExpanded">
-      <Component :is="sidePanelItems[currentPanel].panel"/>
+    <div id="side-panel-content" v-show="appState.sidePanelExpanded">
+      <keep-alive>
+        <Component :is="sidePanelItems[currentPanel].panel"/>
+      </keep-alive>
     </div>
   </div>
 </template>
@@ -82,9 +84,9 @@ function clickPanelTab(item: SidePanelItem, index: number) {
   border-radius: 16px 16px 0 0;
   width: 288px;
   margin-right: 8px;
-  padding: 12px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 12px 12px 0;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   background-color: var(--ryo-color-surface-container-high);
 }

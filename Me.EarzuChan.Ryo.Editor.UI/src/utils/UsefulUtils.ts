@@ -1,4 +1,5 @@
-import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils";
+import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
+import {toRaw} from 'vue'
 
 const TAG = "UsefulUtils"
 
@@ -30,6 +31,7 @@ export function getUpToNLines(str: string, n: number, appendDots: boolean = true
 }
 
 export function isEqual(a: number[], b: number[]): boolean {
+    // 貌似也是为了处理Proxy数组不等于原数组而被迫处理的
     return a.length === b.length && a.every((val, index) => val === b[index])
 }
 
@@ -84,7 +86,8 @@ export function generateId(seed: number): number {
 }
 
 export function deepCopy(obj: any): any {
-    return JSON.parse(JSON.stringify(obj))
+    return structuredClone(toRaw(obj)) // Brand-new Impl
+    // return JSON.parse(JSON.stringify(obj))
 }
 
 export function openLink(link: string) {

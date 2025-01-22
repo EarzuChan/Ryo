@@ -19,7 +19,7 @@ const props = defineProps({
   padding: 6px;
   min-height: 20px;
 
-  color: white;
+  color: var(--ryo-color-error);
 
   align-items: center;
 }
