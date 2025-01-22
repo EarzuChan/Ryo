@@ -22,7 +22,7 @@
 import IconButton from "@/components/IconButton.vue"
 import {ref} from "vue"
 import ExplorerPanel from "@/views/SidePanels/ExplorerPanel.vue"
-import {useAppStateStore} from "@/stores/AppState";
+import {useAppStateStore} from "@/stores/AppState"
 
 interface SidePanelItem {
   name: string

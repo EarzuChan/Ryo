@@ -36,7 +36,7 @@ import {ensure, openLink, TODO} from "@/utils/UsefulUtils"
 import {TabType} from "@/models/AppModels"
 import AboutDialog from "@/views/Dialogs/AboutDialog.vue"
 import {inject} from "@vue/runtime-core"
-import {useI18n} from "vue-i18n";
+import {useI18n} from "vue-i18n"
 
 const TAG = 'TopAppBar'
 
@@ -182,6 +182,10 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'help':
       currentMenu.value = showMenu({
         items: [
+          {
+            name: "进入测试模式",
+            action: () => appState.preferTesting = true
+          },
           {name: t('showWelcomePage'), action: () => workspaceState.openTab(TabType.Welcome)}, {
             name: t('resources'), children:
                 [

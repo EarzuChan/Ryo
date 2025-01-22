@@ -1,9 +1,10 @@
 <template>
   <div class="field-editor">
     <div class="field-holder">
-      <div v-for="(item,index) in keys" class="field-list-item" :key="item.name" :class="{ 'even': isEven(index) }">
+      <div v-for="(item,index) in keys" class="field-list-item" :key="item.name"
+           :class="{ 'even': isEven(index) }">
         <div class="item-name">{{ item.name }}</div>
-        <div class="item-value-holder" :class="{ 'even': isEven(index) }">
+        <div class="item-value-holder" :class="{ 'even': isEven(index) }"> <!-- 左下 v-memo="item" 会搞死原子编辑器-->
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
                         @update:model-value="a=>trySetMember(item.name,a)"
                         :type="appState.getRyoTypeByName(item.type)" :even="isEven(index)"/>

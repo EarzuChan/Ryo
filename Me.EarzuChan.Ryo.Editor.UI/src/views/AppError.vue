@@ -32,7 +32,7 @@ import {inject} from "@vue/runtime-core"
 import {copyTextToClipboard, getUpToNLines} from "@/utils/UsefulUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
 import CodeBlock from "@/components/CodeBlock.vue"
-import {useI18n} from "vue-i18n";
+import {useI18n} from "vue-i18n"
 
 const dialogState = useDialogStateStore()
 const err: any = inject('err')

@@ -2,11 +2,12 @@ import {defineStore} from "pinia"
 import {createApp, h, ref} from "vue"
 import type {DialogModel} from "@/models/UIModels"
 import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
-import {ensureObject} from "@/utils/UsefulUtils";
-import {inject} from "@vue/runtime-core";
-import {i18n} from "@/misc/I18n";
+import {ensureObject} from "@/utils/UsefulUtils"
+import {inject} from "@vue/runtime-core"
+import {i18n} from "@/misc/I18n"
 
 const TAG = "DialogState"
+
 export const useDialogStateStore = defineStore("dialog-state", () => {
     // 创建一个队列来存储对话框配置
 

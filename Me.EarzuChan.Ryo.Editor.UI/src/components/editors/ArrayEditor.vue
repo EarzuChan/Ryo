@@ -5,7 +5,7 @@
     <VueDraggable class="draggable-place" v-model="modelWithIds" @start="notice(true)"
                   :animation="200" @end="notice(false)">
       <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second"
-           @contextmenu.prevent.stop="e=>showContextMenu(e,index)">
+           @contextmenu.prevent.stop="e=>showContextMenu(e,index)"> <!-- v-memo="item" 会搞死原子编辑器-->
         <EditorHolder :even="even" not-use-card v-model="model![index]" :type="itemType"/>
       </div>
     </VueDraggable>
@@ -24,7 +24,7 @@ import IconButton from "../IconButton.vue"
 import EditorHolder from "../EditorHolder.vue"
 import type {Pair, RyoType} from "@/models/AppModels"
 import {useDialogStateStore} from "@/stores/DialogState"
-import {showMenu} from "@/utils/MenuUtils";
+import {showMenu} from "@/utils/MenuUtils"
 
 const TAG = "ArrayEditor"
 

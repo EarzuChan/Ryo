@@ -1,6 +1,6 @@
-﻿import {defineStore} from "pinia";
-import {ref} from "vue";
-import {KurisuWindowState} from "@/models/KurisuModels";
+﻿import {defineStore} from "pinia"
+import {ref} from "vue"
+import {KurisuWindowState} from "@/models/KurisuModels"
 import {addWebEventListener, emitWebEvent, makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
 
 const TAG = "KurisuState"
