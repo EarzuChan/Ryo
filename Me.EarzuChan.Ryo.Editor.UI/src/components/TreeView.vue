@@ -1,41 +1,31 @@
 <template>
-  <TransitionGroup @leave="handleLeave" name="tree-view-anime" tag="div" class="tree-view" tabindex="0"
-                   @focusout="clearLastClicked">
-    <div class="tree-node-container" :style="'padding-left:' + (node.level * props.indent) + 'px'"
-         v-for="node in processedTree" :key="node.indexPath.toString()"
-         @click="handleClickNode(node)" @contextmenu.prevent.stop="e=>handleRightClickNode(e,node)"
-         :class="{'last-clicked':isEqual(lastClicked,node.indexPath)}">
-      <div class="tree-node">
-        <Icon class="tree-node-icon" :filled-icon="node.isStem?false:isEqual(lastClicked,node.indexPath)"
-              :class="{'rotate' : node.expanded}" :icon="node.isStem?'chevron':'file'"/>
-        <div class="tree-node-label ryo-typography-label-large">{{ node.name }}</div>
-        <div class="tree-node-info ryo-typography-label-large ">{{
-            node.isStem ? node.childrenCount + " " + $t('items') : $t('item')
-          }}
+  <div class="viewport" ref="viewport" @wheel.prevent="updateVirtualTopPosition">
+    <div id="positor" @mousedown="startDrag" ref="positor" :style="positorStyle"/>
+    <div class="tree-view" :style="topOffsetTransform">
+      <div v-for="node in visibleNodes" :key="node.indexPath.toString()" :style="getNodeStyle(node)"
+           @click="handleClickNode(node)" @contextmenu.prevent.stop="e=>handleRightClickNode(e,node)"
+           :class="['tree-node-container',{'last-clicked':isEqual(pathOfLastClickedNode,node.indexPath)}]">
+        <div class="tree-node">
+          <Icon class="tree-node-icon" :filled-icon="node.isStem?false:isEqual(pathOfLastClickedNode,node.indexPath)"
+                :class="{'rotate' : node.expanded}" :icon="node.isStem?'chevron':'file'"/>
+          <div class="tree-node-label ryo-typography-label-large">{{ node.name }}</div>
+          <div class="tree-node-info ryo-typography-label-large ">{{
+              node.isStem ? node.childrenCount + " " + $t('items') : $t('item')
+            }}
+          </div>
         </div>
       </div>
     </div>
-  </TransitionGroup>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import {isEqual} from "@/utils/UsefulUtils"
-import {type PropType, computed, ref} from 'vue'
+import {computed, type PropType, ref} from 'vue'
 import type {TreeNodeModel} from "@/models/UIModels"
 import Icon from "./Icon.vue"
 
 const TAG = "TreeView"
-
-// TODO:虚拟列表
-
-interface InternalTreeNode {
-  name: string
-  level: number
-  isStem: boolean
-  indexPath: number[]
-  expanded: boolean
-  childrenCount: number
-}
 
 const props = defineProps({
   nodes: Array as PropType<TreeNodeModel[]>,
@@ -46,31 +36,50 @@ const props = defineProps({
   }
 })
 
-function clearLastClicked() {
-  console.log(TAG, "不有焦点了")
-  lastClicked.value = []
+interface InternalTreeNode {
+  name: string
+  level: number
+  isStem: boolean
+  indexPath: number[]
+  expanded: boolean
+  childrenCount: number
 }
 
-const emit = defineEmits(['nodeClick', 'nodeRightClick'])
+// 所有 非展开节点 的 路径
+const nonExpandedNodePaths = ref<number[][]>([])
 
-const nonExpandedNodes = ref<number[][]>([])
-const lastClicked = ref<number[]>([])
+// 上次被点击节点 的 路径
+const pathOfLastClickedNode = ref<number[]>([])
 
-function handleLeave(el: any) {
-  el.style.width = `${el.parentNode.offsetWidth - parseInt(el.style.paddingLeft, 0)}px`
-}
+const viewport = ref<HTMLElement>()
 
-// props、nonExpandedNodes刷新就自动处理
-const processedTree = computed(() => {
-  return processNodes(props.nodes)
+// 虚拟空间列表 总高度
+const totalVirtualSpaceHeight = computed(() => processedTree.value.length * nodeHeight)
+// 虚拟空间滚动 的 顶部位置
+const topPositionOfVirtualSpace = ref(0)
+
+// 每个节点元素的高度
+const nodeHeight = 36 // 根据实际样式确定
+
+const maxViewportHeight = computed(() => {
+  return viewport.value?.clientHeight || 0
 })
 
+// 计算可见范围
+const visibleRange = computed(() => {
+  const start = Math.floor(topPositionOfVirtualSpace.value / nodeHeight) // 从第几个开始
+  const end = start + Math.ceil(maxViewportHeight.value / nodeHeight) + 1 // 屏幕中放得下多少 + 起始 + 1
+
+  return [start, end]
+})
+
+// 处理成扁平化且一一对应的内部节点数组
 function processNodes(treeNodes: TreeNodeModel[] | undefined, level = 0, parentIndexPath: number[] = []): InternalTreeNode[] {
   let result: InternalTreeNode[] = []
   treeNodes?.forEach((node, index) => {
     const isStem = !!(node.children) // 即使子是空数组，子非未定义，就是干
     const currentIndexPath = parentIndexPath.concat(index) // 当前坐标
-    const expanded = isStem ? !nonExpandedNodes.value.some(ind => isEqual(ind as number[], currentIndexPath)) : false
+    const expanded = isStem ? !nonExpandedNodePaths.value.some(ind => isEqual(ind as number[], currentIndexPath)) : false
     const childrenCount = isStem ? node.children!.length : 0
 
     let takeThis = props.filterText === undefined || node.name.includes(props.filterText) // 直不直拿当前
@@ -97,33 +106,137 @@ function processNodes(treeNodes: TreeNodeModel[] | undefined, level = 0, parentI
   return result
 }
 
+// props、nonExpandedNodes刷新就自动处理
+const processedTree = computed(() => {
+  return processNodes(props.nodes)
+})
+
+// 最终（可视）渲染的节点们
+const visibleNodes = computed(() => {
+  return processedTree.value.slice(visibleRange.value[0], visibleRange.value[1])
+
+  // console.log(TAG, "需要渲染", visibleNodes.value)
+})
+
+
+function updateVirtualTopPosition(event: WheelEvent) {
+  // 处理滚动增量（根据具体场景调整除数）
+  const scrollDelta = event.deltaY / 5
+
+  // 计算潜在的新顶部位置
+  let newTopPosition = topPositionOfVirtualSpace.value + scrollDelta
+
+  // 计算最大允许的滚动位置（当内容不足时不滚动）
+  const maxScrollPosition = Math.max(
+      0,
+      totalVirtualSpaceHeight.value - maxViewportHeight.value
+  )
+
+  // 应用边界约束（0 ≤ position ≤ maxScrollPosition）
+  newTopPosition = Math.max(0, Math.min(newTopPosition, maxScrollPosition))
+
+  /*console.log(TAG, "更新虚拟空间滚动位置", {
+    delta: scrollDelta,
+    newPosition: newTopPosition,
+    maxPosition: maxScrollPosition
+  })*/
+
+  topPositionOfVirtualSpace.value = newTopPosition
+}
+
+const topOffsetTransform = computed(() => ({
+  transform: `translateY(${-(topPositionOfVirtualSpace.value % nodeHeight)}px)`
+}))
+
+const getNodeStyle = (node: InternalTreeNode) => ({
+  paddingLeft: `${node.level * props.indent}px`,
+  height: `${nodeHeight}px`
+})
+
+function clearLastClicked() {
+  console.log(TAG, "清除最后点击节点项")
+  pathOfLastClickedNode.value = []
+}
+
+const emit = defineEmits(['nodeClick', 'nodeRightClick'])
+
 function handleClickNode(node: InternalTreeNode) {
-  console.log(TAG, 'Node clicked:', node, node.indexPath)
-  lastClicked.value = node.indexPath
+  console.log(TAG, '节点被点击', node, node.indexPath)
+
+  pathOfLastClickedNode.value = node.indexPath
+
   if (node.isStem) {
     // 非展开的处理，响应式自己会追踪并更新
-    if (node.expanded) nonExpandedNodes.value.push(node.indexPath)
+    if (node.expanded) nonExpandedNodePaths.value.push(node.indexPath)
     else {
-      const index = nonExpandedNodes.value.findIndex(iP => isEqual(iP as number[], node.indexPath))
-      nonExpandedNodes.value.splice(index, 1)
+      const index = nonExpandedNodePaths.value.findIndex(iP => isEqual(iP as number[], node.indexPath))
+      nonExpandedNodePaths.value.splice(index, 1)
     }
-  } else
-    emit('nodeClick', node.indexPath)
+  } else emit('nodeClick', node.indexPath)
 }
 
 function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
-  console.log(TAG, 'Node right clicked:', node, node.indexPath)
+  console.log(TAG, '节点被右击', node, node.indexPath)
   emit('nodeRightClick', node.indexPath, e)
+}
+
+defineExpose({clearLastClicked})
+
+// 新增变量
+const positor = ref<HTMLElement>()
+const isDragging = ref(false)
+const dragStartY = ref(0)
+const dragStartPosition = ref(0)
+
+// 样式计算
+const positorStyle = computed(() => ({
+  height: `${nodeHeight}px`,
+  top: `${topPositionOfVirtualSpace.value / (totalVirtualSpaceHeight.value - maxViewportHeight.value) * (maxViewportHeight.value - nodeHeight)}px`
+}))
+
+function startDrag(event: MouseEvent) {
+  isDragging.value = true
+  dragStartY.value = event.clientY
+  dragStartPosition.value = topPositionOfVirtualSpace.value
+
+  document.addEventListener('mousemove', handleDrag)
+  document.addEventListener('mouseup', stopDrag)
+}
+
+function handleDrag(event: MouseEvent) {
+  if (!isDragging.value) return
+
+  // 计算拖动位移对应的虚拟滚动位移
+  const deltaY = event.clientY - dragStartY.value
+  const scrollRatio = totalVirtualSpaceHeight.value / maxViewportHeight.value
+  const newPosition = dragStartPosition.value + deltaY * scrollRatio
+
+  // 应用边界约束（复用之前的逻辑）
+  topPositionOfVirtualSpace.value = Math.max(0,
+      Math.min(newPosition, totalVirtualSpaceHeight.value - maxViewportHeight.value)
+  )
+}
+
+function stopDrag() {
+  isDragging.value = false
+  document.removeEventListener('mousemove', handleDrag)
+  document.removeEventListener('mouseup', stopDrag)
 }
 </script>
 
 <style scoped>
+.viewport {
+  flex: 1;
+  overflow: hidden;
+
+  position: relative;
+}
+
 .tree-view * {
   transition: all var(--ryo-motion-standard);
 }
 
 .tree-node-container {
-  height: 36px;
   display: flex;
 
   border-radius: 0;
@@ -169,24 +282,14 @@ function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
   border-radius: 18px;
 }
 
-.tree-view-anime-move {
-  transition: all var(--ryo-motion-standard);
-}
-
-.tree-view-anime-enter-active {
-  transition: all var(--ryo-motion-standard-decelerate);
-}
-
-.tree-view-anime-leave-active {
-  transition: all var(--ryo-motion-standard-accelerate);
-}
-
-.tree-view-anime-enter-from,
-.tree-view-anime-leave-to {
-  opacity: 0;
-}
-
-.tree-view-anime-leave-active {
+#positor {
+  width: 8px;
+  right: 0;
+  z-index: 114514;
   position: absolute;
+
+  border-radius: 16px;
+  background-color: var(--ryo-color-primary-container);
+  box-shadow: var(--ryo-elevation-2);
 }
 </style>

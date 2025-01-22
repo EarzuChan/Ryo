@@ -30,6 +30,7 @@ export function getUpToNLines(str: string, n: number, appendDots: boolean = true
 }
 
 export function isEqual(a: number[], b: number[]): boolean {
+    // 貌似也是为了处理Proxy数组不等于原数组而被迫处理的
     return a.length === b.length && a.every((val, index) => val === b[index])
 }
 
