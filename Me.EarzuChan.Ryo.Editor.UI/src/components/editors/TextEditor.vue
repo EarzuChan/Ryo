@@ -67,7 +67,7 @@ onMounted(() => watch(model, async (newValue) => {
 }
 
 .text-editor {
-  margin: 6px;
+  margin: 7px 8px; /*7是为了凑36的高*/
   display: flex;
   flex-direction: row;
 

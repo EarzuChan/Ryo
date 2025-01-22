@@ -1,19 +1,13 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
-import {
-    addWebEventListener,
-    emitWebEvent,
-    makeWebLetter,
-    sendWebCallAndTakeItsReturnValues
-} from "@/utils/KurisuUtils"
-import {type MemberType, type RyoType, type TypeSchema} from "@/models/AppModels"
-import {KurisuWindowState} from "@/models/KurisuModels"
+import {makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
+import {type RyoType, type TypeSchema} from "@/models/AppModels"
 import NumberEditor from "@/components/editors/NumberEditor.vue"
 import TextEditor from "@/components/editors/TextEditor.vue"
 import BooleanEditor from "@/components/editors/BooleanEditor.vue"
 import ArrayEditor from "@/components/editors/ArrayEditor.vue"
 import FieldEditor from "@/components/editors/FieldEditor.vue"
-import {i18n, setLanguage, sysLang} from "@/misc/I18n"
+import {setLanguage, sysLang} from "@/misc/I18n"
 
 const TAG = "AppState"
 
@@ -33,7 +27,19 @@ export const useAppStateStore = defineStore('app-state', () => {
             }
         })
 
+        // 为提高性能的缓存
+        const ryoTypeCache = new Map<string, RyoType>()
+        const editorsCache = new Map<string, any[]>()
+
         function getEditorsByRyoType(ryoType: RyoType) {
+            // 生成唯一键：类型名 + 是否数组
+            const cacheKey = `${ryoType.typeName}|${ryoType.isArray}`
+
+            if (editorsCache.has(cacheKey)) {
+                console.log(TAG, "[Editors 缓存命中]", cacheKey)
+                return editorsCache.get(cacheKey)!
+            }
+
             const editors = []
 
             if (ryoType.isArray) {
@@ -60,20 +66,33 @@ export const useAppStateStore = defineStore('app-state', () => {
                     editors.push(FieldEditor)
             }
 
+            // 写入缓存
+            editorsCache.set(cacheKey, editors)
             return editors
         }
 
         function getRyoTypeByName(typeName: string): RyoType {
-            let isArray = false
-            if (typeName.endsWith("[]")) {
-                isArray = true
-                typeName = typeName.substring(0, typeName.length - 2) // 裁掉末尾的"[]"
+            // 缓存命中检查
+            if (ryoTypeCache.has(typeName)) {
+                console.log(TAG, "[RyoType 缓存命中]", typeName)
+                return ryoTypeCache.get(typeName)!
             }
 
-            const baseType = dataTypeSchemas.value.find(schema => schema.type === typeName)
+            // 原有逻辑（处理数组类型）
+            let isArray = false
+            let processedTypeName = typeName
+            if (typeName.endsWith("[]")) {
+                isArray = true
+                processedTypeName = typeName.slice(0, -2)
+            }
 
-            const ryoType = {baseType, isArray, typeName}
-            console.log(TAG, "已获取RyoType", typeName, ryoType)
+            // 查找类型定义
+            const baseType = dataTypeSchemas.value.find(schema => schema.type === processedTypeName)
+            const ryoType = {baseType, isArray, typeName: processedTypeName}
+
+            // 写入缓存
+            ryoTypeCache.set(typeName, ryoType)
+            console.log(TAG, "RyoType计算并缓存", typeName)
             return ryoType
         }
 
@@ -100,7 +119,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                 case "java.lang.Boolean":
                     return false
                 default:
-                    // TODO: 初始化各字段？
+                    // TODO：初始化各字段，是否始终可靠？
                     const obj: { [key: string]: any } = {}
                     type.baseType.members?.forEach(field => {
                         obj[field.name] = getInitValue(getRyoTypeByName(field.type))
@@ -129,13 +148,19 @@ export const useAppStateStore = defineStore('app-state', () => {
                 case "java.lang.Boolean":
                     return typeof data === "boolean"
                 default:
-                    // TODO: 检测字段？
+                    // TODO：是否需要检测字段
                     return typeof data === "object" && !Array.isArray(data)
             }
         }
 
         async function fetchDataSchemas() {
             dataTypeSchemas.value = await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetAllDataTypes')) as TypeSchema[]
+
+            // 清空缓存
+            ryoTypeCache.clear()
+            editorsCache.clear()
+            console.log(TAG, "因更新数据类型，缓存已清除")
+
             console.log(TAG, "DataTypeSchemas已拉取", dataTypeSchemas.value)
         }
 

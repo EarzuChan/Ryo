@@ -3,10 +3,13 @@
     <EditorHolder card-surrounded :type="testingState.testingType"
                   v-model="testingState.testingData" ref="testingEditor">
       <div class="testing-action-bar">
-        <TextButton class="a-button" @click="appState.preferTesting = false">离开测试模式</TextButton>
-        <TextButton class="a-button" @click="reloadEditor">重载编辑器</TextButton>
-        <TextButton class="a-button" button-style="filled" @click="testingState.reinitData">重置数据</TextButton>
-        <TextButton class="a-button" button-style="filled" @click="printData">打印数据</TextButton>
+        <TextButton class="a-button" button-style="filled" id="leave-butt"
+                    @click="appState.preferTesting = false">离开测试模式
+        </TextButton>
+        <TextButton class="a-button" button-style="filled" @click="reloadEditor">重载编辑器</TextButton>
+        <TextButton class="a-button" button-style="filled" @click="testingState.reinitData" id="reset-butt">重置数据
+        </TextButton>
+        <TextButton class="a-button" button-style="filled" @click="printData" id="print-butt">打印数据</TextButton>
       </div>
     </EditorHolder>
   </div>
@@ -46,10 +49,27 @@ function printData() {
   gap: 16px;
   display: flex;
 
+  background-color: var(--ryo-color-surface-container);
+
   box-shadow: 0 -1px 0 var(--ryo-color-outline-varient);
 }
 
 .a-button {
   flex: 1;
+}
+
+#leave-butt{
+  --ryo-color-primary: var(--ryo-color-secondary-container);
+  --ryo-color-on-primary: var(--ryo-color-on-secondary-container);
+}
+
+#reset-butt {
+  --ryo-color-primary: var(--ryo-color-primary-container);
+  --ryo-color-on-primary: var(--ryo-color-on-primary-container);
+}
+
+#print-butt {
+  --ryo-color-primary: var(--ryo-color-tertiary-container);
+  --ryo-color-on-primary: var(--ryo-color-on-tertiary-container);
 }
 </style>

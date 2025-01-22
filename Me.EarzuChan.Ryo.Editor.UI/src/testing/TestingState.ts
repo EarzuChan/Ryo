@@ -1,6 +1,6 @@
 ﻿import {defineStore} from "pinia";
 import {useAppStateStore} from "@/stores/AppState"
-import {computed, ref, watch} from "vue"
+import {ref, watch} from "vue"
 import type {RyoType} from "@/models/AppModels"
 
 const TAG = "TestingState"

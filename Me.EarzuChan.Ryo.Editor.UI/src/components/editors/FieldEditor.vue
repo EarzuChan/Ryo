@@ -34,7 +34,6 @@ const model = defineModel<any>()
 
 // watch(model, v => console.log(TAG, "监测", v), {immediate: true})
 
-// console.log("编辑器：组件加载")
 const keys = computed(() => {
   if (props.type && props.type.baseType) {
     return props.type.baseType.members
@@ -113,9 +112,9 @@ function isEven(index: number) {
 
 .item-name {
   min-width: 188px;
-  padding-left: 12px;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-left: 8px;
+  padding-top: 7px; /*这俩7是为了凑36的高*/
+  padding-bottom: 7px;
 
   font-size: 14px;
   color: white;

@@ -10,7 +10,7 @@
       </div>
     </VueDraggable>
     <div id="add-item-button" class="base" @click="addItem">
-      <IconButton :size="32" id="add-item-icon" icon="add"/>
+      <IconButton :size="36" id="add-item-icon" icon="add"/>
     </div>
   </div>
 </template>
@@ -41,7 +41,7 @@ const model = defineModel<any[]>()
 const itemType = computed(() => {
   if (props.type && props.type.typeName) {
     const subRyo = appState.getRyoTypeByName(props.type.typeName)
-    console.debug(TAG, "获取元素类型", props.type.typeName, subRyo)
+    console.debug(TAG, "元素类型已取得", props.type.typeName, subRyo)
 
     return subRyo
   }
@@ -144,8 +144,8 @@ function addItem() {
 }
 
 #add-item-button {
-  min-width: 32px;
-  min-height: 32px;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 #add-item-icon {
