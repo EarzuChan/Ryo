@@ -117,11 +117,15 @@ const visibleNodes = computed(() => {
   // console.log(TAG, "需要渲染", visibleNodes.value)
 })
 
+// 新增边界状态类型
+type BoundaryState = 'within' | 'over-top' | 'over-bottom'
+
 // 惯性滚动参数配置
-const SCROLL_SENSITIVITY = 0.2 // 滚动灵敏度系数 0.1-1
-const DECELERATION = 0.9    // 速度衰减系数 0.8-0.99
-const FRAME_RATE = 16         // 近似 60fps 的帧间隔
-const VELOCITY_THRESHOLD = 0.5 // 停止滚动速度阈值
+const SCROLL_SENSITIVITY = 0.2
+const DECELERATION = 0.9
+const VELOCITY_THRESHOLD = 0.5
+const OVERSCROLL_DECELERATION = 0.7 // 边界外衰减系数
+const OVERSCROLL_RESISTANCE = 0.4   // 边界外滚动阻力
 
 // 响应式变量
 const scrollVelocity = ref(0)
@@ -129,74 +133,104 @@ const isAnimating = ref(false)
 let lastScrollTime = 0
 let animationFrameId: number
 
-// 惯性滚动动画循环
 const animate = () => {
-  if (Math.abs(scrollVelocity.value) < VELOCITY_THRESHOLD) {
-    isAnimating.value = false
-    scrollVelocity.value = 0
-    return
+  console.log(TAG, '动画', scrollVelocity.value)
+
+  const currentPosition = topPositionOfVirtualSpace.value
+  const maxScroll = Math.max(0, totalVirtualSpaceHeight.value - maxViewportHeight.value)
+
+  // 边界状态检测
+  const boundaryState = getBoundaryState(currentPosition, maxScroll)
+
+  // 在边界外时的特殊处理
+  if (boundaryState !== 'within') {
+    console.log(TAG, '边界外', boundaryState)
+    // 边界外速度衰减更快
+    scrollVelocity.value *= OVERSCROLL_DECELERATION
+    
+    // 创建弹性效果
+    const overshoot = boundaryState === 'over-top' ? currentPosition : currentPosition - maxScroll
+    scrollVelocity.value -= overshoot * 0.1
+  } else {
+    // 正常区域衰减
+    scrollVelocity.value *= DECELERATION
   }
 
-  // 应用速度衰减
-  scrollVelocity.value *= DECELERATION
+  // 应用速度（边界外也允许更新位置）
+  topPositionOfVirtualSpace.value += scrollVelocity.value
 
-  // 计算新位置并应用边界
-  const newPosition = applyBoundaryConstraint(
-      topPositionOfVirtualSpace.value + scrollVelocity.value
-  )
-
-  // 更新位置
-  topPositionOfVirtualSpace.value = newPosition
-
-  // 当接近边界时施加额外阻力
-  if (isNearBoundary(newPosition)) {
-    scrollVelocity.value *= 0.6 // 边界阻力系数 0.3-0.8
+  // 停止条件判断
+  if (Math.abs(scrollVelocity.value) < VELOCITY_THRESHOLD) {
+    // 自动回弹到边界内
+    if (boundaryState !== 'within') {
+      const targetPosition = boundaryState === 'over-top' ? 0 : maxScroll
+      smoothScrollTo(targetPosition)
+      return
+    }
+    isAnimating.value = false
+    return
   }
 
   animationFrameId = requestAnimationFrame(animate)
 }
 
-// 边界约束应用函数
-const applyBoundaryConstraint = (position: number) => {
-  const max = Math.max(0, totalVirtualSpaceHeight.value - maxViewportHeight.value)
-  if (position < 0) {
-    return position * 0.5 // 上拉回弹
-  }
-  if (position > max) {
-    return max + (position - max) * 0.5 // 下拉回弹
-  }
-  return position
+// 新增边界状态判断
+const getBoundaryState = (position: number, max: number): BoundaryState => {
+  if (position < 0) return 'over-top'
+  if (position > max) return 'over-bottom'
+  return 'within'
 }
 
-// 判断是否接近边界
-const isNearBoundary = (position: number) => {
-  const threshold = maxViewportHeight.value * 0.1
-  return position < threshold ||
-      position > (totalVirtualSpaceHeight.value - maxViewportHeight.value - threshold)
+// 新增平滑滚动方法（用于回弹）
+const smoothScrollTo = (target: number) => {
+  const startPosition = topPositionOfVirtualSpace.value
+  const duration = 300
+  const startTime = Date.now()
+
+  const tick = () => {
+    console.log(TAG, '平滑滚动')
+
+    const now = Date.now()
+    const progress = Math.min(1, (now - startTime) / duration)
+    const eased = 0.5 * (1 - Math.cos(progress * Math.PI))
+    topPositionOfVirtualSpace.value = startPosition + (target - startPosition) * eased
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(tick)
+    } else {
+      isAnimating.value = false
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(tick)
 }
 
-// 滚轮事件处理器
+// 修改后的滚轮事件处理器
 const onScroll = (event: WheelEvent) => {
-  // 计算时间差用于速度加权
+  event.preventDefault()
+
   const now = Date.now()
-  const timeDiff = now - lastScrollTime
-  lastScrollTime = now
-
-  // 动态灵敏度调整：快速滚动时获得更大的速度加成
-  const dynamicSensitivity = timeDiff < FRAME_RATE
-      ? SCROLL_SENSITIVITY * 1.5
-      : SCROLL_SENSITIVITY
-
-  // 更新滚动速度（带方向）
   const delta = event.deltaMode === 0 ? event.deltaY : event.deltaY * 40
-  scrollVelocity.value += delta * dynamicSensitivity
+  const timeDiff = now - lastScrollTime
 
-  // 立即应用一次滚动以保持响应性
-  topPositionOfVirtualSpace.value = applyBoundaryConstraint(topPositionOfVirtualSpace.value + delta * dynamicSensitivity)
+  // 速度累积逻辑优化
+  const velocityBoost = Math.min(2, 1 + (1 / (timeDiff || 1))) // 防除零
+  scrollVelocity.value += delta * SCROLL_SENSITIVITY * velocityBoost
 
-  // 启动动画循环如果尚未运行
+  // 新增边界外滚动阻力应用
+  const currentPosition = topPositionOfVirtualSpace.value
+  const maxScroll = Math.max(0, totalVirtualSpaceHeight.value - maxViewportHeight.value)
+  const boundaryState = getBoundaryState(currentPosition, maxScroll)
+
+  if (boundaryState !== 'within') {
+    // 边界外滚动时施加额外阻力
+    scrollVelocity.value *= OVERSCROLL_RESISTANCE
+  }
+
+  // 移除直接的位置更新，仅在动画未启动时触发
   if (!isAnimating.value) {
     isAnimating.value = true
+    lastScrollTime = now
     animationFrameId = requestAnimationFrame(animate)
   }
 }
