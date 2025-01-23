@@ -1,6 +1,5 @@
 <template>
-  <div class="viewport" ref="viewport" @wheel.prevent="updateVirtualTopPosition">
-    <div id="positor" @mousedown="startDrag" ref="positor" :style="positorStyle"/>
+  <div class="viewport" ref="viewport" @wheel.prevent="onScroll">
     <div class="tree-view" :style="topOffsetTransform">
       <div v-for="node in visibleNodes" :key="node.indexPath.toString()" :style="getNodeStyle(node)"
            @click="handleClickNode(node)" @contextmenu.prevent.stop="e=>handleRightClickNode(e,node)"
@@ -20,8 +19,8 @@
 </template>
 
 <script lang="ts" setup>
-import {isEqual} from "@/utils/UsefulUtils"
-import {computed, type PropType, ref} from 'vue'
+import {isEqual, delayExecution} from "@/utils/UsefulUtils"
+import {computed, type PropType, ref, onUnmounted} from 'vue'
 import type {TreeNodeModel} from "@/models/UIModels"
 import Icon from "./Icon.vue"
 
@@ -67,7 +66,7 @@ const maxViewportHeight = computed(() => {
 
 // 计算可见范围
 const visibleRange = computed(() => {
-  const start = Math.floor(topPositionOfVirtualSpace.value / nodeHeight) // 从第几个开始
+  const start = Math.floor(Math.max(topPositionOfVirtualSpace.value, 0) / nodeHeight) // 从第几个开始
   const end = start + Math.ceil(maxViewportHeight.value / nodeHeight) + 1 // 屏幕中放得下多少 + 起始 + 1
 
   return [start, end]
@@ -118,31 +117,94 @@ const visibleNodes = computed(() => {
   // console.log(TAG, "需要渲染", visibleNodes.value)
 })
 
+// 惯性滚动参数配置
+const SCROLL_SENSITIVITY = 0.2 // 滚动灵敏度系数 0.1-1
+const DECELERATION = 0.9    // 速度衰减系数 0.8-0.99
+const FRAME_RATE = 16         // 近似 60fps 的帧间隔
+const VELOCITY_THRESHOLD = 0.5 // 停止滚动速度阈值
 
-function updateVirtualTopPosition(event: WheelEvent) {
-  // 处理滚动增量（根据具体场景调整除数）
-  const scrollDelta = event.deltaY / 5
+// 响应式变量
+const scrollVelocity = ref(0)
+const isAnimating = ref(false)
+let lastScrollTime = 0
+let animationFrameId: number
 
-  // 计算潜在的新顶部位置
-  let newTopPosition = topPositionOfVirtualSpace.value + scrollDelta
+// 惯性滚动动画循环
+const animate = () => {
+  if (Math.abs(scrollVelocity.value) < VELOCITY_THRESHOLD) {
+    isAnimating.value = false
+    scrollVelocity.value = 0
+    return
+  }
 
-  // 计算最大允许的滚动位置（当内容不足时不滚动）
-  const maxScrollPosition = Math.max(
-      0,
-      totalVirtualSpaceHeight.value - maxViewportHeight.value
+  // 应用速度衰减
+  scrollVelocity.value *= DECELERATION
+
+  // 计算新位置并应用边界
+  const newPosition = applyBoundaryConstraint(
+      topPositionOfVirtualSpace.value + scrollVelocity.value
   )
 
-  // 应用边界约束（0 ≤ position ≤ maxScrollPosition）
-  newTopPosition = Math.max(0, Math.min(newTopPosition, maxScrollPosition))
+  // 更新位置
+  topPositionOfVirtualSpace.value = newPosition
 
-  /*console.log(TAG, "更新虚拟空间滚动位置", {
-    delta: scrollDelta,
-    newPosition: newTopPosition,
-    maxPosition: maxScrollPosition
-  })*/
+  // 当接近边界时施加额外阻力
+  if (isNearBoundary(newPosition)) {
+    scrollVelocity.value *= 0.6 // 边界阻力系数 0.3-0.8
+  }
 
-  topPositionOfVirtualSpace.value = newTopPosition
+  animationFrameId = requestAnimationFrame(animate)
 }
+
+// 边界约束应用函数
+const applyBoundaryConstraint = (position: number) => {
+  const max = Math.max(0, totalVirtualSpaceHeight.value - maxViewportHeight.value)
+  if (position < 0) {
+    return position * 0.5 // 上拉回弹
+  }
+  if (position > max) {
+    return max + (position - max) * 0.5 // 下拉回弹
+  }
+  return position
+}
+
+// 判断是否接近边界
+const isNearBoundary = (position: number) => {
+  const threshold = maxViewportHeight.value * 0.1
+  return position < threshold ||
+      position > (totalVirtualSpaceHeight.value - maxViewportHeight.value - threshold)
+}
+
+// 滚轮事件处理器
+const onScroll = (event: WheelEvent) => {
+  // 计算时间差用于速度加权
+  const now = Date.now()
+  const timeDiff = now - lastScrollTime
+  lastScrollTime = now
+
+  // 动态灵敏度调整：快速滚动时获得更大的速度加成
+  const dynamicSensitivity = timeDiff < FRAME_RATE
+      ? SCROLL_SENSITIVITY * 1.5
+      : SCROLL_SENSITIVITY
+
+  // 更新滚动速度（带方向）
+  const delta = event.deltaMode === 0 ? event.deltaY : event.deltaY * 40
+  scrollVelocity.value += delta * dynamicSensitivity
+
+  // 立即应用一次滚动以保持响应性
+  topPositionOfVirtualSpace.value = applyBoundaryConstraint(topPositionOfVirtualSpace.value + delta * dynamicSensitivity)
+
+  // 启动动画循环如果尚未运行
+  if (!isAnimating.value) {
+    isAnimating.value = true
+    animationFrameId = requestAnimationFrame(animate)
+  }
+}
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
+})
 
 const topOffsetTransform = computed(() => ({
   transform: `translateY(${-(topPositionOfVirtualSpace.value % nodeHeight)}px)`
@@ -181,47 +243,6 @@ function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
 }
 
 defineExpose({clearLastClicked})
-
-// 新增变量
-const positor = ref<HTMLElement>()
-const isDragging = ref(false)
-const dragStartY = ref(0)
-const dragStartPosition = ref(0)
-
-// 样式计算
-const positorStyle = computed(() => ({
-  height: `${nodeHeight}px`,
-  top: `${topPositionOfVirtualSpace.value / (totalVirtualSpaceHeight.value - maxViewportHeight.value) * (maxViewportHeight.value - nodeHeight)}px`
-}))
-
-function startDrag(event: MouseEvent) {
-  isDragging.value = true
-  dragStartY.value = event.clientY
-  dragStartPosition.value = topPositionOfVirtualSpace.value
-
-  document.addEventListener('mousemove', handleDrag)
-  document.addEventListener('mouseup', stopDrag)
-}
-
-function handleDrag(event: MouseEvent) {
-  if (!isDragging.value) return
-
-  // 计算拖动位移对应的虚拟滚动位移
-  const deltaY = event.clientY - dragStartY.value
-  const scrollRatio = totalVirtualSpaceHeight.value / maxViewportHeight.value
-  const newPosition = dragStartPosition.value + deltaY * scrollRatio
-
-  // 应用边界约束（复用之前的逻辑）
-  topPositionOfVirtualSpace.value = Math.max(0,
-      Math.min(newPosition, totalVirtualSpaceHeight.value - maxViewportHeight.value)
-  )
-}
-
-function stopDrag() {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleDrag)
-  document.removeEventListener('mouseup', stopDrag)
-}
 </script>
 
 <style scoped>
@@ -280,16 +301,5 @@ function stopDrag() {
 .tree-node-container:hover:not(.last-clicked) {
   background-color: rgba(var(--ryo-color-state-layers-on-primary-container), var(--ryo-opacity-state-layers-008));
   border-radius: 18px;
-}
-
-#positor {
-  width: 8px;
-  right: 0;
-  z-index: 114514;
-  position: absolute;
-
-  border-radius: 16px;
-  background-color: var(--ryo-color-primary-container);
-  box-shadow: var(--ryo-elevation-2);
 }
 </style>

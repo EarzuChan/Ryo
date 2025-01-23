@@ -1,4 +1,5 @@
-import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils";
+import {emitWebEvent, makeWebLetter} from "@/utils/KurisuUtils"
+import {toRaw} from 'vue'
 
 const TAG = "UsefulUtils"
 
@@ -85,7 +86,8 @@ export function generateId(seed: number): number {
 }
 
 export function deepCopy(obj: any): any {
-    return JSON.parse(JSON.stringify(obj))
+    return structuredClone(toRaw(obj)) // Brand-new Impl
+    // return JSON.parse(JSON.stringify(obj))
 }
 
 export function openLink(link: string) {
