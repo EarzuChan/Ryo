@@ -147,7 +147,7 @@ const animate = () => {
     console.log(TAG, '边界外', boundaryState)
     // 边界外速度衰减更快
     scrollVelocity.value *= OVERSCROLL_DECELERATION
-    
+
     // 创建弹性效果
     const overshoot = boundaryState === 'over-top' ? currentPosition : currentPosition - maxScroll
     scrollVelocity.value -= overshoot * 0.1
@@ -208,6 +208,8 @@ const smoothScrollTo = (target: number) => {
 // 修改后的滚轮事件处理器
 const onScroll = (event: WheelEvent) => {
   event.preventDefault()
+
+  // console.log(TAG, '滚动', event)
 
   const now = Date.now()
   const delta = event.deltaMode === 0 ? event.deltaY : event.deltaY * 40

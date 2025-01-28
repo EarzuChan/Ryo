@@ -22,12 +22,12 @@ function switchState() {
 
 <style scoped>
 #current-state {
-  color: white;
+  color: var(--ryo-color-on-surface);
   flex: 1;
 }
 
 #another-state {
-  color: var(--ryo-color-on-surface);
+  color: var(--ryo-color-on-surface-variant);
 }
 
 .boolean-editor {
