@@ -44,14 +44,14 @@ export function showMenu(config: MenuModel) {
 
     const man = h(Menu, {
         ...config,
-        onClose: () => {
+        onClose: (imm) => {
             if (config.onClose) {
-                config.onClose()
+                config.onClose(imm)
             }
         },
-        onCloseOnMenuItem: () => {
+        onCloseOnMenuItem: (imm: boolean) => {
             if (config.onCloseOnMenuItem) {
-                config.onCloseOnMenuItem()
+                config.onCloseOnMenuItem(imm)
             }
         },
         onClosed: () => {

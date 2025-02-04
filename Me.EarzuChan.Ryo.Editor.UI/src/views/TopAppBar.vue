@@ -74,7 +74,7 @@ function hoverMenuButton(menuType: MenuBarItem) {
   console.log(TAG, 'hoverMenuButton', menuType, currentMenu.value)
 
   if (currentMenu.value !== null && lastMenu.value!.id !== menuType.id) {
-    currentMenu.value.closeMenu()
+    currentMenu.value.closeMenu(true)
 
     showMenuOf(menuType)
   }
