@@ -1,5 +1,5 @@
 <template>
-  <div id="ryo-viewport" class="ryo-dark">
+  <div id="ryo-viewport" class="ryo-dark" :class="{'border': !kurisuState.isAppWindowMaximized}">
     <Transition mode="out-in" name="shifter">
       <TestingView v-if="justTesting" class="flex"/>
       <div v-else-if="allAvailable" id="ryo-app" class="flex">
@@ -19,7 +19,7 @@ import {useAppStateStore} from "@/stores/AppState"
 import TopAppBar from "@/views/TopAppBar.vue"
 import SidePanel from "@/views/SidePanel.vue"
 import TabPanel from "@/views/TabPanel.vue"
-import {computed, ref} from "vue"
+import {computed, ref, watch} from "vue"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import EmptyPage from "@/views/Pages/EmptyPage.vue"
@@ -36,10 +36,16 @@ const justTesting = computed(() => appState.preferTesting && allAvailable.value)
 <style scoped>
 #ryo-viewport {
   display: flex;
-  height: 100vh;
+  flex: 1;
 
   background-color: var(--ryo-color-surface);
   overflow: hidden;
+}
+
+#ryo-viewport.border {
+  margin: 1px;
+  border: 1px solid var(--ryo-color-outline-varient);
+  border-radius: 16px;
 }
 
 #ryo-app-contents {

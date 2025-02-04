@@ -1,7 +1,7 @@
 <template>
   <div class="use-flex fulfill" :class="{'with-margin':isComplexEditor&&props.withMargin,
   'editor-holder-card':shouldUseCard}">
-    <component v-if="ready" :even="realEven" @err="e=>onError(e as string)" :errorMsg="errorMsg"
+    <component v-if="ready" :even="realEven" @err="(e:Error)=>onError(e as any as string)" :errorMsg="errorMsg"
                class="fulfill" :is="editorType" v-model="model" :type="type" v-memo="[model]"/>
     <!-- 右上 v-memo="[model] 不会搞死原子编辑器 或因只是代办-->
     <slot/>
