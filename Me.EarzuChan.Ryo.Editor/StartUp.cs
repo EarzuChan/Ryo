@@ -20,7 +20,7 @@ public static class StartUp
                 DebugStartUpWithDebugUrl: true,
                 VirtualHostName: "ryo_web_frontend"
 #if DEBUG
-                ,DebugMode: true
+                ,IsDebug: true
 #endif
             ))
             .UseDefaultWindowBackend()

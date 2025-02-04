@@ -6,9 +6,11 @@ import './styles/style-default.scss'
 import './styles/color-default.scss'
 import {i18n} from "@/misc/I18n"
 
+// TODO：换图标
+
 const TAG = "InitApp"
 const APP_INFO = {
-    version: "2024.0831",
+    version: "2024.2.1",
     name: "Ryo",
     author: "Earzu Chan",
     repoLink: "https://github.com/EarzuChan/Ryo",

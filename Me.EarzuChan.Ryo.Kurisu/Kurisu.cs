@@ -364,21 +364,21 @@ public class KurisuAppBuilder
 
     private void RegisterWebEventHandlerDirectly(WebEventHandlerAttribute handlerAttribute, Type handler)
     {
-        if (handlerAttribute.IsDev && !Profile.DebugMode) return;
+        if (handlerAttribute.IsDev && !Profile.IsDebug) return;
 
         WebEventHandlers.Add(handlerAttribute, handler);
     }
 
     private void RegisterAppEventHandlerDirectly(AppEventHandlerAttribute handlerAttribute, Type handler)
     {
-        if (handlerAttribute.IsDev && !Profile.DebugMode) return;
+        if (handlerAttribute.IsDev && !Profile.IsDebug) return;
 
         AppEventHandlers.Add(handlerAttribute, handler);
     }
 
     private void RegisterWebCallResponderDirectly(OldWebCallResponderAttribute responderAttribute, Type handler)
     {
-        if (responderAttribute.IsDev && !Profile.DebugMode) return;
+        if (responderAttribute.IsDev && !Profile.IsDebug) return;
 
         WebCallResponders.Add(responderAttribute, handler);
     }
@@ -419,7 +419,7 @@ public record KurisuAppProfile(
         WebCallResponderRegistrationStrategy.ScanAndRegisterAutomatically,
     bool DebugStartUpWithDebugUrl = false,
     bool DebugAutomaticOpenDevTool = true,
-    bool DebugMode = false
+    bool IsDebug = false
 );
 
 public class KurisuAppContext
@@ -467,6 +467,9 @@ public class KurisuAppContext
             case KurisuAppProperty.WindowState:
                 returnValue = App.WindowManager.GetWindowState();
                 break;
+            case KurisuAppProperty.IsDebug:
+                returnValue = App.Profile.IsDebug;
+                break;
             case KurisuAppProperty.WindowWidth:
             case KurisuAppProperty.WindowHeight:
             case KurisuAppProperty.WindowTitle:
@@ -506,6 +509,7 @@ public enum KurisuAppProperty
     WindowHeight,
     WindowTitle,
     WindowUrl,
+    IsDebug,
 }
 
 public enum KurisuAppCommand

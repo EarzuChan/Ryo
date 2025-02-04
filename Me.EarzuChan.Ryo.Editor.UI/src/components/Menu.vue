@@ -1,6 +1,6 @@
 ﻿<template>
   <Teleport to="#ryo-viewport">
-    <Transition name="menu" @after-enter="afterEnter" @after-leave="afterLeave">
+    <Transition :name="transName" @after-enter="afterEnter" @after-leave="afterLeave">
       <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
         <div id="menu-contents">
           <div v-for="(item,index) in items"
@@ -64,10 +64,10 @@ const currentMenu = ref<any>(null)
 const menuItemClicked = ref(false)
 const delay = ref<any>(null)
 
+const transName = ref('menu')
+
 function invoke(item: MenuItem) {
-  if (item.action) {
-    item.action()
-  }
+  if (item.action) item.action()
 
   menuItemClicked.value = true
   closeMenu()
@@ -79,11 +79,13 @@ function hover(item: MenuItem, index: number) {
   // console.log(TAG, 'hover', index)
   currentHover.value = index
 
-  if (currentMenu.value) currentMenu.value.closeMenu()
+  // 清除上一个菜单
+  if (currentMenu.value) currentMenu.value.closeMenu(true)
   else if (delay.value) delay.value.cancel()
 
   if (item.children) {
     let babe = item.children
+
     delay.value = delayExecution(100, () => {
       currentMenu.value = showMenu({
         items: babe,
@@ -91,13 +93,14 @@ function hover(item: MenuItem, index: number) {
         onClose() {
           currentMenu.value = null
         },
-        onCloseOnMenuItem() {
-          closeMenu()
+        onCloseOnMenuItem(imm) {
+          closeMenu(imm)
         },
         left: -8,
         top: -8
       })
 
+      // 执行完毕后清除
       delay.value = null
     })
   }
@@ -112,15 +115,18 @@ function clickDocument(event: MouseEvent) {
   }
 }
 
-function closeMenu() {
-  console.trace(TAG, 'closeMenu', menuItemClicked)
+function closeMenu(immediate = false) {
+  console.log(TAG, 'closeMenu', immediate)
 
-  if (currentMenu.value) currentMenu.value.closeMenu()
+  if (immediate) transName.value = 'disa'
+  if (currentMenu.value) currentMenu.value.closeMenu(immediate)
 
-  emit('close')
+  emit('close', immediate)
+
   if (menuItemClicked.value) {
-    emit('close-on-menu-item')
+    emit('close-on-menu-item', immediate)
   }
+
   ctrlShow.value = false
 }
 
@@ -164,9 +170,10 @@ onMounted(() => {
   }
 
 
-  // 我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
+  // HACK：我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
   setTimeout(() => document.addEventListener('mousedown', clickDocument))
 })
+
 onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
 </script>
 
@@ -214,7 +221,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
   background-color: rgba(var(--ryo-color-state-layers-on-surface), var(--ryo-opacity-state-layers-008));
 }
 
-/*BUG:不好看，我测你妈*/
+/*HACK：不好看，我测你妈*/
 .menu-item.marked {
   background-color: var(--ryo-color-secondary-container);
 }
@@ -229,6 +236,10 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', clickDocument))
 
 .menu-leave-active {
   transition: var(--ryo-motion-emphasized-accelerate);
+}
+
+.disa-leave-active {
+  transition: 0s;
 }
 
 .menu-enter-from,

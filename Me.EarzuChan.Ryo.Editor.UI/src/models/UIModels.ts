@@ -32,9 +32,9 @@ export interface MenuItem {
 
 export interface MenuModel {
     items: MenuItem[]
-    onClose?: () => void
+    onClose?: (imm:boolean) => void
     onClosed?: () => void
-    onCloseOnMenuItem?: () => void
+    onCloseOnMenuItem?: (imm:boolean) => void
     top?: number
     left?: number
     attachToId?: string

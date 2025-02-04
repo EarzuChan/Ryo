@@ -14,7 +14,7 @@ const TAG = "AppState"
 export const useAppStateStore = defineStore('app-state', () => {
         const available = ref(false)
 
-        const preferTesting = ref(true)
+        const preferTesting = ref(false)
 
         const dataTypeSchemas = ref<TypeSchema[]>([])
         const sidePanelExpanded = ref(true)
@@ -174,6 +174,10 @@ export const useAppStateStore = defineStore('app-state', () => {
                 const fetchedLanguage = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("Preference:Language", reffedAppLanguage.value)))[0]
                 console.log(TAG, "Language fetched", fetchedLanguage)
                 appLanguage.value = fetchedLanguage
+                
+                const fetchedTesting = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:5")))[0]
+                console.log(TAG, "Testing fetched", fetchedTesting)
+                preferTesting.value = fetchedTesting
 
                 available.value = true
             } catch (err) {

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shell;
 using Me.EarzuChan.Ryo.Extensions.Utils;
@@ -9,6 +11,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using DColor = System.Drawing.Color;
 
 namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers;
 
@@ -27,13 +30,30 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
     private readonly Application WpfApp = new();
     private readonly Window WpfWindow = new();
 
+    private readonly Thickness Margin4 = new(4);
+    private readonly Thickness Margin0 = new(0);
+
     internal WpfKurisuWindowManager()
     {
     }
 
-    private void OnStateChanged(object? _, EventArgs __) =>
-        App?.TriggerAppEvent(new(AppEventType.AppWindowStateChanged,
+    private void OnStateChanged(object? _, EventArgs __)
+    {
+        Trace.WriteLine($"窗口状态变更：{WpfWindow.WindowState}");
+
+        switch (WpfWindow.WindowState)
+        {
+            case WindowState.Maximized:
+                if (App!.Profile.WindowBorderless) WebView.Margin = Margin0;
+                break;
+            default:
+                if (App!.Profile.WindowBorderless) WebView.Margin = Margin4;
+                break;
+        }
+
+        App!.TriggerAppEvent(new(AppEventType.AppWindowStateChanged,
             ToKurisuWindowState(WpfWindow.WindowState)));
+    }
 
     private async void InitWebView(object _, RoutedEventArgs __)
     {
@@ -68,21 +88,25 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
             app.HandleWebEvent(DataModelParsingUtils.ParseWebLetterJson(e.WebMessageAsJson));
 
         // 打开控制台
-        if (app.Profile is { DebugMode: true, DebugAutomaticOpenDevTool: true })
+        if (app.Profile is { IsDebug: true, DebugAutomaticOpenDevTool: true })
             WebView.CoreWebView2.OpenDevToolsWindow();
     });
 
-    public void SetWindowState(KurisuWindowState state) => WpfWindow.WindowState =
-        state switch
+    public void SetWindowState(KurisuWindowState state)
+    {
+        WpfWindow.WindowState = state switch
         {
             KurisuWindowState.Maximized => WindowState.Maximized,
             KurisuWindowState.Normal => WindowState.Normal,
             _ => WindowState.Minimized
         };
+    }
 
     public void Init(KurisuApp app)
     {
         App = app;
+
+        // TODO：不要再使用系统边框，先搞透明窗口，接着Webview留出边距，然后H5自绘边框
 
         WpfWindow.Title = app.Profile.Name;
         WpfWindow.Width = app.Profile.WindowWidth;
@@ -91,16 +115,35 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
             WpfWindow.Icon = new BitmapImage(new Uri(app.Profile.Icon, UriKind.RelativeOrAbsolute));
 
         WpfWindow.Content = WebView.Also(it =>
-            it.Source = new Uri(app.Profile is { DebugMode: true, DebugStartUpWithDebugUrl: true }
-                ? app.Profile.DebugStartUpUrl
-                : app.Profile.StartUpUrl));
-
-        if (app.Profile.WindowBorderless)
-            WindowChrome.SetWindowChrome(WpfWindow, new WindowChrome()
             {
-                ResizeBorderThickness = new Thickness(8),
-                CaptionHeight = 0,
+                // 设置Webview的起始Url
+                it.Source = new Uri(app.Profile is { IsDebug: true, DebugStartUpWithDebugUrl: true }
+                    ? app.Profile.DebugStartUpUrl
+                    : app.Profile.StartUpUrl);
+
+                // 设置Webview背景透明
+                if (app.Profile.WindowBorderless) it.DefaultBackgroundColor = DColor.Transparent;
+            }
+        );
+
+        // 
+        if (app.Profile.WindowBorderless)
+        {
+            // 处理WebView
+            WebView.Margin = Margin4;
+
+            // 设置窗口背景为透明
+            WpfWindow.AllowsTransparency = true;
+            WpfWindow.Background = new SolidColorBrush(Color.FromArgb(0x01, 0, 0, 0));
+            WpfWindow.WindowStyle = WindowStyle.None;
+            WpfWindow.ResizeMode = ResizeMode.CanResize;
+
+            WindowChrome.SetWindowChrome(WpfWindow, new WindowChrome
+            {
+                ResizeBorderThickness = Margin4,
+                GlassFrameThickness = Margin0,
             });
+        }
 
         WpfWindow.StateChanged += OnStateChanged;
         WpfWindow.Loaded += InitWebView;
