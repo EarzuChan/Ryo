@@ -11,7 +11,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using DColor = System.Drawing.Color;
+using DrawingColor = System.Drawing.Color;
 
 namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers;
 
@@ -75,13 +75,9 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(app.Profile.VirtualHostName,
             app.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
 
-        // TODO:FIX BABE
-        // WebView.CoreWebView2.Navigate();
 
         // 提供对象 互操作
         WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppExposedApiBridge(app));
-        // Trace.WriteLine(MassServer.GetMasses());
-        // 其实在Js侧写个包也可以做到"Request"，还需要提供专门的Request接口吗
 
         // 回调接受消息
         WebView.CoreWebView2.WebMessageReceived += (_, e) =>
@@ -106,11 +102,12 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
     {
         App = app;
 
-        // TODO：不要再使用系统边框，先搞透明窗口，接着Webview留出边距，然后H5自绘边框
+        //不再使用系统边框，先搞透明窗口，接着Webview留出边距，然后H5自绘边框
 
         WpfWindow.Title = app.Profile.Name;
         WpfWindow.Width = app.Profile.WindowWidth;
         WpfWindow.Height = app.Profile.WindowHeight;
+
         if (app.Profile.UseIcon)
             WpfWindow.Icon = new BitmapImage(new Uri(app.Profile.Icon, UriKind.RelativeOrAbsolute));
 
@@ -120,16 +117,14 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
                 it.Source = new Uri(app.Profile is { IsDebug: true, DebugStartUpWithDebugUrl: true }
                     ? app.Profile.DebugStartUpUrl
                     : app.Profile.StartUpUrl);
-
-                // 设置Webview背景透明
-                if (app.Profile.WindowBorderless) it.DefaultBackgroundColor = DColor.Transparent;
             }
         );
 
         // 
         if (app.Profile.WindowBorderless)
         {
-            // 处理WebView
+            // 设置Webview背景透明与边距
+            WebView.DefaultBackgroundColor = DrawingColor.Transparent;
             WebView.Margin = Margin4;
 
             // 设置窗口背景为透明
@@ -150,7 +145,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         WebView.CoreWebView2InitializationCompleted += InitWebApp;
     }
 
-    public void EmitWebEvent(OldWebLetter model) =>
+    public void EmitWebEvent(WebLetter model) =>
         WebView.CoreWebView2?.PostWebMessageAsJson(model.ToJson());
 
     public void Close() => WpfApp.Shutdown();
@@ -178,6 +173,6 @@ public interface IKurisuWindowManager
 
     public void Init(KurisuApp app);
 
-    public void EmitWebEvent(OldWebLetter model);
+    public void EmitWebEvent(WebLetter model);
     public KurisuWindowState GetWindowState();
 }

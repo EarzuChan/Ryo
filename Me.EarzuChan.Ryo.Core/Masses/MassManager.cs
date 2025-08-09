@@ -24,7 +24,7 @@ public class MassManager
 
     public bool ExistsMass(string fileName) => MassFiles.ContainsKey(fileName);
 
-    // TODO:改写
+    // TODO：改写
     public MassFile LoadMassFile(string filePath, string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentNullException("文件名", "不该为空");

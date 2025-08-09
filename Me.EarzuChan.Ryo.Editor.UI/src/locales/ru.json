@@ -98,5 +98,6 @@
   "reloadApp": "Перезагрузить приложение",
   "featureNotImplemented": "Функция не реализована",
   "featureNotImplementedDescription": "Извините, эта функция пока не реализована.",
-  "sigh": "О нет"
+  "sigh": "О нет",
+  "newMassPrefix": "Новый файл "
 }

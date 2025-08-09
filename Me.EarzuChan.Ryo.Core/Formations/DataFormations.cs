@@ -77,12 +77,12 @@ namespace Me.EarzuChan.Ryo.Core.Formations
             [AdaptableFormationAttribute("sengine.graphics2d.TextureZERO")]
             public class TextureZero
             {
-            } // TODO:Mass
+            } // TODO：Mass
 
             [AdaptableFormationAttribute("sengine.graphics2d.Shader")]
             public class Shader
             {
-            } // TODO:ShaderAdapter
+            } // TODO：ShaderAdapter
         }
 
         namespace PipeDream

@@ -1,7 +1,7 @@
 import {defineStore} from "pinia"
 import {computed, markRaw, ref} from "vue"
-import ItemPage from "@/views/Pages/ItemPage.vue"
-import WelcomePage from "@/views/Pages/WelcomePage.vue"
+import ItemPage from "@/views/pages/ItemPage.vue"
+import WelcomePage from "@/views/pages/WelcomePage.vue"
 import {
     addWebEventListener,
     emitWebEvent,
@@ -9,10 +9,11 @@ import {
     sendWebCallAndTakeItsReturnValues
 } from "@/utils/KurisuUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
-import {type FileModel, type VolumeModel, TabType} from "@/models/AppModels"
+import {type FileModel, type VolumeModel, TabType, type RyoType} from "@/models/AppModels"
 import type {TabModel} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, TODO} from "@/utils/UsefulUtils"
+import SelectRyoTypeDialog from "@/views/dialogs/SelectRyoTypeDialog.vue"
 import {useI18n} from "vue-i18n"
 
 const TAG = "WorkspaceState"
@@ -26,30 +27,30 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         const activeTabExposed = ref<any>(null)
 
-        const openedTabs = ref<TabModel[]>([
-            /*{
-                name: "项目页1",
-                page: markRaw(ItemPage),
-                data: 0
-            },
-            {
-                name: "项目页2",
-                page: markRaw(ItemPage),
-                data: 1
-            },
-            {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
-        ])
+        /*{
+                       name: "项目页1",
+                       page: markRaw(ItemPage),
+                       data: 0
+                   },
+                   {
+                       name: "项目页2",
+                       page: markRaw(ItemPage),
+                       data: 1
+                   },
+                   {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
+        const openedTabs = ref<TabModel[]>([])
         const activeTabIndex = ref(-1)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
         const activeVolume = computed(() => activeItem.value?.fromFile)
         const activeItem = computed(() => openedItems.value[activeTab.value?.data])
 
-        const openedVolumes = ref<VolumeModel[]>([/*{
-        name: "假文件1",
-        items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]
-    }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}*/])
-        const openedItems = ref<FileModel[]>([
-            /*{
+        /*{
+                name: "假文件1",
+                items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]
+            }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}*/
+        const openedVolumes = ref<VolumeModel[]>([])
+
+        /*{
                 id: 1919810, parseSuccess: true,
                 type: appState.getRyoTypeByName("sengine.graphics2d.FontSprites[]"),
                 data: [{
@@ -65,7 +66,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     }, isArray: true, typeName: "java.lang.String"
                 },
                 data: ["man"]
-            }*/])
+            }*/
+        const openedItems = ref<FileModel[]>([])
 
         const dialogState = useDialogStateStore()
 
@@ -74,7 +76,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function newVolume() {
-            emitWebEvent(makeWebLetter('NewVolume'))
+            emitWebEvent(makeWebLetter('NewVolume', t("newMassPrefix")))
         }
 
         function clickTab(index: number) {
@@ -256,7 +258,17 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             emitWebEvent(makeWebLetter('CloseVolume', massName))
         }
 
-// Async Init
+        function addItemInVolume(massName: string) {
+            dialogState.orderSpecial(SelectRyoTypeDialog, {
+                confirm: (str: string, ryoType: RyoType) => {
+                    console.log(massName, str, ryoType)
+                    
+                    // TODO：新建FileModel
+                }
+            })
+        }
+
+        // Async Init
         (async () => {
             try {
                 console.log(TAG, "Start init")
@@ -306,6 +318,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             saveVolumeAs,
             saveItem,
             setActiveTabExposed,
+            addItemInVolume,
         }
     }
 )

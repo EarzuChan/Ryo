@@ -1,5 +1,7 @@
 # Ryo (Me.EarzuChan.Ryo)
 
+[中文](README_CN.md)
+
 ## Overview
 
 Ryo is a comprehensive solution designed for browsing and editing game resources from the Simulacra series developed by
@@ -9,8 +11,6 @@ Vue3 for the front-end user interface.
 
 The name "Ryo" is derived from the Japanese character "鿌" (Ryo), actually Ryo is a character from the
 anime [Bocchi the Rock!](https://en.wikipedia.org/wiki/Bocchi_the_Rock!).
-
-The chinese version of this document is [here](README_CN.md).
 
 ## Features
 
@@ -50,7 +50,7 @@ documentation.
 var massManager = new MassManager();
 var mass = massManager.LoadMassFile("path/to/file.fs", "ResourcePackageName");
 var dialogueTree = mass.Get<DialogueTree>(mass.IdStrPairs["ResourceItemKey"]);
-mass.Add("ResourceItemKey", dialogueTree);
+mass.Add("ResourceItemKey2", dialogueTree);
 
 // Read game image resource (".texture")
 var stream = FileUtils.OpenFile("path/to/photo.texture");
@@ -77,7 +77,7 @@ txfile.Save(saveStream);
 
 Aka Ryo Editor.
 
-An in-development GUI for Ryo built using the Me.EarzuChan.Ryo.WinWebAppSystem framework. It is a sleek and
+An in-development GUI for Ryo built using the Me.EarzuChan.Ryo.Kurisu framework. It is a sleek and
 user-friendly editor application allowing users to open and edit multiple resource packages simultaneously using a
 visual editor view, akin to VSCode. This powerful editor app is designed to be easily used by general users.
 

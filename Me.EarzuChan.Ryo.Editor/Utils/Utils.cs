@@ -45,7 +45,6 @@ public static class MiscUtils
                     })
             });
 
-        context.EmitWebEvent(new
-            ("OpenedVolumesChanged", openedMasses));
+        context.EmitWebEvent(new ("OpenedVolumesChanged", openedMasses));
     }
 }

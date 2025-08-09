@@ -20,7 +20,7 @@ public static class DataSerializationUtils
         ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
         // A类的成员a类型是A时采取的操作
         // PreserveReferencesHandling = PreserveReferencesHandling.All,
-        // TODO: Null管不管
+        // TODO： Null管不管
         ContractResolver = new CamelCasePropertyNamesContractResolver(),
         Converters = new JsonConverter[] { new ExpandoObjectConverter() }
     };

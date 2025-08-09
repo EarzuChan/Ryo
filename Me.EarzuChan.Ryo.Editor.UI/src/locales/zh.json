@@ -98,5 +98,13 @@
   "reloadApp": "重新加载应用程序",
   "featureNotImplemented": "这这不能",
   "featureNotImplementedDescription": "抱歉，此功能尚未实现。",
-  "sigh": "唉"
+  "sigh": "唉",
+  "newMassPrefix": "新文件",
+  "nothing": "暂无",
+  "itemName": "项目名称",
+  "searchTypeHere": "在这里搜索类型",
+  "ignoreCase": "不区分大小写",
+  "useGangAndMinor": "仅建议使用小写字母、点、横杠和数字，用'/'分割路径",
+  "noResultCheckUrInput": "没有结果，请检查你的输入",
+  "makeArray": "做数组"
 }

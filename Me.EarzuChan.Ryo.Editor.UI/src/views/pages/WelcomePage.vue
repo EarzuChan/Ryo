@@ -34,7 +34,7 @@ import {ref} from "vue"
 import type {RecentFile} from "@/models/AppModels"
 import type {ResLinkModel} from "@/models/AppModels"
 import {openLink} from "@/utils/UsefulUtils"
-import {inject} from "@vue/runtime-core"
+import {inject} from "vue"
 import {useI18n} from "vue-i18n"
 
 const TAG = 'WelcomePage'

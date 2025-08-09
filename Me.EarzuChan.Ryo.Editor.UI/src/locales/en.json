@@ -98,5 +98,6 @@
   "reloadApp": "Reload App",
   "featureNotImplemented": "Feature Not Implemented",
   "featureNotImplementedDescription": "Sorry, this feature is not implemented yet.",
-  "sigh": "Oh no"
+  "sigh": "Oh no",
+  "newMassPrefix": "New File "
 }

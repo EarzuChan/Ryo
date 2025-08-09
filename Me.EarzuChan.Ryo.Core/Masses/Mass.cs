@@ -38,7 +38,7 @@ public abstract class Mass : IMass
 {
     protected string ExtendedName = "Mass";
 
-    private RyoBuffer WorkingBuffer = new(); // TODO:待优化
+    private RyoBuffer WorkingBuffer = new(); // TODO：待优化
 
     private int SavedId;
 
@@ -330,7 +330,7 @@ public abstract class Mass : IMass
             // 读适配项与压缩情况
             for (var i = 0; i < objCount; i++)
             {
-                // TODO:之所以适配项有ID，就是因为索引并不是一一对应适配项的，还需斟酌
+                // TODO：之所以适配项有ID，就是因为索引并不是一一对应适配项的，还需斟酌
                 int itemBlobInfo = inflatedDataReader.ReadInt();
                 itemBlobAdaptionIds.Add(itemBlobInfo >> 1);
                 isItemBlobDeflatedList.Add((itemBlobInfo & 1) != 0);
@@ -372,7 +372,7 @@ public abstract class Mass : IMass
         }
     }
 
-    // TODO:实现真正项目压缩
+    // TODO：实现真正项目压缩
     public void Save(FileStream fileStream, bool deflated = true)
     {
         using var fileWriter = new RyoWriter(fileStream);
@@ -383,7 +383,7 @@ public abstract class Mass : IMass
         using var indexWriter = new RyoWriter(new MemoryStream());
         indexWriter.WriteInt(objCount);
 
-        // TODO:检测并压缩项目！
+        // TODO：检测并压缩项目！
         for (int i = 0; i < objCount; i++) indexWriter.WriteInt(ItemBlobs[i].AdaptionId << 1); // <<1则都没有压缩，全恼
 
         // 写结束乐队
@@ -446,7 +446,7 @@ public abstract class Mass : IMass
     {
     }
 
-    // TODO:依托答辩
+    // TODO：依托答辩
     public void Write<T>(T obj)
     {
         // LogUtil.INSTANCE.PrintInfo("覆写：" + IsPutting, "对象：" + obj);

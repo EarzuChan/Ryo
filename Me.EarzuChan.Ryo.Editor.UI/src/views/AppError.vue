@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import TextButton from "@/components/TextButton.vue"
-import {inject} from "@vue/runtime-core"
+import {inject} from "vue"
 import {copyTextToClipboard, getUpToNLines} from "@/utils/UsefulUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
 import CodeBlock from "@/components/CodeBlock.vue"

@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import IconButton from "@/components/IconButton.vue"
 import {computed, ref} from "vue"
-import EmptyPage from "@/views/Pages/EmptyPage.vue"
+import EmptyPage from "@/views/pages/EmptyPage.vue"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 
 const TAG = "Tabs"

@@ -12,24 +12,17 @@ public enum WebCallResponderRegistrationStrategy
     RegisterManually,
 }
 
-public interface IOldWebCallResponder
+public interface IWebCallResponder
 {
     public OldWebResponse Respond(KurisuAppContext context);
 }
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-public class OldWebCallResponderAttribute : Attribute
+public class WebCallResponderAttribute(string name, bool scannable = true, bool isDev = false) : Attribute
 {
-    public readonly bool Scannable;
-    public readonly bool IsDev;
-    public readonly string EventName;
+    public readonly bool Scannable = scannable;
+    public readonly bool IsDev = isDev;
+    public readonly string EventName = name;
 
-    // TODO:HandlerType
-
-    public OldWebCallResponderAttribute(string name, bool scannable = true, bool isDev = false)
-    {
-        EventName = name;
-        Scannable = scannable;
-        IsDev = isDev;
-    }
+    // TODO：HandlerType，什么TYPE？？？
 }

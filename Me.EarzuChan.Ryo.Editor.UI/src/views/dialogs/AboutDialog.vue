@@ -25,8 +25,8 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
-import {inject} from "@vue/runtime-core"
-import {openLink} from "@/utils/UsefulUtils";
+import {inject} from "vue"
+import {openLink} from "@/utils/UsefulUtils"
 
 const appInfo: any = inject('app_info')
 
