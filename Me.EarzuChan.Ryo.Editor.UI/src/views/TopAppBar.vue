@@ -63,7 +63,7 @@ function toggleErr() {
 }
 
 function clickMenuButton(menuType: MenuBarItem) {
-  console.log(TAG, 'clickMenuButton', menuType)
+  console.log(TAG, 'clickMenuButton', menuType, currentMenu.value)
 
   if (currentMenu.value === null) {
     showMenuOf(menuType)

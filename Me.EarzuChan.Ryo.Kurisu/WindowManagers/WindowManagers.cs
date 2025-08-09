@@ -11,7 +11,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Me.EarzuChan.Ryo.Utils;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using DColor = System.Drawing.Color;
+using DrawingColor = System.Drawing.Color;
 
 namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers;
 
@@ -47,7 +47,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
                 if (App!.Profile.WindowBorderless) WebView.Margin = Margin0;
                 break;
             default:
-                if (App!.Profile.WindowBorderless) WebView.Margin = Margin4;
+                // if (App!.Profile.WindowBorderless) WebView.Margin = Margin4;
                 break;
         }
 
@@ -75,13 +75,9 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(app.Profile.VirtualHostName,
             app.Profile.WebResourcePath, CoreWebView2HostResourceAccessKind.Deny);
 
-        // TODO:FIX BABE
-        // WebView.CoreWebView2.Navigate();
 
         // 提供对象 互操作
         WebView.CoreWebView2.AddHostObjectToScript("webApis", new KurisuAppExposedApiBridge(app));
-        // Trace.WriteLine(MassServer.GetMasses());
-        // 其实在Js侧写个包也可以做到"Request"，还需要提供专门的Request接口吗
 
         // 回调接受消息
         WebView.CoreWebView2.WebMessageReceived += (_, e) =>
@@ -122,7 +118,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
                     : app.Profile.StartUpUrl);
 
                 // 设置Webview背景透明
-                if (app.Profile.WindowBorderless) it.DefaultBackgroundColor = DColor.Transparent;
+                if (app.Profile.WindowBorderless) it.DefaultBackgroundColor = DrawingColor.Transparent;
             }
         );
 
@@ -130,7 +126,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         if (app.Profile.WindowBorderless)
         {
             // 处理WebView
-            WebView.Margin = Margin4;
+            // WebView.Margin = Margin4;
 
             // 设置窗口背景为透明
             WpfWindow.AllowsTransparency = true;
