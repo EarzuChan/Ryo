@@ -44,6 +44,7 @@ public class ConsoleApplication
     public void ParseCommand(string input) => ParseCommand(ConsoleUtils.ParseCommandLineArguments(input));
 
     // 解析命令并执行相关操作
+    // TODO：要支持可选参数
     public void ParseCommand(params string[] args)
     {
         Context.PrintLine();

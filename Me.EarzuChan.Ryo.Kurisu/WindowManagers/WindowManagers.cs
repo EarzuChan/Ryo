@@ -47,7 +47,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
                 if (App!.Profile.WindowBorderless) WebView.Margin = Margin0;
                 break;
             default:
-                // if (App!.Profile.WindowBorderless) WebView.Margin = Margin4;
+                if (App!.Profile.WindowBorderless) WebView.Margin = Margin4;
                 break;
         }
 
@@ -102,11 +102,12 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
     {
         App = app;
 
-        // TODO：不要再使用系统边框，先搞透明窗口，接着Webview留出边距，然后H5自绘边框
+        //不再使用系统边框，先搞透明窗口，接着Webview留出边距，然后H5自绘边框
 
         WpfWindow.Title = app.Profile.Name;
         WpfWindow.Width = app.Profile.WindowWidth;
         WpfWindow.Height = app.Profile.WindowHeight;
+
         if (app.Profile.UseIcon)
             WpfWindow.Icon = new BitmapImage(new Uri(app.Profile.Icon, UriKind.RelativeOrAbsolute));
 
@@ -116,17 +117,15 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
                 it.Source = new Uri(app.Profile is { IsDebug: true, DebugStartUpWithDebugUrl: true }
                     ? app.Profile.DebugStartUpUrl
                     : app.Profile.StartUpUrl);
-
-                // 设置Webview背景透明
-                if (app.Profile.WindowBorderless) it.DefaultBackgroundColor = DrawingColor.Transparent;
             }
         );
 
         // 
         if (app.Profile.WindowBorderless)
         {
-            // 处理WebView
-            // WebView.Margin = Margin4;
+            // 设置Webview背景透明与边距
+            WebView.DefaultBackgroundColor = DrawingColor.Transparent;
+            WebView.Margin = Margin4;
 
             // 设置窗口背景为透明
             WpfWindow.AllowsTransparency = true;
