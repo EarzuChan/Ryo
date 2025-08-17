@@ -16,6 +16,14 @@ using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
+// TODO：新建卷
+[OldWebCallResponder("NewVolume")]
+public class NewVolumeResponder : IOldWebCallResponder
+{
+    public OldWebResponse Respond(KurisuAppContext context) =>
+        new(WebResponseState.Failure);
+}
+
 [OldWebCallResponder("GetAllDataTypes")]
 public class GetAllDataTypesResponder : IOldWebCallResponder
 {
@@ -77,33 +85,34 @@ public class SaveItemHandler(string volumeName, string itemName, object data) : 
             Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
 
             it.GetVolumeByName(volumeName)
-                .Ensured(vol => LanguageExtensiveUtils.Ensured(vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType(), typ =>
-                {
-                    Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
-                    switch (data)
+                .Ensured(vol => LanguageExtensiveUtils.Ensured(
+                    vol[itemName].RawJavaClass.JavaClassToRyoType().ToCsType(), typ =>
                     {
-                        case JObject jobj:
-                            Trace.WriteLine("Data is JObject");
-                            jobj.ToObject(typ).Ensured(obj =>
-                            {
-                                vol.Add(itemName, obj);
-                                newId = vol[itemName].Id;
-                            });
-                            break;
-                        case JArray jarr when typ.IsArray:
-                            Trace.WriteLine($"Data is JArray, {jarr.Count} items");
-                            jarr.ToObject(typ).Ensured(arr =>
-                            {
-                                vol.Add(itemName, arr);
-                                newId = vol[itemName].Id;
-                            });
-                            break;
-                        default:
-                            Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
-                            vol.Add(itemName, data);
-                            break;
-                    }
-                }));
+                        Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
+                        switch (data)
+                        {
+                            case JObject jobj:
+                                Trace.WriteLine("Data is JObject");
+                                jobj.ToObject(typ).Ensured(obj =>
+                                {
+                                    vol.Add(itemName, obj);
+                                    newId = vol[itemName].Id;
+                                });
+                                break;
+                            case JArray jarr when typ.IsArray:
+                                Trace.WriteLine($"Data is JArray, {jarr.Count} items");
+                                jarr.ToObject(typ).Ensured(arr =>
+                                {
+                                    vol.Add(itemName, arr);
+                                    newId = vol[itemName].Id;
+                                });
+                                break;
+                            default:
+                                Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
+                                vol.Add(itemName, data);
+                                break;
+                        }
+                    }));
         });
 
         return newId == -1

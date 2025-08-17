@@ -50,7 +50,7 @@ documentation.
 var massManager = new MassManager();
 var mass = massManager.LoadMassFile("path/to/file.fs", "ResourcePackageName");
 var dialogueTree = mass.Get<DialogueTree>(mass.IdStrPairs["ResourceItemKey"]);
-mass.Add("ResourceItemKey", dialogueTree);
+mass.Add("ResourceItemKey2", dialogueTree);
 
 // Read game image resource (".texture")
 var stream = FileUtils.OpenFile("path/to/photo.texture");

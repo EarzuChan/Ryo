@@ -159,6 +159,7 @@ public class LocalVolume
         return IdStrPairs.Remove(name);
     }
 
+    // 这方法有问题，怎么能设置文件名称！
     public LocalVolumeFileModel GetWrappedFile(int id, string? name = null)
     {
         var file = MassFile.Get<object>(id);
