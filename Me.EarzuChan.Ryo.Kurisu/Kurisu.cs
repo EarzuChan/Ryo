@@ -128,7 +128,7 @@ public class KurisuApp
         Trace.WriteLine($"找不到WebEvent {model.Name} 可用的Handler");
     }
 
-    internal OldWebResponse RespondWebCall(WebLetter model)
+    internal WebResponse RespondWebCall(WebLetter model)
     {
         Trace.WriteLine($"WebCall名称：{model.Name} 参数数：{model.Args.Length}");
 
@@ -145,6 +145,7 @@ public class KurisuApp
                     return result == null
                         ? new(WebResponseState.Failure, $"找不到该属性{property}")
                         : new(WebResponseState.Success, result);
+                
                 case "Preference":
                     var key = multi[1];
                     var def = model.Args.Length == 1 ? model.Args[0] : default;
@@ -152,15 +153,17 @@ public class KurisuApp
                     return value == null
                         ? new(WebResponseState.Failure, $"找不到该偏好项{key}")
                         : new(WebResponseState.Success, value);
+                
                 case "AppCommand":
                     var command = Enum.Parse<KurisuAppCommand>(multi[1]);
                     var retVal = Context.ExecuteAppCommand<object>(command, model.Args);
                     return retVal == null
                         ? new(WebResponseState.Failure, $"执行命令{command}失败")
                         : new(WebResponseState.Success, retVal);
+                
                 default:
                     Trace.WriteLine($"没有内置Api：{multi[0]}");
-                    return new OldWebResponse(WebResponseState.Failure, $"没有内置Api：{multi[0]}");
+                    return new WebResponse(WebResponseState.Failure, $"没有内置Api：{multi[0]}");
             }
         }
 
@@ -288,7 +291,7 @@ public class KurisuAppBuilder
 
     public KurisuAppBuilder UseWindowBackend(IKurisuWindowManager windowManager) => this.Also(_ =>
     {
-        if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口");
+        if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口后端");
         AppWindowBackend = windowManager;
     });
 

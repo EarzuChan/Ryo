@@ -26,7 +26,7 @@ export interface FileModel {
     fromFile?: string
     name?: string
     unsaved?: boolean
-    type?: string
+    dataTypeName?: string
     ryoType?: RyoType
     parseSuccess: boolean
     data?: any

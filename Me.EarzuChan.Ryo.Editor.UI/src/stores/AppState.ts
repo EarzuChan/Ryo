@@ -71,19 +71,19 @@ export const useAppStateStore = defineStore('app-state', () => {
             return editors
         }
 
-        function getRyoTypeByName(typeName: string): RyoType {
+        function getRyoTypeByDataTypeName(dataTypeName: string): RyoType {
             // 缓存命中检查
-            if (ryoTypeCache.has(typeName)) {
-                console.log(TAG, "[RyoType 缓存命中]", typeName)
-                return ryoTypeCache.get(typeName)!
+            if (ryoTypeCache.has(dataTypeName)) {
+                console.log(TAG, "[RyoType 缓存命中]", dataTypeName)
+                return ryoTypeCache.get(dataTypeName)!
             }
 
             // 原有逻辑（处理数组类型）
             let isArray = false
-            let processedTypeName = typeName
-            if (typeName.endsWith("[]")) {
+            let processedTypeName = dataTypeName
+            if (dataTypeName.endsWith("[]")) {
                 isArray = true
-                processedTypeName = typeName.slice(0, -2)
+                processedTypeName = dataTypeName.slice(0, -2)
             }
 
             // 查找类型定义
@@ -91,10 +91,29 @@ export const useAppStateStore = defineStore('app-state', () => {
             const ryoType = {baseType, isArray, typeName: processedTypeName}
 
             // 写入缓存
-            ryoTypeCache.set(typeName, ryoType)
-            console.log(TAG, "RyoType计算并缓存", typeName)
+            ryoTypeCache.set(dataTypeName, ryoType)
+            console.log(TAG, "RyoType计算并缓存", dataTypeName)
             return ryoType
         }
+
+    function getDataTypeNameByRyoType(ryoType: RyoType): string {
+        // 先尝试从缓存中查找
+        for (const [cachedName, cachedType] of ryoTypeCache.entries()) {
+            if (cachedType === ryoType) {
+                console.log(TAG, "[RyoType转Name 缓存命中]", cachedName)
+                return cachedName
+            }
+        }
+
+        // 缓存未命中，计算类型名
+        const typeName = ryoType.isArray ? `${ryoType.typeName}[]` : ryoType.typeName
+
+        // 写入缓存
+        ryoTypeCache.set(typeName, ryoType)
+        console.log(TAG, "RyoType转DataTypeName计算并缓存", typeName)
+
+        return typeName
+    }
 
         function typeSchemaToRyoType(baseType: TypeSchema, isArray: boolean = false): RyoType {
             return {baseType, isArray, typeName: baseType.type}
@@ -122,7 +141,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                     // TODO：初始化各字段，是否始终可靠？
                     const obj: { [key: string]: any } = {}
                     type.baseType.members?.forEach(field => {
-                        obj[field.name] = getInitValue(getRyoTypeByName(field.type))
+                        obj[field.name] = getInitValue(getRyoTypeByDataTypeName(field.type))
                     })
                     return obj
             }
@@ -174,7 +193,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                 const fetchedLanguage = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("Preference:Language", reffedAppLanguage.value)))[0]
                 console.log(TAG, "Language fetched", fetchedLanguage)
                 appLanguage.value = fetchedLanguage
-                
+
                 const fetchedTesting = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:5")))[0]
                 console.log(TAG, "Testing fetched", fetchedTesting)
                 preferTesting.value = fetchedTesting
@@ -196,7 +215,8 @@ export const useAppStateStore = defineStore('app-state', () => {
             appLanguage,
             getInitValue,
             getEditorsByRyoType,
-            getRyoTypeByName,
+            getNameByRyoType: getDataTypeNameByRyoType,
+            getRyoTypeByName: getRyoTypeByDataTypeName,
             typeSchemaToRyoType,
             sidePanelExpanded
         }

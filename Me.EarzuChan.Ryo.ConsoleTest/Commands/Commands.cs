@@ -25,7 +25,6 @@ public class 骚纲
 [Command("TsCs")]
 public class TsCsCommand : ICommand
 {
-
     public void Execute(ConsoleApplicationContext ctx)
     {
         /*var hdl = DataTypeSchemaUtils.NonDataTypeHandling.Error;*/
@@ -60,6 +59,7 @@ public class PsJcCommand : ICommand
         context.PrintLine(ryoType.ToString());
         context.PrintLine($"C#:{ryoType.ToCsType()}");
         context.PrintLine($"Java:{ryoType.ToJavaClass()}");
+        context.PrintLine($"DTN:{ryoType.ResolveDataTypeName()}");
     }
 }
 
@@ -79,5 +79,26 @@ public class PsCtCommand : ICommand
         context.PrintLine(ryoType.ToString());
         context.PrintLine($"C#:{ryoType.ToCsType()}");
         context.PrintLine($"Java:{ryoType.ToJavaClass()}");
+        context.PrintLine($"DTN:{ryoType.ResolveDataTypeName()}");
+    }
+}
+
+[Command("PsDtn")]
+public class PsDtnCommand : ICommand
+{
+    private readonly string Dtn;
+
+    public PsDtnCommand(string dtn)
+    {
+        Dtn = dtn;
+    }
+
+    public void Execute(ConsoleApplicationContext context)
+    {
+        var ryoType = Dtn.DataTypeNameResolveRyoType();
+        context.PrintLine(ryoType.ToString());
+        context.PrintLine($"C#:{ryoType.ToCsType()}");
+        context.PrintLine($"Java:{ryoType.ToJavaClass()}");
+        context.PrintLine($"DTN:{ryoType.ResolveDataTypeName()}");
     }
 }
