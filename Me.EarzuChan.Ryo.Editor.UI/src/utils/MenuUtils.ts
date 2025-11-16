@@ -35,9 +35,8 @@ export function showMenu(config: MenuModel) {
             if (typeof top === "number") config.top += top
             if (typeof left === "number") config.left += left
         } else throw new Error("Element not found")
-    } else if (config.top === undefined || config.left === undefined) {
+    } else if (config.top === undefined || config.left === undefined)
         throw new Error("If you don't attach to an element, you must provide top and left")
-    }
 
     const div = document.createElement('div')
     document.body.appendChild(div)
@@ -45,22 +44,16 @@ export function showMenu(config: MenuModel) {
     const man = h(Menu, {
         ...config,
         onClose: (imm) => {
-            if (config.onClose) {
-                config.onClose(imm)
-            }
+            if (config.onClose) config.onClose(imm)
         },
         onCloseOnMenuItem: (imm: boolean) => {
-            if (config.onCloseOnMenuItem) {
-                config.onCloseOnMenuItem(imm)
-            }
+            if (config.onCloseOnMenuItem) config.onCloseOnMenuItem(imm)
         },
         onClosed: () => {
             app.unmount()
             document.body.removeChild(div)
 
-            if (config.onClosed) {
-                config.onClosed()
-            }
+            if (config.onClosed) config.onClosed()
         }
     })
 

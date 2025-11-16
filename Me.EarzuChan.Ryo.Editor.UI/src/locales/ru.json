@@ -99,5 +99,12 @@
   "featureNotImplemented": "Функция не реализована",
   "featureNotImplementedDescription": "Извините, эта функция пока не реализована.",
   "sigh": "О нет",
-  "newMassPrefix": "Новый файл "
+  "newMassPrefix": "Новый файл ",
+  "nothing": "Ничего",
+  "itemName": "Название элемента",
+  "searchTypeHere": "Искать тип здесь",
+  "ignoreCase": "Игнорировать регистр",
+  "useGangAndMinor": "Рекомендуется использовать только строчные буквы, точки, дефисы и цифры, разделяя путь с помощью '/'",
+  "noResultCheckUrInput": "Нет результатов, проверьте ввод",
+  "makeArray": "Сделать массивом"
 }

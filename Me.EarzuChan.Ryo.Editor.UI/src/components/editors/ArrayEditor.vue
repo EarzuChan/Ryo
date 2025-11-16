@@ -40,7 +40,7 @@ const model = defineModel<any[]>()
 
 const itemType = computed(() => {
   if (props.type && props.type.typeName) {
-    const subRyo = appState.getRyoTypeByName(props.type.typeName)
+    const subRyo = appState.getRyoTypeByDataTypeName(props.type.typeName)
     console.debug(TAG, "元素类型已取得", props.type.typeName, subRyo)
 
     return subRyo

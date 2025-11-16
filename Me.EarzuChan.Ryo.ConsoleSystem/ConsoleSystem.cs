@@ -108,30 +108,30 @@ public class ConsoleApplication
 
 public class ConsoleApplicationBuilder
 {
-    private readonly ConsoleApplicationProfile Profile;
-    private readonly ArrayList Dependencies = new();
-    private readonly Dictionary<CommandAttribute, Type> Commands = new();
-    private IConsoleApplicationConsoleBackend? ConsoleBackend;
-    private bool IsBuilt = false;
+    private readonly ConsoleApplicationProfile _profile;
+    private readonly ArrayList _dependencies = new();
+    private readonly Dictionary<CommandAttribute, Type> _commands = new();
+    private IConsoleApplicationConsoleBackend? _consoleBackend;
+    private bool _isBuilt = false;
 
     internal ConsoleApplicationBuilder(ConsoleApplicationProfile profile)
     {
-        Profile = profile;
+        _profile = profile;
     }
 
     public ConsoleApplication Build()
     {
-        if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
+        if (_isBuilt) throw new InvalidOperationException("Builder instance has already built a product");
 
-        if (ConsoleBackend == null) throw new RyoException("未配置控制台后端");
+        if (_consoleBackend == null) throw new RyoException("未配置控制台后端");
 
-        if (Profile.CommandRegistrationStrategy == CommandRegistrationStrategy.ScanAndRegisterAutomatically) ScanCmds();
+        if (_profile.CommandRegistrationStrategy == CommandRegistrationStrategy.ScanAndRegisterAutomatically) ScanCmds();
 
         RegisterCmd(new("Help", "Get the help infomations of this application"), typeof(HelpCommand));
 
-        ConsoleApplication application = new(Profile, ConsoleBackend, Dependencies, Commands);
+        ConsoleApplication application = new(_profile, _consoleBackend, _dependencies, _commands);
 
-        IsBuilt = true;
+        _isBuilt = true;
 
         return application;
     }
@@ -146,7 +146,7 @@ public class ConsoleApplicationBuilder
             var attribute = type.GetCustomAttribute<CommandAttribute>();
             if (attribute != null && typeof(ICommand).IsAssignableFrom(type))
             {
-                if (!attribute.Scannable || (attribute.IsDev && !Profile.IsDev)) continue;
+                if (!attribute.Scannable || (attribute.IsDev && !_profile.IsDev)) continue;
 
                 RegisterCmd(attribute, type);
             }
@@ -155,7 +155,7 @@ public class ConsoleApplicationBuilder
 
     public ConsoleApplicationBuilder RegisterCmd(CommandAttribute commandAttribute, Type command)
     {
-        Commands.Add(commandAttribute, command);
+        _commands.Add(commandAttribute, command);
 
         return this;
     }
@@ -163,17 +163,17 @@ public class ConsoleApplicationBuilder
     public ConsoleApplicationBuilder ProvideDependency<T>() where T : new()
     {
         //检测是否已经有T的实例
-        if (!Dependencies.OfType<T>().Any()) Dependencies.Add(new T());
+        if (!_dependencies.OfType<T>().Any()) _dependencies.Add(new T());
 
         return this;
     }
 
     public ConsoleApplicationBuilder UseConsoleBackend<T>() where T : IConsoleApplicationConsoleBackend, new()
     {
-        if (ConsoleBackend != null) throw new RyoException("已配置控制台后端");
+        if (_consoleBackend != null) throw new RyoException("已配置控制台后端");
 
-        ConsoleBackend = new T();
-        ConsoleBackend.InitBackend(Profile);
+        _consoleBackend = new T();
+        _consoleBackend.InitBackend(_profile);
 
         return this;
     }
@@ -188,7 +188,7 @@ public class ConsoleApplicationProfile
 {
 
     public string Name { get; init; } = "Ryo Console";
-    public string Description { get; init; } = "©2024 Earzu Chan";
+    public string Description { get; init; } = "©2025 Earzu Chan";
     public string Version { get; init; } = "1.0.0.0";
     public Encoding Encoding { get; init; } = Encoding.UTF8;
 

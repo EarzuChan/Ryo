@@ -105,7 +105,7 @@ function save() {
 
             itemData.value.data = deepCopy(itemData.value.tempData)
 
-            const newItemId = await workspaceState.saveItem(itemData.value.fromFile!, itemData.value.name!, itemData.value.data)
+            const newItemId = await workspaceState.saveItem(itemData.value.fromFile!, itemData.value.name!, itemData.value.data, itemData.value.dataTypeName!!)
 
             console.log(TAG, "保存成功", newItemId)
 
@@ -204,7 +204,7 @@ onDeactivated(() => {
   padding: 16px;
   gap: 16px;
   display: flex;
-  
+
   background-color: var(--ryo-color-surface-container);
 
   box-shadow: 0 -1px 0 var(--ryo-color-outline-varient);
@@ -212,7 +212,6 @@ onDeactivated(() => {
 
 #action-bar-text {
   flex: 1;
-  margin: -2px;
   max-height: unset;
 }
 

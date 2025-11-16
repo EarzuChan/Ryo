@@ -18,7 +18,7 @@ export const useTestingStateStore = defineStore("testing-state", () => {
         try {
             if (newValue.length === 0) throw new Error("类名为空")
 
-            let ryoType = appState.getRyoTypeByName(newValue)
+            let ryoType = appState.getRyoTypeByDataTypeName(newValue)
 
             testingType.value = ryoType
 

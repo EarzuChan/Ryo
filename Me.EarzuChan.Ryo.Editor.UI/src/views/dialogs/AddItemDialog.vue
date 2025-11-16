@@ -7,7 +7,7 @@
         </div>
         <OutlinedTextField :label="t('itemName')" v-model="itemName" :placeholder="t('useGangAndMinor')"/>
         <OutlinedTextField :label="t('searchTypeHere')" v-model="filterText"
-                           :placeholder="t('ignoreCase')" :error="errorText"/>
+                           :placeholder="t('ignoreCase')" :error="typeFilterErrorText"/>
       </div>
       <Divider/>
       <div id="types-container" ref="viewport" @wheel.prevent="onScroll">
@@ -23,12 +23,14 @@
         </div>
       </div>
       <Divider/>
-      <!--差一个Make Array-->
+      <!--TODO：包装器选项-->
       <div class="dialog-contents">
-        <div class="hori">
+        <!--<div class="hori">
           <div class="desc ryo-typography-body-medium">{{ t('makeArray') }}</div>
           <CheckBox v-model:checked="makeArray" :container-size="20"/>
-        </div>
+        </div>-->
+        <Select :items="wrapperTypes" v-model:selected="preferredWrapperType"
+                :unselected-text="$t('selectWrapperType')"/>
       </div>
       <div id="dialog-actions">
         <TextButton @click="handleCancel">{{ t('cancel') }}</TextButton>
@@ -50,15 +52,26 @@ import {useI18n} from "vue-i18n";
 import CheckBox from "@/components/CheckBox.vue";
 import type {DialogActionButtonModel} from "@/models/UIModels";
 import type {RyoType} from "@/models/AppModels";
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState";
+import Select from "@/components/Select.vue";
 
 const {t} = useI18n()
 
-const TAG = "SelectRyoTypeDialog"
+const TAG = "AddItemDialog"
+
+const appState = useAppStateStore()
+const dataTypeSchemas = appState.dataTypeSchemas
 
 const ctrlShow = ref(false)
 const selectedSchema = ref<any>(null)
 
-const errorText = ref("")
+const typeFilterErrorText = ref("")
+
+const itemNameErrorText = ref("")
+
+const wrapperTypes = ["无包装", "数组", "二维数组"]
+
+const preferredWrapperType = ref(0)
 
 const props = defineProps<{
   confirm: (str: string, ryoType: RyoType) => void
@@ -69,14 +82,9 @@ const emit = defineEmits(['open', 'opened', 'close', 'closed'])
 const itemName = ref("")
 const filterText = ref("")
 
-const appState = useAppStateStore()
-const dataTypeSchemas = appState.dataTypeSchemas
-
-const makeArray = ref(false)
-
 const viewport = ref<HTMLElement>()
 
-const available = computed(() => selectedSchema.value && itemName.value)
+const available = computed(() => selectedSchema.value && itemName.value && !itemNameErrorText.value)
 
 // 添加计算属性获取实际高度
 const viewportHeight = computed(() => viewport.value?.clientHeight || 240)
@@ -87,15 +95,13 @@ const ITEM_HEIGHT = 60
 // 筛选后的数据
 const filteredSchemas = computed(() => {
   if (!filterText.value) {
-    errorText.value = ""
+    typeFilterErrorText.value = ""
     return dataTypeSchemas
   }
 
-  let res = dataTypeSchemas.filter(schema =>
-      schema.type.toLowerCase().includes(filterText.value.toLowerCase())
-  )
+  const res = dataTypeSchemas.filter(schema => schema.type.toLowerCase().includes(filterText.value.toLowerCase()))
 
-  errorText.value = res.length == 0 ? t("noResultCheckUrInput") : ""
+  typeFilterErrorText.value = res.length == 0 ? t("noResultCheckUrInput") : ""
 
   return res
 })
@@ -131,7 +137,12 @@ function handleCancel() {
 
 // 确认
 function handleConfirm() {
-  props.confirm(itemName.value, appState.typeSchemaToRyoType(selectedSchema.value, makeArray.value))
+  // 计算RyoType
+  console.log(TAG, "啊玉桂狗", preferredWrapperType.value)
+  let ryoType = appState.typeSchemaToRyoType(selectedSchema.value, preferredWrapperType.value != 0)
+  if (preferredWrapperType.value == 2) ryoType = appState.getRyoTypeByDataTypeName(appState.getDataTypeNameByRyoType(ryoType) + "[]")
+
+  props.confirm(itemName.value, ryoType)
 
   closeDialog()
 }

@@ -106,5 +106,7 @@
   "ignoreCase": "不区分大小写",
   "useGangAndMinor": "仅建议使用小写字母、点、横杠和数字，用'/'分割路径",
   "noResultCheckUrInput": "没有结果，请检查你的输入",
-  "makeArray": "做数组"
+  "enterTestMode": "进入测试模式",
+  "selectWrapperType": "选择包装器类型",
+  "makeArray": "弄为数组"
 }

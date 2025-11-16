@@ -1,4 +1,8 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Core.IO;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Exceptions;
@@ -38,17 +42,15 @@ public abstract class Mass : IMass
 {
     protected string ExtendedName = "Mass";
 
-    private RyoBuffer WorkingBuffer = new(); // TODO：待优化
+    private RyoBuffer _workingBuffer = new(); // TODO：待优化
 
-    private int SavedId;
+    private int _savedId;
 
-    private int SavedItemBlobMinusOneStickyId;
+    private int _savedItemBlobMinusOneStickyId;
 
-    private int SavedItemBlobStickyId;
+    private int _savedItemBlobStickyId;
 
-    private bool IsPutting;
-
-    private Dictionary<int, object>? SavedItems;
+    private Dictionary<int, object>? _savedItems;
 
     public class ItemBlob
     {
@@ -66,27 +68,18 @@ public abstract class Mass : IMass
         }
     }
 
-    public class ItemAdaption
+    public class ItemAdaption(string? dataJavaClz, string? adapterFactoryJavaClz)
     {
-        //public int AdaptionId;
+        public readonly string? DataJavaClz = dataJavaClz;
 
-        public string? DataJavaClz;
-
-        public string? AdapterJavaClz;
-
-        public ItemAdaption(string? dataJavaClz, string? adapterFactoryJavaClz)
-        {
-            //AdaptionId = adaptionId;
-            DataJavaClz = dataJavaClz;
-            AdapterJavaClz = adapterFactoryJavaClz;
-        }
+        public readonly string? AdapterJavaClz = adapterFactoryJavaClz;
     }
 
-    public readonly List<ItemBlob> ItemBlobs = new();
+    public readonly List<ItemBlob> ItemBlobs = [];
 
-    public readonly List<ItemAdaption> ItemAdaptions = new();
+    public readonly List<ItemAdaption> ItemAdaptions = [];
 
-    public readonly List<int> StickyMetaDatas = new();
+    public readonly List<int> StickyMetaDatas = [];
 
     // 修正Adaptions命名空间，让工厂或者别的什么玩意能寻找适配器。先遍历表，没有就获取然后加新。反正返回适配项ID
     public int FindAdaptionIdForDataRyoType(RyoType ryoType)
@@ -121,19 +114,19 @@ public abstract class Mass : IMass
 
             // 代表正在序列化，托管给原主
             // 收集单
-            if (SavedItems != null)
+            if (_savedItems != null)
             {
-                SavedItems.Add(id, obj);
+                _savedItems.Add(id, obj);
                 // LogUtil.INSTANCE.PrintInfo($"直接返回：{id}");
                 return id;
             }
 
-            SavedItems = new() { { id, obj } };
+            _savedItems = new() { { id, obj } };
 
             int nowId = id;
-            while (nowId < id + SavedItems.Count)
+            while (nowId < id + _savedItems.Count)
             {
-                object nowObj = SavedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
+                object nowObj = _savedItems[nowId] ?? throw new NullReferenceException("噗叽啪");
                 // LogUtils.PrintInfo($"主Id：{id} 本Id：{nowId}");
 
                 RyoType dataRyoType = nowObj.GetType().ToRyoType();
@@ -159,7 +152,7 @@ public abstract class Mass : IMass
                 ItemBlobs[id].Data = ;*/
             }
 
-            SavedItems = null;
+            _savedItems = null;
 
             return id;
         }
@@ -192,30 +185,30 @@ public abstract class Mass : IMass
         }
 
         // 获取各方面数据
-        RyoBuffer workBuffer = WorkingBuffer;
-        int savedItemBlobStickyIdIndexMinusOne = SavedItemBlobMinusOneStickyId;
-        int savedItemBlobStickyIdIndex = SavedItemBlobStickyId;
-        int savedId = SavedId;
+        RyoBuffer workBuffer = _workingBuffer;
+        int savedItemBlobStickyIdIndexMinusOne = _savedItemBlobMinusOneStickyId;
+        int savedItemBlobStickyIdIndex = _savedItemBlobStickyId;
+        int savedId = _savedId;
 
         // 处理暂存数据
-        SavedId = id;
-        SavedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyIndex;
-        SavedItemBlobStickyId = itemBlob.StickyIndex;
+        _savedId = id;
+        _savedItemBlobMinusOneStickyId = id == 0 ? 0 : ItemBlobs[id - 1].StickyIndex;
+        _savedItemBlobStickyId = itemBlob.StickyIndex;
         // LogUtils.INSTANCE.PrintInfo($"暂存ID：{SavedId}", $"暂存减一：{SavedItemBlobMinusOneStickyId}", $"暂存直接：{SavedItemBlobStickyId}");
 
         // 获取Blob
-        WorkingBuffer.Buffer = itemBlob.Data;
+        _workingBuffer.Buffer = itemBlob.Data;
 
         // LogUtils.INSTANCE.PrintInfo("长度", workBuffer.Length.ToString());
 
         // 从Blob建立对象
-        var item = (T)adapter.From(this, WorkingBuffer.Buffer, dataRyoType);
+        var item = (T)adapter.From(this, _workingBuffer.Buffer, dataRyoType);
 
         // 还回数据
-        WorkingBuffer = workBuffer;
-        SavedId = savedId;
-        SavedItemBlobMinusOneStickyId = savedItemBlobStickyIdIndexMinusOne;
-        SavedItemBlobStickyId = savedItemBlobStickyIdIndex;
+        _workingBuffer = workBuffer;
+        _savedId = savedId;
+        _savedItemBlobMinusOneStickyId = savedItemBlobStickyIdIndexMinusOne;
+        _savedItemBlobStickyId = savedItemBlobStickyIdIndex;
 
         // LogUtils.INSTANCE.PrintInfo("读取终了");
 
@@ -225,14 +218,14 @@ public abstract class Mass : IMass
     public T? Read<T>()
     {
         // 子项不能等于父项
-        if (SavedItemBlobMinusOneStickyId == SavedItemBlobStickyId) throw new InvalidDataException("无子项的项目不能被当作父项读");
+        if (_savedItemBlobMinusOneStickyId == _savedItemBlobStickyId) throw new InvalidDataException("无子项的项目不能被当作父项读");
 
         // 获取元素据
-        int metaOfIdMinusOne = StickyMetaDatas[SavedItemBlobMinusOneStickyId];
+        int metaOfIdMinusOne = StickyMetaDatas[_savedItemBlobMinusOneStickyId];
 
         // 原来的增加
         // 导致适配器再读可正确读好吧
-        SavedItemBlobMinusOneStickyId++;
+        _savedItemBlobMinusOneStickyId++;
 
         // 打印增加后的
         //LogUtil.INSTANCE.PrintDebugInfo("新粘连ID：" + SavedItemBlobMinusOneStickyId);
@@ -246,7 +239,7 @@ public abstract class Mass : IMass
         {
             0 => default, // 本该返回NULL
             3 => Get<T>(subitemId),
-            _ => throw new NotSupportedException($"元数据的类型（{metaOfIdMinusOne & 3}）暂不支持"), // 1抛NULL、2内联还不支持
+            _ => throw new NotSupportedException($"元数据的类型（{metaOfIdMinusOne & 3}）暂不支持"), // 1抛NULL、2内联还不支持（Java也没支持）
         };
     }
 
@@ -260,45 +253,6 @@ public abstract class Mass : IMass
     public void Set<T>(int id, T obj)
     {
         throw new NotSupportedException("暂不支持！");
-
-        // 以前的可能可以不要了，我的评价是新增，然后把原来的空荡图图了，然后改粘连数据
-        try
-        {
-            if (obj == null) throw new NullReferenceException("对象为Null");
-
-            //int id = ItemBlobs.Count;
-            bool doSthLess = !IsPutting;
-
-            RyoType dataRyoType = obj.GetType().ToRyoType();
-            var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
-            var adaption = ItemAdaptions[adaptionId];
-            // if(dataRyoType!=AdaptionManager.INSTANCE.GetRyoTypeByJavaClz(adaption.DataJavaClz)) 
-
-            var adapter = AdaptationUtils.CreateAdapter(adaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
-
-            int stickyId = ItemBlobs[id].StickyIndex;
-            SavedItemBlobStickyId = stickyId;
-
-            var writer = new RyoWriter(new MemoryStream());
-            adapter.To(obj, this, writer);
-            writer.PositionToZero();
-
-            var itemBlob = new ItemBlob(adaptionId, stickyId, new RyoReader(writer).ReadAllBytes());
-
-            ItemBlobs[id] = itemBlob;
-
-            if (!doSthLess) IsPutting = false;
-            // 写写手写到对应Blob和压缩（待办）
-            // 记得解析原文的对于粘连数据干了什么？我觉得是大小，因为没读（写）不刷新，写元数据自然是最新
-
-            // throw new NotImplementedException("暂未完成");
-
-            //return id;
-        }
-        catch (Exception ex)
-        {
-            throw new RyoException("不能设置对象，因为" + ex.Message, ex);
-        }
     }
 
     public void Load(FileStream fileStream)
@@ -315,10 +269,10 @@ public abstract class Mass : IMass
             ? CompressionUtils.Inflate(reader.ReadBytes(deflateLen), 0, deflateLen)
             : reader.ReadBytes(deflateLen);
 
-        List<bool> isItemBlobDeflatedList = new();
-        List<int> itemBlobEndPositions = new();
-        List<int> itemBlobAdaptionIds = new();
-        List<int> itemBlobStickyIds = new();
+        List<bool> isItemBlobDeflatedList = [];
+        List<int> itemBlobEndPositions = [];
+        List<int> itemBlobAdaptionIds = [];
+        List<int> itemBlobStickyIds = [];
         int objCount = 0;
 
         // LogUtils.INSTANCE.PrintInfo("索引长度：" + indexBlob.Length);
@@ -446,60 +400,34 @@ public abstract class Mass : IMass
     {
     }
 
-    // TODO：依托答辩
     public void Write<T>(T obj)
     {
-        // LogUtil.INSTANCE.PrintInfo("覆写：" + IsPutting, "对象：" + obj);
+        int newStickyMetaData;
 
-        // 暂不写覆盖
-        if (IsPutting)
+        if (obj == null) newStickyMetaData = 0; // 给SUB是NULL预留的
+        else if (obj.GetType().ToRyoType().IsJavaPrimitiveType)
         {
             throw new NotImplementedException();
-            if (obj == null) throw new NullReferenceException("怕覆写空对象");
-
-            int stickyMetaData = StickyMetaDatas[SavedItemBlobStickyId];
-            if ((stickyMetaData & 3) != 3) throw new InvalidOperationException("暂不支持非3类型覆写");
-            int subitemId = stickyMetaData >> 2;
-
-            /*if (obj == null) stickyMetaData = 0;//Ret?
-            else if (AdaptionManager.INSTANCE.GetRyoTypeByCsClz(obj.GetType()).IsJvmBaseType)
-            {
-                throw new NotImplementedException();
+            // 序列化基本类型，然后写注册ID+2给4
+            // 那边也没实现这个
+            /*Class <?> cls = obj.getClass();
+            接口_序列化器 <?> xlhq = 方法_取序列化器(cls);
+            newStickyMetaData = (方法_取已序列化类的ID(cls) << 2) | 2;
+            try
+            { // 直接写入父项捏
+                xlhq.方法_写(this, this.读者_输出_暂存拨弄缓冲区, obj); // 直接写入父项捏
             }
-            else stickyMetaData = (SavedId << 2) | 3;*/ // Switch3
-
-            Set(subitemId, obj);
-            //读到的MetaIndex的Meta作为Set的Id，在Set中要更新MetaIndex。
+            catch (Throwable th)
+            {
+                throw new 错误类_马斯("Cannot serialize inlined object: " + obj + ", type: " + cls, th);
+            }*/
         }
         else
         {
-            int newStickyMetaData;
+            newStickyMetaData = (Add(obj) << 2) | 3;
+            //ItemBlobs[newItemId].StickyId++;
+        } // Switch3
 
-            if (obj == null) newStickyMetaData = 0; // 给SUB是NULL预留的
-            else if (obj.GetType().ToRyoType().IsJavaPrimitiveType)
-            {
-                throw new NotImplementedException();
-                // 序列化基本类型，然后写注册ID+2给4
-                // 那边业没实现这个
-                /*Class <?> cls = obj.getClass();
-                接口_序列化器 <?> xlhq = 方法_取序列化器(cls);
-                newStickyMetaData = (方法_取已序列化类的ID(cls) << 2) | 2;
-                try
-                { // 直接写入父项捏
-                    xlhq.方法_写(this, this.读者_输出_暂存拨弄缓冲区, obj); // 直接写入父项捏
-                }
-                catch (Throwable th)
-                {
-                    throw new 错误类_马斯("Cannot serialize inlined object: " + obj + ", type: " + cls, th);
-                }*/
-            }
-            else
-            {
-                newStickyMetaData = (Add(obj) << 2) | 3;
-                //ItemBlobs[newItemId].StickyId++;
-            } // Switch3
-
-            StickyMetaDatas.Add(newStickyMetaData);
-        }
+        StickyMetaDatas.Add(newStickyMetaData);
     }
 }

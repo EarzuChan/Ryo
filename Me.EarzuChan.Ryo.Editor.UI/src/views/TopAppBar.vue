@@ -183,7 +183,7 @@ function showMenuOf(menuType: MenuBarItem) {
       currentMenu.value = showMenu({
         items: [
           {
-            name: "进入测试模式",
+            name: t('enterTestMode'),
             action: () => appState.preferTesting = true
           },
           {name: t('showWelcomePage'), action: () => workspaceState.openTab(TabType.Welcome)}, {

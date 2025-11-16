@@ -86,8 +86,8 @@ export function generateId(seed: number): number {
 }
 
 export function deepCopy(obj: any): any {
-    return structuredClone(toRaw(obj)) // Brand-new Impl
-    // return JSON.parse(JSON.stringify(obj))
+    // return structuredClone(toRaw(obj)) // Brand-new Impl
+    return JSON.parse(JSON.stringify(obj))
 }
 
 export function openLink(link: string) {

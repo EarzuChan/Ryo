@@ -7,7 +7,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
     {
         namespace Universe
         {
-            [AdaptableFormationAttribute("sengine.graphics2d.FontSprites")]
+            [AdaptableFormation("sengine.graphics2d.FontSprites")]
             public class FontSprites : ICtorAdaptable
             {
                 public int[] IArr;
@@ -24,7 +24,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     I = i;
                 }
 
-                object[] ICtorAdaptable.GetAdaptedArray() => new object[] { IArr, BArr, F, I };
+                object[] ICtorAdaptable.GetAdaptedArray() => [IArr, BArr, F, I];
             }
 
             /*[AdaptableFormat("sengine.materials.SimpleMaterial")]
@@ -74,12 +74,12 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 }
             }*/
 
-            [AdaptableFormationAttribute("sengine.graphics2d.TextureZERO")]
+            [AdaptableFormation("sengine.graphics2d.TextureZERO")]
             public class TextureZero
             {
             } // TODO：Mass
 
-            [AdaptableFormationAttribute("sengine.graphics2d.Shader")]
+            [AdaptableFormation("sengine.graphics2d.Shader")]
             public class Shader
             {
             } // TODO：ShaderAdapter
@@ -93,8 +93,8 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public ContactModel[] contacts;
                 public string default_ringtone;
                 public string[] favourites;
-                public PhoneRecentModel[] recents = Array.Empty<PhoneRecentModel>();
-                public string[] emergency_numbers = Array.Empty<string>();
+                public PhoneRecentModel[] recents = [];
+                public string[] emergency_numbers = [];
             }
 
             [AdaptableFormation("game31.model.PhoneAppModel$PhoneRecentModel")]
@@ -117,7 +117,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string trigger;
                 public string profile_pic_path = "system/profile.png";
                 public string big_profile_pic_path = "system/profile-big.png";
-                public ContactAttributeModel[] attributes = new ContactAttributeModel[0];
+                public ContactAttributeModel[] attributes = [];
             }
 
             [AdaptableFormation("game31.model.ContactModel$ContactAttributeModel")]
@@ -147,10 +147,10 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => new object[] { DialogueNameSpace, ConversationList.ToArray() };
+                public object[] GetAdaptedArray() => [DialogueNameSpace, ConversationList.ToArray()];
             }
 
-            [AdaptableFormationAttribute("game31.DialogueTree$Conversation")]
+            [AdaptableFormation("game31.DialogueTree$Conversation")]
             public class Conversation : ICtorAdaptable
             {
                 public List<string> Tags;
@@ -181,14 +181,14 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => new object[]
-                {
+                public object[] GetAdaptedArray() =>
+                [
                     Tags.ToArray(), Status, UserMessages.ToArray(), StateOfDiswatch, SenderMessagers.ToArray(),
                     TagsToUnlock.ToArray(), TagsToLock.ToArray(), Trigger
-                };
+                ];
             }
 
-            [AdaptableFormationAttribute("game31.DialogueTree$UserMessage")]
+            [AdaptableFormation("game31.DialogueTree$UserMessage")]
             public class UserMessage : ICtorAdaptable
             {
                 public bool IsHidden;
@@ -206,10 +206,10 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => new object[] { Message, IsHidden };
+                public object[] GetAdaptedArray() => [Message, IsHidden];
             }
 
-            [AdaptableFormationAttribute("game31.DialogueTree$SenderMessage")]
+            [AdaptableFormation("game31.DialogueTree$SenderMessage")]
             public class SenderMessage : ICtorAdaptable
             {
                 public string DateText;
@@ -240,14 +240,16 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => new object[]
-                    { Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime };
+                public object[] GetAdaptedArray() =>
+                [
+                    Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime
+                ];
             }
         }
 
         namespace WeakPipe
         {
-            [AdaptableFormationAttribute("me.earzuchan.weakpipe.Outer")]
+            [AdaptableFormation("me.earzuchan.weakpipe.Outer")]
             public class Outer : ICtorAdaptable
             {
                 public string Origin;
@@ -260,10 +262,10 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     Inner = inner;
                 }
 
-                public object[] GetAdaptedArray() => new object[] { Origin, Inner };
+                public object[] GetAdaptedArray() => [Origin, Inner];
             }
 
-            [AdaptableFormationAttribute("me.earzuchan.weakpipe.Inner")]
+            [AdaptableFormation("me.earzuchan.weakpipe.Inner")]
             public class Inner : ICtorAdaptable
             {
                 public string Origin;
@@ -271,10 +273,10 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 [ICtorAdaptable.AdaptableConstructor]
                 public Inner(string origin) => Origin = origin;
 
-                public object[] GetAdaptedArray() => new object[] { Origin };
+                public object[] GetAdaptedArray() => [Origin];
             }
 
-            [AdaptableFormationAttribute("me.earzuchan.weakpipe.HugeOuter")]
+            [AdaptableFormation("me.earzuchan.weakpipe.HugeOuter")]
             public class HugeOuter : ICtorAdaptable
             {
                 public string Origin;
@@ -289,13 +291,13 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     Inners = inners;
                 }
 
-                public object[] GetAdaptedArray() => new object[] { Origin, Inner, Inners };
+                public object[] GetAdaptedArray() => [Origin, Inner, Inners];
             }
         }
 
         namespace SIM
         {
-            [AdaptableFormationAttribute("game23.model.DialogueTreeModel")]
+            [AdaptableFormation("game23.model.DialogueTreeModel")]
             public class SaraDialogueTree
             {
                 public ConditionMacroModel[] ConditionMacros;
@@ -304,44 +306,46 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string Namespace;
             }
 
-            [AdaptableFormationAttribute("game23.model.DialogueTreeModel$ConditionMacroModel")]
+            [AdaptableFormation("game23.model.DialogueTreeModel$ConditionMacroModel")]
             public class ConditionMacroModel
             {
                 public string Condition;
                 public string Name;
             }
 
-            [AdaptableFormationAttribute("game23.model.DialogueTreeModel$ConversationModel")]
-            // ReSharper disable once ClassNeverInstantiated.Global
-            public record ConversationModel(
-                string Condition,
-                bool IsUserIgnored,
-                SenderMessageModel[] SenderMessages,
-                string Tags,
-                string TagsToLock,
-                string TagsToUnlock,
-                string Trigger,
-                UserMessageModel[] UserMessages
-            );
+            [AdaptableFormation("game23.model.DialogueTreeModel$ConversationModel")]
+            public class ConversationModel
+            {
+                public string Condition;
+                public bool IsUserIgnored;
+                public SenderMessageModel[] SenderMessages;
+                public string Tags;
+                public string TagsToLock;
+                public string TagsToUnlock;
+                public string Trigger;
+                public UserMessageModel[] UserMessages;
+            }
 
-            [AdaptableFormationAttribute("game23.model.DialogueTreeModel$SenderMessageModel")]
+            [AdaptableFormation("game23.model.DialogueTreeModel$SenderMessageModel")]
             // ReSharper disable once ClassNeverInstantiated.Global
-            public record SenderMessageModel(
-                string DateText,
-                float IdleTime,
-                string Message,
-                string Origin,
-                string TimeText,
-                string Trigger,
-                float TriggerTime,
-                float TypingTime
-            );
+            public class SenderMessageModel
+            {
+                public string DateText;
+                public float IdleTime;
+                public string Message;
+                public string Origin;
+                public string TimeText;
+                public string Trigger;
+                public float TriggerTime;
+                public float TypingTime;
+            }
 
-            [AdaptableFormationAttribute("game23.model.DialogueTreeModel$UserMessageModel")]
-            public record UserMessageModel(
-                bool IsHidden,
-                string Message
-            );
+            [AdaptableFormation("game23.model.DialogueTreeModel$UserMessageModel")]
+            public class UserMessageModel
+            {
+                public bool IsHidden;
+                public string Message;
+            }
         }
     }
 }

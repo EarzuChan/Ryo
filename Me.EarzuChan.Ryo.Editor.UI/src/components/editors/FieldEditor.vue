@@ -7,7 +7,7 @@
         <div class="item-value-holder" :class="{ 'even': isEven(index) }"> <!-- 左下 v-memo="item" 会搞死原子编辑器-->
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
                         @update:model-value="a=>trySetMember(item.name,a)"
-                        :type="appState.getRyoTypeByName(item.type)" :even="isEven(index)"/>
+                        :type="appState.getRyoTypeByDataTypeName(item.type)" :even="isEven(index)"/>
         </div>
       </div>
     </div>

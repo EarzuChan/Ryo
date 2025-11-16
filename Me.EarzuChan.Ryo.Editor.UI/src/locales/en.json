@@ -94,10 +94,17 @@
   "reloadSuggestion": "Try reloading?",
   "moreInfoConsole": "You can find more information in the console.",
   "reportError": "Report Error",
-  "copyError": "Copy Error Details",
+  "copyError": "Copy Error Message",
   "reloadApp": "Reload App",
-  "featureNotImplemented": "Feature Not Implemented",
-  "featureNotImplementedDescription": "Sorry, this feature is not implemented yet.",
-  "sigh": "Oh no",
-  "newMassPrefix": "New File "
+  "featureNotImplemented": "This is not possible",
+  "featureNotImplementedDescription": "Sorry, this feature is not yet implemented.",
+  "sigh": "Sigh",
+  "newMassPrefix": "New File ",
+  "nothing": "Nothing",
+  "itemName": "Item Name",
+  "searchTypeHere": "Search type here",
+  "ignoreCase": "Ignore Case",
+  "useGangAndMinor": "Only recommend using lowercase letters, dots, hyphens, and numbers, separated by '/' for paths",
+  "noResultCheckUrInput": "No result, please check your input",
+  "makeArray": "Make Array"
 }

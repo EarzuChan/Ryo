@@ -14,7 +14,7 @@ public enum WebCallResponderRegistrationStrategy
 
 public interface IWebCallResponder
 {
-    public OldWebResponse Respond(KurisuAppContext context);
+    public WebResponse Respond(KurisuAppContext context);
 }
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

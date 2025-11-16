@@ -7,6 +7,7 @@
             <option name="type" value="immediately" />
           </ConditionSnapshot>
         </option>
+        <option name="disableDebugging" value="true" />
         <option name="executable">
           <ExecutableSnapshot>
             <option name="id" value="runConfig:Shell Script.启动EditorUI" />
@@ -19,7 +20,6 @@
             <option name="type" value="afterPreviousStarted" />
           </ConditionSnapshot>
         </option>
-        <option name="disableDebugging" value="true" />
         <option name="executable">
           <ExecutableSnapshot>
             <option name="id" value="runConfig:.NET 项目.Me.EarzuChan.Ryo.Editor" />

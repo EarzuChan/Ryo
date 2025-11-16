@@ -185,7 +185,7 @@ public record LocalVolumeFileModel(
     int Id,
     string FromFile,
     string? Name,
-    string? Type,
+    string? DataTypeName,
     string? RawJavaClass,
     object Data,
     bool ParseSuccess

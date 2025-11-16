@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace Me.EarzuChan.Ryo.Kurisu.WebCalls;
 
-public class OldWebResponse
+public class WebResponse
 {
     public WebResponseState State;
     public object[] ReturnValues;
     // 脑瘫Api设计，返回值为什么是[]而不是单个呢，抽象
 
-    public OldWebResponse(WebResponseState state, params object[] returnValues)
+    public WebResponse(WebResponseState state, params object[] returnValues)
     {
         returnValues ??= Array.Empty<object>();
 

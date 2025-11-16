@@ -1,19 +1,19 @@
 ﻿<template>
   <div class="label-holder" :class="labelHolderStyle"
        ref="labelHolder" tabindex="0" @click="toggleItemsMenu">
-    <div class="label ryo-typography-label-large" id="mamba-out">
-      {{ selected !== -1 ? items[selected] : $t('unselected') }}
+    <div class="label ryo-typography-label-large" :id="uniqueId">
+      {{ selected !== -1 ? items[selected] : unselectedText ?? $t('unselected') }}
     </div>
-    <IconButton v-if="currentMenu!==null" icon="unfold_less"
-                :size="iconButtonSize" @mousedown.left="toggleItemsMenu"/>
   </div>
 </template>
 
 <script lang="ts" setup>
 import {ref, computed, type PropType} from 'vue'
-import IconButton from "./IconButton.vue"
 import {showMenu} from "@/utils/MenuUtils"
 import {AttachMethod} from "@/models/UIModels"
+
+
+const uniqueId = ref(`select-${Math.random().toString(36).slice(9)}`)
 
 const props = defineProps({
   items: {
@@ -23,17 +23,21 @@ const props = defineProps({
   elegant: {
     type: Boolean,
     default: false
+  },
+  unselectedText: {
+    type: String || null,
+    default: null
   }
 })
-const selected = defineModel<number>({default: -1})
+const selected = defineModel<number>('selected', {default: -1})
 
-const iconButtonSize = computed(() => props.elegant ? 28 : 24)
 const labelHolderStyle = computed(() => {
   let arr: string[] = []
   if (currentMenu.value) arr.push('showingMenu')
   if (props.elegant) arr.push("elegant")
   return arr
 })
+
 const menuItems = computed(() => props.items.map((item, index) => {
   return {
     name: item,
@@ -44,15 +48,13 @@ const menuItems = computed(() => props.items.map((item, index) => {
 const currentMenu = ref<any>(null)
 
 function toggleItemsMenu() {
-  if (currentMenu.value) {
-    currentMenu.value.closeMenu()
-  } else {
+  if (currentMenu.value) currentMenu.value.closeMenu()
+  else {
     const ind = selected.value
-    const fix = props.elegant ? 0 : 0.5
     currentMenu.value = showMenu({
       items: menuItems.value,
-      attachToId: 'mamba-out', locateToIndex: ind,
-      left: -8, top: -12 - fix, attachMethod: AttachMethod.UpLeft, // 菜单超长时
+      attachToId: uniqueId.value, locateToIndex: ind,
+      left: -8, top: -12, attachMethod: AttachMethod.UpLeft, // 菜单超长时
       onClose() {
         currentMenu.value = null
       },
@@ -70,6 +72,8 @@ function toggleItemsMenu() {
 }
 
 .label-holder:not(.elegant) {
+  margin: 0 -2px;
+
   padding: 0 2px;
 
   min-height: 24px;
@@ -77,7 +81,7 @@ function toggleItemsMenu() {
 }
 
 .label-holder.elegant {
-  padding: 8px 16px;
+  padding: 8px 8px;
 
   min-height: 20px;
   max-height: 20px;

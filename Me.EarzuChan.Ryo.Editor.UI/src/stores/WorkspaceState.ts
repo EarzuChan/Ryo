@@ -13,7 +13,7 @@ import {type FileModel, type VolumeModel, TabType, type RyoType} from "@/models/
 import type {TabModel} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, TODO} from "@/utils/UsefulUtils"
-import SelectRyoTypeDialog from "@/views/dialogs/SelectRyoTypeDialog.vue"
+import AddItemDialog from "@/views/dialogs/AddItemDialog.vue"
 import {useI18n} from "vue-i18n"
 
 const TAG = "WorkspaceState"
@@ -27,46 +27,14 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         const activeTabExposed = ref<any>(null)
 
-        /*{
-                       name: "项目页1",
-                       page: markRaw(ItemPage),
-                       data: 0
-                   },
-                   {
-                       name: "项目页2",
-                       page: markRaw(ItemPage),
-                       data: 1
-                   },
-                   {name: "欢迎页", page: markRaw(WelcomePage), nonResident: true},*/
         const openedTabs = ref<TabModel[]>([])
         const activeTabIndex = ref(-1)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
         const activeVolume = computed(() => activeItem.value?.fromFile)
         const activeItem = computed(() => openedItems.value[activeTab.value?.data])
 
-        /*{
-                name: "假文件1",
-                items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]
-            }, {name: "假文件2", items: [{id: 1, name: "假项目1"}, {id: 2, name: "假项目2"}]}*/
         const openedVolumes = ref<VolumeModel[]>([])
 
-        /*{
-                id: 1919810, parseSuccess: true,
-                type: appState.getRyoTypeByName("sengine.graphics2d.FontSprites[]"),
-                data: [{
-                    iArr: [1, 9, 1, 9], bArr: [[1, 2], [3, 4]], f: 1.9,
-                    i: 810,
-                }]
-            },
-            {
-                id: 1919810, parseSuccess: true,
-                type: {
-                    baseType: {
-                        type: "java.lang.String",
-                    }, isArray: true, typeName: "java.lang.String"
-                },
-                data: ["man"]
-            }*/
         const openedItems = ref<FileModel[]>([])
 
         const dialogState = useDialogStateStore()
@@ -81,21 +49,18 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         function clickTab(index: number) {
             activeTabIndex.value = index
-            // 相应操作
         }
 
         function anchorTab(index: number) {
             const tab = openedTabs.value[index]
-            if (tab.nonResident) {
-                tab.nonResident = false
-            }
+            if (tab.nonResident) tab.nonResident = false
         }
 
         function getIsTabUnsaved(index: number) {
             const man = openedTabs.value[index].data
-            if (typeof man === 'number') {
-                return openedItems.value[man].unsaved === true
-            } else return false
+
+            if (typeof man === 'number') return openedItems.value[man].unsaved === true
+            else return false
         }
 
         function closeTab(index: number) {
@@ -139,11 +104,9 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         function internalCloseTab(index: number) {
             openedTabs.value.splice(index, 1)
-            if (activeTabIndex.value === index) {
-                activeTabIndex.value = openedTabs.value.length !== 0 ? 0 : -1
-            } else if (activeTabIndex.value > index) {
-                activeTabIndex.value--
-            }
+
+            if (activeTabIndex.value === index) activeTabIndex.value = openedTabs.value.length !== 0 ? 0 : -1
+            else if (activeTabIndex.value > index) activeTabIndex.value--
         }
 
         function setActiveTabExposed(page: any) {
@@ -157,12 +120,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 case TabType.Empty:
                     internalOpenTab({name: t('emptyPage'), nonResident: true})
                     break
+
                 case TabType.Item:
-                    let name = openedItems.value[data]?.name
+                    const fileModel = openedItems.value[data]
+
+                    let name = fileModel.name
                     if (name === undefined) name = t('noNameItem')
-                    internalOpenTab({name, page: markRaw(ItemPage), data, nonResident: true})
-                    // TODO: 项目一旦unsaved，就常驻
+
+                    internalOpenTab({name, page: markRaw(ItemPage), data, nonResident: !fileModel.unsaved})
                     break
+
                 case TabType.Welcome:
                     internalOpenTab({name: t('welcome'), page: markRaw(WelcomePage), nonResident: true})
             }
@@ -171,12 +138,13 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         function internalOpenTab(tab: TabModel) {
             // 如果Tab不是ItemPage，就看看有没有打开过，有就简单切换至就行了
             if (tab.page !== markRaw(ItemPage)) {
-                let index = openedTabs.value.findIndex(t => t.page === tab.page)
+                const index = openedTabs.value.findIndex(t => t.page === tab.page)
                 if (index !== -1) {
                     activeTabIndex.value = index
                     return
                 }
             }
+
             // 遍历是否有非常驻，有就顶掉
             let nonResidentIndex = openedTabs.value.findIndex(tab => tab.nonResident)
             console.debug(TAG, "内部打开Tab", tab, nonResidentIndex)
@@ -212,11 +180,11 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         async function mentionItem(massName: string, itemId: number) {
             console.log(TAG, "提及项目", massName, itemId)
 
-            let mamba = openedItems.value.findIndex(item =>
+            let itsId = openedItems.value.findIndex(item =>
                 item.id === itemId && item.fromFile === massName)
 
-            if (mamba !== -1) {
-                const tabIndex = openedTabs.value.findIndex(tab => tab.data === mamba)
+            if (itsId !== -1) {
+                const tabIndex = openedTabs.value.findIndex(tab => tab.data === itsId)
 
                 if (tabIndex !== -1) {
                     activeTabIndex.value = tabIndex
@@ -225,18 +193,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             } else {
                 const fileModel = await getFullFileModel(massName, itemId)
 
-                if (ensure(fileModel)) {
-                    mamba = openedItems.value.push(fileModel!) - 1
-                }
+                if (ensure(fileModel)) itsId = openedItems.value.push(fileModel!) - 1
             }
 
-            openTab(TabType.Item, mamba)
+            openTab(TabType.Item, itsId)
         }
 
         async function getFullFileModel(massName: string, itemId: number) {
             console.log(TAG, "获取项目", massName, itemId)
             const fileModel = (await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetFullFileModel', massName, itemId)))[0] as FileModel
-            fileModel.ryoType = appState.getRyoTypeByName(fileModel.type!)
+            fileModel.ryoType = appState.getRyoTypeByDataTypeName(fileModel.dataTypeName!)
             console.log(TAG, "获取到项目", massName, itemId, fileModel)
 
             return fileModel
@@ -250,8 +216,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             emitWebEvent(makeWebLetter('SaveVolume', massName, true))
         }
 
-        async function saveItem(massName: string, itemName: string, data: any) {
-            return (await sendWebCallAndTakeItsReturnValues(makeWebLetter('SaveItem', massName, itemName, data)))[0]
+        async function saveItem(massName: string, itemName: string, data: any, tsRyoTypeName: string) {
+            return (await sendWebCallAndTakeItsReturnValues(makeWebLetter('SaveItem', massName, itemName, data, tsRyoTypeName)))[0]
         }
 
         function closeVolume(massName: string) {
@@ -259,11 +225,46 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function addItemInVolume(massName: string) {
-            dialogState.orderSpecial(SelectRyoTypeDialog, {
-                confirm: (str: string, ryoType: RyoType) => {
-                    console.log(massName, str, ryoType)
+            dialogState.orderSpecial(AddItemDialog, {
+                confirm: (itemName: string, ryoType: RyoType) => {
+                    console.log(massName, itemName, ryoType)
                     
-                    // TODO：新建FileModel
+                    // 重复检查
+                    const volume = openedVolumes.value.find(v => v.name === massName)
+                    if (volume) {
+                        const existingItem = volume.items?.find(item => item.name === itemName)
+                        
+                        if (existingItem) {
+                            dialogState.order({
+                                headline: `已存在"${itemName}"`,
+                                description: "不可重复创建同名项目，是否跳转到已有项目？",
+                                actions: [
+                                    {text: "取消"},
+                                    {
+                                        text: "跳转", onClick() {
+                                            mentionItem(massName, existingItem.id!)
+                                        }
+                                    }
+                                ]
+                            })
+                            return // 终止创建流程
+                        }
+                    }
+
+                    const fileModel: FileModel = {
+                        data: appState.getInitValue(ryoType),
+                        fromFile: massName,
+                        id: -1, // 未保存，则未分配（-1）
+                        name: itemName,
+                        parseSuccess: true,
+                        ryoType: ryoType,
+                        dataTypeName: appState.getDataTypeNameByRyoType(ryoType),
+                        unsaved: true
+                    }
+
+                    const itsId = openedItems.value.push(fileModel) - 1
+
+                    openTab(TabType.Item, itsId)
                 }
             })
         }

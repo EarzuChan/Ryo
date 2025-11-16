@@ -56,7 +56,6 @@ function handleMouseLeave() {
 }
 
 function clearText() {
-  // console.log('Cleared')
   emit('update:editText', '')
 }
 
@@ -88,8 +87,6 @@ async function handleFocus(isFocusing: boolean) {
     notHoverAble.value = false
   }
 }
-
-// console.log("可编辑：" + props.editable)
 </script>
 
 <style scoped>
@@ -101,6 +98,7 @@ async function handleFocus(isFocusing: boolean) {
 }
 
 .label-holder:not(.elegant) {
+  margin: 0 -2px;
   padding: 0 2px;
 
   min-height: 24px;
