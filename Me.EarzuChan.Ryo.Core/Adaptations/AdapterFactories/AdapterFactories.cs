@@ -476,7 +476,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
-            // TODO:优化类型判断过程，和RyoType的GetSubitemRyoType有关
+            // TODO：优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
             var oriItemType = ryoType.ToCsType()?.GetElementType();
             // LogUtils.INSTANCE.PrintInfo($"这是类型：{ryoType} 这是结果：{ryoType.IsAdaptableCustom}");

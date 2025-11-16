@@ -24,7 +24,7 @@ public class WebEventHandlerAttribute : Attribute
     public readonly bool IsDev;
     public readonly string EventName;
 
-    // TODO:HandlerType
+    // TODO：HandlerType
 
     public WebEventHandlerAttribute(string name, bool scannable = true, bool isDev = false)
     {

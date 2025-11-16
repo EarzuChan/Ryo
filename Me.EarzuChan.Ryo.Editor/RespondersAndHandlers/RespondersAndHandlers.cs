@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
+using Me.EarzuChan.Ryo.Editor.Data;
 using Me.EarzuChan.Ryo.Editor.Utils;
 using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
@@ -17,15 +18,20 @@ using Newtonsoft.Json.Linq;
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
 // TODO：新建卷
-[OldWebCallResponder("NewVolume")]
-public class NewVolumeResponder : IOldWebCallResponder
+[WebEventHandler("NewVolume")]
+public class NewVolumeHandler(string namePrefix) : IWebEventHandler
 {
-    public OldWebResponse Respond(KurisuAppContext context) =>
-        new(WebResponseState.Failure);
+    public void Handle(KurisuAppContext context)
+    {
+        var localVolumeManager = context.Inject<LocalVolumeManager>()!;
+        var newMassRepo = context.Inject<NewMassRepository>()!;
+
+        localVolumeManager.CreateNewVolume($"{namePrefix}{newMassRepo.GetAndIncrementNewMassCounter()}");
+    }
 }
 
-[OldWebCallResponder("GetAllDataTypes")]
-public class GetAllDataTypesResponder : IOldWebCallResponder
+[WebCallResponder("GetAllDataTypes")]
+public class GetAllDataTypesResponder : IWebCallResponder
 {
     public OldWebResponse Respond(KurisuAppContext context) =>
         new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
@@ -36,12 +42,12 @@ public class OpenVolumeHandler : IWebEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
-        var massManager = context.Inject<LocalVolumeManager>()!;
+        var localVolumeManager = context.Inject<LocalVolumeManager>()!;
 
         var filePath = MiscUtils.OpenFileByDialog("MassFile", "fs");
         if (filePath is null) return;
 
-        massManager.OpenLocalVolume(filePath);
+        localVolumeManager.OpenLocalVolume(filePath);
     }
 }
 
@@ -73,8 +79,8 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
 }
 
 // TODO:如果是基本类型，参数不是JObject，懆称冯的福
-[OldWebCallResponder("SaveItem")]
-public class SaveItemHandler(string volumeName, string itemName, object data) : IOldWebCallResponder
+[WebCallResponder("SaveItem")]
+public class SaveItemHandler(string volumeName, string itemName, object data) : IWebCallResponder
 {
     public OldWebResponse Respond(KurisuAppContext context)
     {
@@ -144,8 +150,8 @@ public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandle
         });
 }
 
-[OldWebCallResponder("GetFullFileModel")]
-public class GetFullFileModelResponder(string volumeName, int fileId) : IOldWebCallResponder
+[WebCallResponder("GetFullFileModel")]
+public class GetFullFileModelResponder(string volumeName, int fileId) : IWebCallResponder
 {
     public OldWebResponse Respond(KurisuAppContext context)
     {

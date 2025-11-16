@@ -1,9 +1,9 @@
 import {defineStore} from "pinia"
 import {createApp, h, ref} from "vue"
 import type {DialogModel} from "@/models/UIModels"
-import CommonDialog from "@/views/Dialogs/CommonDialog.vue"
+import CommonDialog from "@/views/dialogs/CommonDialog.vue"
 import {ensureObject} from "@/utils/UsefulUtils"
-import {inject} from "@vue/runtime-core"
+import {inject} from "vue"
 import {i18n} from "@/misc/I18n"
 
 const TAG = "DialogState"
@@ -37,11 +37,11 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
         }
     }
 
-    function orderSpecial(customDialog: any, config?: DialogModel) {
-        internalOrder({customDialog: customDialog})
+    function orderSpecial(customDialog: any, config?: any) {
+        internalOrder({customDialog: customDialog, dialogModel: config})
     }
 
-// 定义一个函数，用于显示下一个对话框
+    // 定义一个函数，用于显示下一个对话框
     function showNextDialog() {
         if (dialogQueue.value.length > 0) {
             const info = dialogQueue.value.shift()! // 从队列中取出最后一个对话框配置
@@ -51,7 +51,7 @@ export const useDialogStateStore = defineStore("dialog-state", () => {
         }
     }
 
-// 定义一个函数，用于显示对话框
+    // 定义一个函数，用于显示对话框
     function showDialog(info: InternalDialogInfo) {
         const div = document.createElement('div')
         document.body.appendChild(div)

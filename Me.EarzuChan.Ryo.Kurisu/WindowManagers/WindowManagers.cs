@@ -145,7 +145,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         WebView.CoreWebView2InitializationCompleted += InitWebApp;
     }
 
-    public void EmitWebEvent(OldWebLetter model) =>
+    public void EmitWebEvent(WebLetter model) =>
         WebView.CoreWebView2?.PostWebMessageAsJson(model.ToJson());
 
     public void Close() => WpfApp.Shutdown();
@@ -173,6 +173,6 @@ public interface IKurisuWindowManager
 
     public void Init(KurisuApp app);
 
-    public void EmitWebEvent(OldWebLetter model);
+    public void EmitWebEvent(WebLetter model);
     public KurisuWindowState GetWindowState();
 }

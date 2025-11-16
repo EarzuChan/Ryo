@@ -82,13 +82,18 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
     )
     else items.push(
         {
+          name: t('addItem'),
+          action: () => workspaceState.addItemInVolume(stuff.name)
+        },
+        {
           name: t('saveMass'),
           action: () => workspaceState.saveVolume(stuff.name)
         },
         {
           name: t('closeMass'),
           action: () => workspaceState.closeVolume(stuff.name)
-        })
+        },
+    )
   }
 
   showMenu({top: e.clientY - 8, left: e.clientX, items})

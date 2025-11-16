@@ -58,6 +58,8 @@ function afterLeave() {
   left: 0;
   right: 0;
   bottom: 0;
+
+  /*根视图有圆角时，这个没被裁切，何也*/
   background-color: rgba(var(--ryo-color-scrim), var(--ryo-opacity-040));
 }
 

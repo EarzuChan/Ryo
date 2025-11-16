@@ -34,8 +34,8 @@ import {KurisuWindowState} from "@/models/KurisuModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import {ensure, openLink, TODO} from "@/utils/UsefulUtils"
 import {TabType} from "@/models/AppModels"
-import AboutDialog from "@/views/Dialogs/AboutDialog.vue"
-import {inject} from "@vue/runtime-core"
+import AboutDialog from "@/views/dialogs/AboutDialog.vue"
+import {inject} from "vue"
 import {useI18n} from "vue-i18n"
 
 const TAG = 'TopAppBar'

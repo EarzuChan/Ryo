@@ -1,6 +1,10 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="打包Editor" type="DotNetFolderPublish" factoryName="Publish to folder">
-    <riderPublish configuration="Release" platform="Any CPU" runtime="win-x64" target_folder="$PROJECT_DIR$/Me.EarzuChan.Ryo.Editor/bin/Release/net8.0-windows/win-x64/publish" target_framework="net8.0-windows" uuid_high="2687897984472161506" uuid_low="-2496995897910396390" />
+    <riderPublish configuration="Release" platform="Any CPU" target_folder="$PROJECT_DIR$/Me.EarzuChan.Ryo.Editor/bin/Release/net8.0-windows/win-x64/publish" target_framework="net10.0" uuid_high="-1123962067903618832" uuid_low="-7423395242539707978">
+      <runtimes>
+        <item value="win-x64" />
+      </runtimes>
+    </riderPublish>
     <method v="2" />
   </configuration>
 </component>

@@ -29,7 +29,7 @@ public class AppEventHandlerAttribute : Attribute
     public readonly bool IsDev;
     public readonly AppEventType EventType;
 
-    // TODO:HandlerType
+    // TODO：HandlerType
 
     public AppEventHandlerAttribute(AppEventType eventType, bool scannable = true, bool isDev = false)
     {

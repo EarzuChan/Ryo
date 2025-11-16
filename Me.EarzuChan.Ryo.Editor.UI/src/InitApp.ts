@@ -10,7 +10,7 @@ import {i18n} from "@/misc/I18n"
 
 const TAG = "InitApp"
 const APP_INFO = {
-    version: "2024.2.1",
+    version: "2025.1.1",
     name: "Ryo",
     author: "Earzu Chan",
     repoLink: "https://github.com/EarzuChan/Ryo",

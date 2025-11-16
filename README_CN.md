@@ -72,7 +72,7 @@ txfile.Save(saveStream);
 
 也叫 鿌 Editor。
 
-一个正在开发中的 鿌 GUI，使用 Me.EarzuChan.Ryo.WinWebAppSystem 框架构建。它是一个优雅且用户友好的编辑器应用程序，允许用户同时打开和编辑多个资源包，使用类似
+一个正在开发中的 鿌 GUI，使用 Me.EarzuChan.Ryo.Kurisu 框架构建。它是一个优雅且用户友好的编辑器应用程序，允许用户同时打开和编辑多个资源包，使用类似
 VSCode 的可视化编辑器视图。这款强大的编辑器应用程序旨在为普通用户提供简便的使用体验。
 
 我们有一个官方的 鿌 Editor 用户指南，你可以在软件的帮助菜单中找到。

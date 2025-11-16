@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Me.EarzuChan.Ryo.Core.Masses;
+using Me.EarzuChan.Ryo.Editor.Data;
 using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu;
 using Me.EarzuChan.Ryo.Utils;
@@ -25,6 +26,7 @@ public static class StartUp
             ))
             .UseDefaultWindowBackend()
             .ProvideDependency<LocalVolumeManager>()
+            .ProvideDependency<NewMassRepository>()
             .Build()
             .Run();
     }

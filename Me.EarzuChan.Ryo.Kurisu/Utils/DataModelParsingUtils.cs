@@ -8,16 +8,16 @@ namespace Me.EarzuChan.Ryo.Kurisu.Utils;
 
 public static class DataModelParsingUtils
 {
-    public static OldWebLetter ParseWebLetterJson(string str)
+    public static WebLetter ParseWebLetterJson(string str)
     {
         if (string.IsNullOrWhiteSpace(str)) throw new ArgumentNullException("无效事件：源文本为Null");
 
         Trace.WriteLine($"WebLetter源文本：{str}");
 
-        OldWebLetter? model;
+        WebLetter? model;
         try
         {
-            model = JsonConvert.DeserializeObject<OldWebLetter>(str);
+            model = JsonConvert.DeserializeObject<WebLetter>(str);
         }
         catch (Exception e)
         {

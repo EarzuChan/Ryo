@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import IconButton from "@/components/IconButton.vue"
 import {ref} from "vue"
-import ExplorerPanel from "@/views/SidePanels/ExplorerPanel.vue"
+import ExplorerPanel from "@/views/sidePanels/ExplorerPanel.vue"
 import {useAppStateStore} from "@/stores/AppState"
 
 interface SidePanelItem {

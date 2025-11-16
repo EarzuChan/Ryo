@@ -1,10 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latestmajor</LangVersion>
+    <!-- 添加这个配置 -->
+    <RestoreAdditionalProjectSources>https://api.nuget.org/v3/index.json</RestoreAdditionalProjectSources>
   </PropertyGroup>
 
   <ItemGroup>
