@@ -2,7 +2,7 @@
 
 namespace Me.EarzuChan.Ryo.Utils;
 
-public static class LanguageExtensiveUtils
+public static class LangExt
 {
     public static T Also<T>(this T obj, Action<T> action)
     {
@@ -11,21 +11,21 @@ public static class LanguageExtensiveUtils
         return obj;
     }
 
-    public static void Ensured<T>(this T? obj, Action<T> action)
+    public static void EnsureNotNull<T>(this T? obj, Action<T> action)
     {
         if (obj == null) throw new ArgumentNullException(nameof(obj), "Ensure failed: Value is null");
 
         action(obj);
     }
 
-    public static void TryCatchingThenThrow(string errorPrefix, Action action, Dictionary<Type, string>? exceptionReplacements = null) =>
-        TryCatchingThenThrow<object>(errorPrefix, () =>
+    public static void WrappedTry(string errorPrefix, Action action, Dictionary<Type, string>? exceptionReplacements = null) =>
+        WrappedTry<object>(errorPrefix, () =>
         {
             action();
             return null;
         }, exceptionReplacements);
 
-    public static T? TryCatchingThenThrow<T>(string errorPrefix, Func<T?> action,
+    public static T? WrappedTry<T>(string errorPrefix, Func<T?> action,
         Dictionary<Type, string>? exceptionReplacements = null)
     {
         try

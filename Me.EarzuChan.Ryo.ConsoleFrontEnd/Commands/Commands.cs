@@ -1,8 +1,6 @@
-using Me.EarzuChan.Ryo.Core.Adaptations;
 using Me.EarzuChan.Ryo.Core.Formations.DataFormations.PipeDream;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
-using Me.EarzuChan.Ryo.Exceptions.Utils;
 using Me.EarzuChan.Ryo.Exceptions;
 using Me.EarzuChan.Ryo.Exceptions.FileExceptions;
 using Me.EarzuChan.Ryo.Utils;
@@ -15,274 +13,434 @@ using Me.EarzuChan.Ryo.ConsoleSystem;
 
 namespace Me.EarzuChan.Ryo.ConsoleFrontEnd.Commands;
 
+// -- 文件操作 --
+
 [Command("Open", "Open a file from path")]
 public class OpenCommand : ICommand
 {
-    public string PathString;
-    public string? CustomFileName;
+    private readonly string _pathString;
+    private readonly string? _customFileName;
 
-    public OpenCommand(string path) => PathString = path;
+    public OpenCommand(string path) => _pathString = path;
 
     public OpenCommand(string path, string customFileName)
     {
-        PathString = path;
-        CustomFileName = customFileName;
+        _pathString = path;
+        _customFileName = customFileName;
     }
 
-    public void Execute(ConsoleApplicationContext commandFrame)
+    public void Execute(ConsoleApplicationContext ctx)
     {
-        var fileName = CustomFileName ?? Path.GetFileNameWithoutExtension(PathString);
-        var mass = commandFrame.Inject<MassManager>().LoadMassFile(PathString, fileName);
+        var fileName = _customFileName ?? Path.GetFileNameWithoutExtension(_pathString);
+        var mass = ctx.Inject<MassManager>()!.LoadMassFile(_pathString, fileName);
 
-        commandFrame.PrintLine($"Loaded, index information as follows:\n\n{mass.GetInfo()}");
-        commandFrame.PrintLine($"\nFile loaded, named {fileName.MakeFirstCharUpper()}, you can later dump the file, view index information, perform CRUD operations, and more using this name.");
+        ctx.PrintLine($"Loaded, index information as follows:\n\n{mass.GetInfo()}");
+        ctx.PrintLine(
+            $"\nFile loaded, named {fileName.MakeFirstCharUpper()}, you can later dump the file, view index information, perform CRUD operations, and more using this name.");
     }
 }
 
 [Command("Info", "Show the info of a file")]
-public class InfoCommand : ICommand
+public class InfoCommand(string fileName) : ICommand
 {
-    public string FileName;
-
-    public InfoCommand(string fileName)
-    {
-        FileName = fileName;
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Couldn't show file info", () => commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n\n" + MassUtils.GetInfo(commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName)))
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Couldn't show file info",
+            () => ctx.PrintLine(fileName.ToUpper() + "的索引信息：\n\n" +
+                                ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName).GetInfo())
         );
-    }
 }
 
 [Command("New", "Create a new empty file")]
-public class NewCommand : ICommand
+public class NewCommand(string fileName) : ICommand
 {
-    public string FileName;
-    public NewCommand(string fileName)
+    public void Execute(ConsoleApplicationContext ctx)
     {
-        FileName = fileName;
-    }
+        var massManager = ctx.Inject<MassManager>()!;
 
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        if (commandFrame.Inject<MassManager>().ExistsMass(FileName)) throw new RyoException("A file with the same name is already loaded, please choose a different name.");
+        if (massManager.ExistsMass(fileName))
+            throw new RyoException("A file with the same name is already loaded, please choose a different name.");
 
         var newMass = new MassFile();
-        commandFrame.Inject<MassManager>().AddMassFile(newMass, FileName);
+        massManager.AddMassFile(newMass, fileName);
 
-        commandFrame.PrintLine($"File: {FileName} added successfully.");
-
+        ctx.PrintLine($"File: {fileName} added successfully.");
     }
 }
 
 [Command("Close", "Close a file by its name")]
-public class CloseCommand : ICommand
+public class CloseCommand(string fileName) : ICommand
 {
-    public string FileName;
-    public CloseCommand(string fileName)
+    public void Execute(ConsoleApplicationContext ctx)
     {
-        FileName = fileName;
-    }
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        if (commandFrame.Inject<MassManager>().ExistsMass(FileName)) commandFrame.Inject<MassManager>().UnloadMassFile(FileName);
-        else throw new NoSuchFileException(FileName);
-    }
+        var massManager = ctx.Inject<MassManager>()!;
 
+        if (massManager.ExistsMass(fileName))
+        {
+            massManager.UnloadMassFile(fileName);
+            ctx.PrintLine($"File: {fileName} closed successfully.");
+        }
+        else throw new NoSuchFileException(fileName);
+    }
 }
 
 [Command("View", "View the item of your given id in a file")]
-public class ViewCommand : ICommand
+public class ViewCommand(string fileName, string id) : ICommand
 {
-    public string FileName;
-    public int Id;
+    private readonly int _id = int.Parse(id);
 
-    public ViewCommand(string fileName, string id)
-    {
-        FileName = fileName;
-        Id = int.Parse(id);
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Cannot retrieve object", () =>
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot retrieve object", () =>
         {
-            var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
 
-            var typename = mass.ItemAdaptions[mass.ItemBlobs[Id].AdaptionId].DataJavaClz.JavaClassToRyoType();
-            var item = mass.Get<object>(Id);
-            var itemName = mass.IdStrPairs.Where(pair => pair.Value == Id).Select(pair => pair.Key).FirstOrDefault();
+            var typename = mass.ItemAdaptions[mass.ItemBlobs[_id].AdaptionId].DataJavaClz.JavaClassToRyoType();
+            var item = mass.Get<object>(_id).Data;
+            var itemName = mass.IdStrPairs.Where(pair => pair.Value == _id).Select(pair => pair.Key).FirstOrDefault();
 
-            string newtonJson = DataSerializationUtils.ToJson(item);
+            var newtonJson = item.ToJson();
 
-            commandFrame.PrintLine($"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{DataSerializationUtils.ToJsonWithInternalAlgorithm(item)}\n\nNewtonsoft reader:\n{newtonJson}");
+            ctx.PrintLine(
+                $"{(itemName != null ? $"Item Name: {itemName}" : "This is a sub-item, no item name")} Data original type: {typename}\n\nBuilt-in reader:\n{item.ToJsonWithInternalAlgorithm()}\n\nNewtonsoft reader:\n{newtonJson}");
 
-            bool dump = commandFrame.ReadYesOrNo("\nHaha, do you want to dump");
-            if (dump)
+            var dump = ctx.ReadYesOrNo("\nHaha, do you want to dump");
+
+            if (!dump) return;
+
+            var dumpPath = ctx.ReadLine("\nInput dump directory");
+            if (!string.IsNullOrEmpty(dumpPath))
             {
-                string dumpPath = commandFrame.ReadLine("\nInput dump directory");
-                if (!string.IsNullOrEmpty(dumpPath))
+                Directory.CreateDirectory(dumpPath); // 检测文件夹纯真
+
+                itemName ??= ctx.ReadLine("\nName for the project"); // 无名需要命名
+
+                if (!string.IsNullOrEmpty(itemName))
                 {
-                    Directory.CreateDirectory(dumpPath); // 检测文件夹纯真
+                    dumpPath = dumpPath + "/" + itemName.Replace('/', '_');
 
-                    itemName ??= commandFrame.ReadLine("\nName for the project"); // 无名需要命名
+                    // 序列化为Json
+                    var jsonFilePath = dumpPath + ".json";
+                    using var jsonFile = FileUtils.OpenFile(jsonFilePath, true, true);
+                    jsonFile.Write(Encoding.UTF8.GetBytes(newtonJson));
+                    ctx.PrintLine($"\nJson file saved to {jsonFilePath}");
 
-                    if (!string.IsNullOrEmpty(itemName))
-                    {
-                        dumpPath = dumpPath + "/" + itemName.Replace('/', '_');
-
-                        // 可Dump类型 Dump它列表
-                        /*if (item.GetType().IsAssignableTo(typeof(IDumpable)))
-                        {
-                            commandFrame.PrintLine("\nThis item supports file dumping, so let's try.\n");
-
-                            var dumpDic = ((IDumpable)item).GetDumpableObjects();
-
-                            if (dumpDic != null)
-                            {
-                                foreach (var dumpObj in dumpDic)
-                                {
-                                    if (dumpObj.Value == null || string.IsNullOrWhiteSpace(dumpObj.Key))
-                                    {
-                                        commandFrame.PrintLine($"Sub-item {dumpObj.Key} can't be dump.");
-                                        continue;
-                                    }
-
-                                    string dumpFilePath = dumpPath + "." + dumpObj.Key;
-                                    using var dumpFile = FileUtils.OpenFile(dumpFilePath, true, true);
-                                    dumpFile.Write(dumpObj.Value);
-                                    commandFrame.PrintLine($"Sub-item {dumpObj.Key} saved to {dumpFilePath}.");
-                                }
-                            }
-                            else commandFrame.PrintLine($"{item.GetType()}实现了IDumpable接口，却返回Null，系来骗、来偷袭");
-                        }*/
-
-                        // 序列化为Json
-                        string jsonFilePath = dumpPath + ".json";
-                        using var jsonFile = FileUtils.OpenFile(jsonFilePath, true, true);
-                        jsonFile.Write(Encoding.UTF8.GetBytes(newtonJson));
-                        commandFrame.PrintLine($"\nJson file saved to {jsonFilePath}");
-
-                        commandFrame.PrintLine("\nDumped.");
-                    }
-                    else commandFrame.PrintLine("Filename is not correct, no dumping.");
+                    ctx.PrintLine("\nDumped.");
                 }
-                else commandFrame.PrintLine("Dump directory is not correct, no dumping.");
+                else ctx.PrintLine("Filename is not correct, no dumping.");
             }
+            else ctx.PrintLine("Dump directory is not correct, no dumping.");
         });
-    }
+}
+
+[Command("Copy", "Copy the item of your given id in a file")]
+public class CopyCommand(string fileName, string id) : ICommand
+{
+    private readonly int _id = int.Parse(id);
+
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot copy object", () =>
+        {
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            var newId = mass.Copy(_id);
+
+            ctx.PrintLine($"Item {_id} copied to {newId} successfully.");
+        });
+}
+
+[Command("CopyByName", "Copy the item of your given name in a file")]
+public class CopyByNameCommand(string fileName, string oldName, string newName) : ICommand
+{
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot copy object", () =>
+        {
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            mass.Copy(oldName, newName);
+
+            ctx.PrintLine($"Item {oldName} copied to {newName} successfully.");
+        });
 }
 
 [Command("Search", "Search the target item in a file")]
-public class SearchCommand : ICommand
+public class SearchCommand(string fileName, string searchName) : ICommand
 {
-    public string FileName;
-    public string SearchName;
-    public SearchCommand(string fileName, string searchName)
-    {
-        FileName = fileName;
-        SearchName = searchName;
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Cannot locate object", () =>
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot locate object", () =>
         {
-            var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
 
             var map = mass.IdStrPairs;
-            commandFrame.PrintLine("Search Results:");
+            ctx.PrintLine("Search Results:");
             foreach (var item in map)
             {
                 var itBlob = mass.ItemBlobs[item.Value];
                 var adaTion = mass.ItemAdaptions[itBlob.AdaptionId];
-                if (item.Key.ToLower().Contains(SearchName)) commandFrame.PrintLine($"Id.{item.Value} Name：{item.Key} Size：{itBlob.Data.Length} Type：{adaTion.DataJavaClz} Adapter：{adaTion.AdapterJavaClz}");
+                if (item.Key.Contains(searchName, StringComparison.CurrentCultureIgnoreCase))
+                    ctx.PrintLine(
+                        $"Id.{item.Value} Name：{item.Key} Size：{itBlob.Data?.Length ?? -1} Type：{adaTion.DataJavaClz} Adapter：{adaTion.AdapterJavaClz}");
             }
         });
-    }
 }
 
-[Command("Save", "Save the file to the path you given")]
-public class WriteCommand : ICommand
+[Command("Write", "Write the file to the path you given")]
+public class WriteCommand(string fileName, string pathName) : ICommand
 {
-    public string FileName;
-    public string PathName;
-
-    public WriteCommand(string fileName, string pathName)
-    {
-        FileName = fileName;
-        PathName = pathName;
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Cannot save object", () =>
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot save object", () =>
         {
-            var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
 
-            using var fileStream = FileUtils.OpenFile(PathName, true, true);
+            using var fileStream = FileUtils.OpenFile(pathName, true, true);
             mass.Save(fileStream);
 
-            commandFrame.PrintLine("Saved.");
+            ctx.PrintLine("Saved");
         });
+}
+
+[Command("Delete", "Delete an item by its id from a file")]
+public class DeleteCommand(string fileName, string id) : ICommand
+{
+    private readonly int _id = int.Parse(id);
+
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Cannot delete object", () =>
+        {
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            var itemName = mass.IdStrPairs.Where(pair => pair.Value == _id).Select(pair => pair.Key).FirstOrDefault();
+
+            var result = mass.Remove(_id);
+
+            ctx.PrintLine($"Item {itemName ?? $"No.{_id}"} deleted: {result}");
+        });
+}
+
+[Command("GC", "Perform GC to a file")]
+public class GcCommand(string fileName) : ICommand
+{
+    public void Execute(ConsoleApplicationContext context) =>
+        LangExt.WrappedTry("Cannot GC a file", () =>
+        {
+            var mass = context.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            mass.CollectGarbage();
+
+            context.PrintLine("GC performed");
+        });
+}
+
+[Command("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
+public class ImportDialogueTreeCommand(string fileName, string jsonFilePath, string itemName) : ICommand
+{
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Parse failed", () =>
+        {
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            // TODO：创建通用的拨弄 我们得约定一个输出格式 才能输入
+
+            var msgText = File.ReadAllText(jsonFilePath);
+
+            var msg = msgText.JsonToObject<DialogueTreeDescriptor>() ??
+                      throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+
+            var result = mass.Add(itemName, msg);
+
+            ctx.PrintLine($"Added, mode is {result.ToString().MakeFirstCharLower()}");
+        });
+}
+
+// For Testing Purpose
+[Command("R2D", "Replace to PipeDreams' Dialogue Tree for Id", true)]
+public class R2DCommand(string fileName, string jsonFilePath, string itemId) : ICommand
+{
+    private readonly int _itemId = int.Parse(itemId);
+
+    public void Execute(ConsoleApplicationContext ctx) =>
+        LangExt.WrappedTry("Parse failed", () =>
+        {
+            var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+            var msgText = File.ReadAllText(jsonFilePath);
+
+            var msg = msgText.JsonToObject<DialogueTreeDescriptor>() ??
+                      throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
+
+            mass.Set(_itemId, msg);
+
+            ctx.PrintLine("Replaced");
+        });
+}
+
+[Command("OperateDialogueTree", "Only for PipeDreams now")]
+public class OperateDialogueTreeCommand(string fileName, string id) : ICommand
+{
+    private readonly int _id = int.Parse(id);
+
+    private static string Edit(ConsoleApplicationContext ctx, string ori)
+    {
+        while (true)
+        {
+            var doTrans = ctx.ReadYesOrNo("Do you want to edit it", ConsoleKey.Enter, ConsoleKey.DownArrow);
+
+            if (!doTrans) return ori;
+            var str = ctx.ReadLine("Content");
+
+            if (ctx.ReadYesOrNo("Save changes", ConsoleKey.Enter, ConsoleKey.Backspace)) return str;
+        }
+    }
+
+    public void Execute(ConsoleApplicationContext ctx)
+    {
+        LangExt.WrappedTry("Operating Dialogue Tree encountered an issue", () =>
+            {
+                var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
+
+                var dialogue = mass.Get<DialogueTreeDescriptor>(_id).Data;
+
+                var dialogueItemName = mass.IdStrPairs.Where(pair => pair.Value == _id).Select(pair => pair.Key).FirstOrDefault();
+
+                ctx.PrintLine(
+                    $"{(dialogueItemName != null ? $"Item Name: {dialogueItemName}" : "This is a sub-item, no item name")} Dialogue Tree Namespace: {dialogue.DialogueNameSpace} Conversation Count: {dialogue.ConversationList.Count}");
+
+                var applyEdit = dialogueItemName != null && ctx.ReadYesOrNo("Apply edit mode");
+
+                var no = 1;
+                foreach (var conv in dialogue.ConversationList)
+                {
+                    ctx.PrintLine(
+                        $"--------\nDialogue Part {no}:\nTags: {conv.Tags.ToJson()}\nTags to lock: {conv.TagsToLock.ToJson()}\nTags to unlock: {conv.TagsToUnlock.ToJson()}\nStatus: {conv.Status} Unread: {conv.StateOfDiswatch} Trigger: {conv.Trigger}");
+                    int all = conv.SenderMessagers.Count;
+                    ctx.PrintLine($"\nSender's Conversation Count: {all}");
+                    int no2 = 1;
+                    foreach (var send in conv.SenderMessagers)
+                    {
+                        ctx.PrintLine(
+                            $"----\nSender's Conversation {no2}/{all}:\nDate Text: {send.DateText} Time Text: {send.TimeText} Original: {send.Origin}\nTrigger: {send.Trigger} Trigger Time: {send.TriggerTime}\nIdle Time: {send.IdleTime} Typing Time: {send.TypingTime}:\n{send.Message}");
+                        if (applyEdit) send.Message = Edit(ctx, send.Message); // else send.Message += "日恁毛";
+                        no2++;
+                    }
+
+                    all = conv.UserMessages.Count;
+                    ctx.PrintLine($"\nUser's Conversation Count: {all}");
+                    no2 = 1;
+                    foreach (var user in conv.UserMessages)
+                    {
+                        ctx.PrintLine($"----\nUser's Conversation {no2}/{all} Hidden: {user.IsHidden}:\n{user.Message.Trim()}");
+                        if (applyEdit) user.Message = Edit(ctx, user.Message); // else user.Message += "物支浪了吸";
+                        no2++;
+                    }
+
+                    no++;
+                }
+
+                if (!applyEdit || !ctx.ReadYesOrNo("\n--------\nSave all changes")) return;
+
+                mass.Add(dialogueItemName!, dialogue);
+                ctx.PrintLine("Changes saved.");
+            },
+            new Dictionary<Type, string>
+                { { typeof(InvalidCastException), "The item got by the id you given is not a Dialogue Tree item" } });
     }
 }
 
+// -- 外部 --
+
+[Command("Inflate", "Inflate a outside file")]
+public class InflateCommand : ICommand
+{
+    private enum FileType
+    {
+        FileSystem,
+        TextureFile
+    }
+
+    private readonly FileType _fileType = FileType.FileSystem;
+    private readonly string _fileName;
+
+    public InflateCommand(string fileName)
+    {
+        _fileName = fileName;
+    }
+
+    public InflateCommand(string fileName, string fileType)
+    {
+        _fileName = fileName;
+        _fileType = (FileType)int.Parse(fileType);
+    }
+
+    public void Execute(ConsoleApplicationContext ctx)
+    {
+        using var fileStream = FileUtils.OpenFile(_fileName);
+        Mass mass = _fileType switch
+        {
+            FileType.FileSystem => new MassFile(),
+            FileType.TextureFile => new TextureFile(),
+            _ => throw new NotSupportedException("This file type is not supported at the moment."),
+        };
+        mass.Load(fileStream);
+
+        var fileName = _fileName + "_inflated";
+        using var writer = FileUtils.OpenFile(fileName, true, true);
+        mass.Save(writer, false);
+
+        ctx.PrintLine($"Write out to {fileName}.");
+    }
+}
+
+// TODO：未来按新TxFile优化
 [Command("UnpackImage", "Unpack the images from a texture file.")]
 public class UnpackImageCommand : ICommand
 {
-    public enum MODE
+    private enum Mode
     {
         FullInfoAndDump,
         HighestComposed
     }
 
-    public string FileName;
-    public MODE Mode = MODE.HighestComposed;
+    private readonly string _fileName;
+    private readonly Mode _mode = Mode.HighestComposed;
 
-    public UnpackImageCommand(string fileName)
-    {
-        FileName = fileName;
-    }
+    public UnpackImageCommand(string fileName) => _fileName = fileName;
 
     public UnpackImageCommand(string fileName, string mode)
     {
-        FileName = fileName;
-        Mode = (MODE)int.Parse(mode);
+        _fileName = fileName;
+        _mode = (Mode)int.Parse(mode);
     }
 
-    public void Execute(ConsoleApplicationContext commandFrame)
+    public void Execute(ConsoleApplicationContext ctx)
     {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Couldn't unpack image", () =>
+        LangExt.WrappedTry("Couldn't unpack image", () =>
         {
-            using var stream = FileUtils.OpenFile(FileName);
+            using var stream = FileUtils.OpenFile(_fileName);
 
             var fileName = Path.GetFileNameWithoutExtension(stream.Name);
 
             var textureFile = new TextureFile();
             textureFile.Load(stream);
 
-            switch (Mode)
+            switch (_mode)
             {
                 // HACK:罗里吧嗦 解包还是蛮麻烦，多种张图片，多种格式，多层剪辑 我测你们妈
-                case MODE.FullInfoAndDump:
+                case Mode.FullInfoAndDump:
                 {
-                    commandFrame.PrintLine($"名称：{fileName.ToUpper()}\n\n信息如下：\n");
+                    ctx.PrintLine($"名称：{fileName.ToUpper()}\n\n信息如下：\n");
 
-                    commandFrame.PrintLine(FileName.ToUpper() + "的索引信息：\n");
-                    commandFrame.PrintLine($"图片碎片数：{textureFile.ItemBlobs.Count}");
+                    ctx.PrintLine(_fileName.ToUpper() + "的索引信息：\n");
+                    ctx.PrintLine($"图片碎片数：{textureFile.ItemBlobs.Count}");
 
-                    commandFrame.PrintLine($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
-                    foreach (var item in textureFile.ItemAdaptions) commandFrame.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+                    ctx.PrintLine($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
+                    foreach (var item in textureFile.ItemAdaptions)
+                        ctx.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
 
-                    commandFrame.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
-                    for (var i = 0; i < textureFile.ImageIDsArray.Count; i++) commandFrame.PrintLine($"-- No.{i + 1} 对应的ID：[{DataSerializationUtils.ToJson(textureFile.ImageIDsArray[i])}]");
+                    ctx.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
+                    for (var i = 0; i < textureFile.ImageIDsArray.Count; i++)
+                        ctx.PrintLine($"-- No.{i + 1} 对应的ID：[{DataSerializationUtils.ToJson(textureFile.ImageIDsArray[i])}]");
 
                     if (textureFile.ImageIDsArray.Count == 0) return;
 
-                    commandFrame.PrintLine("\n解析各项图片：");
+                    ctx.PrintLine("\n解析各项图片：");
 
                     int piece = 1;
                     for (int i = 0; i < textureFile.ImageIDsArray.Count; i++)
@@ -291,79 +449,82 @@ public class UnpackImageCommand : ICommand
 
                         foreach (int id in items)
                         {
-                            var imageBlob = textureFile.Get<FragmentalImage>(id);
+                            var imageBlob = textureFile.Get<FragmentalImage>(id).Data;
 
                             //LogUtil.INSTANCE.PrintInfo($"\n总片数：{imageBlob.ClipCount}，总层数：{imageBlob.SliceWidths.Length}，解析各项图片：");
 
-                            if (imageBlob != null && imageBlob.ClipSize != 0)
+                            if (imageBlob.ClipSize == 0) continue;
+
+                            ctx.PrintLine(
+                                $"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{imageBlob.LevelHeights.ToJson()}] 层级宽：[{imageBlob.LevelWidths.ToJson()}] 层级数：{imageBlob.RyoPixmaps.Length}");
+                            var pathName = _fileName + $" No_{piece} Dumps";
+                            ctx.PrintLine("-- 该图片的相关资源将被写出在：" + pathName);
+                            if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
+
+                            for (var level = 0; level < imageBlob.RyoPixmaps.Length; level++)
                             {
-                                commandFrame.PrintLine($"-- No.{piece} 属于第{i + 1}格式 最大碎片长宽：[{imageBlob.ClipSize}] 层级高：[{imageBlob.LevelHeights.ToJson()}] 层级宽：[{imageBlob.LevelWidths.ToJson()}] 层级数：{imageBlob.RyoPixmaps.Length}");
-                                string pathName = FileName + $" No_{piece} Dumps";
-                                commandFrame.PrintLine("-- 该图片的相关资源将被写出在：" + pathName);
-                                if (!Directory.Exists(pathName)) Directory.CreateDirectory(pathName);
+                                RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
+                                ctx.PrintLine($"---- 第{level + 1}层 有{pixs.Length}个");
 
-                                for (int level = 0; level < imageBlob.RyoPixmaps.Length; level++)
+                                var levelPathName = pathName + $"\\Lv_{level + 1}";
+                                if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
+                                for (int no = 0; no < pixs.Length; no++)
                                 {
-                                    RyoPixmap[] pixs = imageBlob.RyoPixmaps[level];
-                                    commandFrame.PrintLine($"---- 第{level + 1}层 有{pixs.Length}个");
+                                    RyoPixmap pix = pixs[no];
+                                    ctx.PrintLine($"------ 第{no + 1}个 类型：{pix.Format}");
 
-                                    string levelPathName = pathName + $"\\Lv_{level + 1}";
-                                    if (!Directory.Exists(levelPathName)) Directory.CreateDirectory(levelPathName);
-                                    for (int no = 0; no < pixs.Length; no++)
+                                    string levelFileName = $"{levelPathName}\\No_{no + 1}.{(pix.IsJPG ? "jpg" : "png")}";
+
+                                    try
                                     {
-                                        RyoPixmap pix = pixs[no];
-                                        commandFrame.PrintLine($"------ 第{no + 1}个 类型：{pix.Format}");
+                                        var it = pix.ToImage() ?? throw new RyoException("Fail to convert this image");
 
-                                        string levelFileName = $"{levelPathName}\\No_{no + 1}.{(pix.IsJPG ? "jpg" : "png")}";
-
-                                        try
-                                        {
-                                            var it = pix.ToImage() ?? throw new RyoException("Fail to convert this image");
-
-                                            it.Save(levelFileName);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            commandFrame.PrintLine($"Cannot dump this image due to {ex.Message.MakeFirstCharLower}.");
-                                        }
+                                        it.Save(levelFileName);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        ctx.PrintLine($"Cannot dump this image due to {ex.Message.MakeFirstCharLower}.");
                                     }
                                 }
-                                piece++;
                             }
+
+                            piece++;
                         }
                     }
 
                     break;
                 }
 
-                case MODE.HighestComposed:
+                case Mode.HighestComposed:
                 {
-                    var fragmentalImage = textureFile.Get<FragmentalImage>(textureFile.ImageIDsArray.First().First()) ?? throw new FileNotFoundException("无法找到默认图片");
+                    var fragmentalImage = textureFile.Get<FragmentalImage>(textureFile.ImageIDsArray.First().First()).Data ??
+                                          throw new FileNotFoundException("无法找到默认图片");
 
                     Image outputImage = fragmentalImage.ToImage();
 
                     // 保存拼接好的图像
-                    string savePath = FileName.Replace(".texture", "");
+                    string savePath = _fileName.Replace(".texture", "");
                     if (fragmentalImage.RyoPixmaps.First().First().IsJPG)
                     {
-                        commandFrame.PrintLine("该文件实际上被转存为了Jpg");
+                        ctx.PrintLine("该文件实际上被转存为了Jpg");
 
                         if (savePath.Contains(".png")) savePath = savePath.Replace(".png", ".jpg");
                     }
 
                     outputImage.Save(savePath);
-                    commandFrame.PrintLine("写出成功，路径：" + savePath);
+                    ctx.PrintLine("写出成功，路径：" + savePath);
 
                     break;
                 }
 
                 default:
-                    throw new NotImplementedException("No such mode of your given id" + Mode);
+                    throw new NotImplementedException("No such mode of your given id" + _mode);
             }
         });
     }
 }
 
+// TODO：未来按新TxFile优化
 [Command("PackImage", "Pack a image to a texture file and save it")]
 public class PackImageCommand : ICommand
 {
@@ -382,9 +543,9 @@ public class PackImageCommand : ICommand
         FileName = imgPath + ".texture";
     }
 
-    public void Execute(ConsoleApplicationContext commandFrame)
+    public void Execute(ConsoleApplicationContext ctx)
     {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Couldn't pack image to a \".texture\"", () =>
+        LangExt.WrappedTry("Couldn't pack image to a \".texture\"", () =>
         {
             using FileStream fileStream = FileUtils.OpenFile(ImgPath);
 
@@ -396,162 +557,7 @@ public class PackImageCommand : ICommand
             using FileStream saveStream = FileUtils.OpenFile(FileName, true, true, false);
             txfile.Save(saveStream);
 
-            commandFrame.PrintLine("Saved to " + FileName);
+            ctx.PrintLine("Saved to " + FileName);
         });
     }
 }
-
-[Command("ImportDialogueTree", "Import dialogue tree from a json file into a file, only for PipeDreams now")]
-public class ImportDialogueTreeCommand : ICommand
-{
-    public string FileName;
-    public string JsonFilePath;
-    public string? ItemName;
-
-    public ImportDialogueTreeCommand(string fileName, string jsonFilePath, string? itemName)
-    {
-        FileName = fileName;
-        JsonFilePath = jsonFilePath;
-        ItemName = itemName;
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Parse failed", () =>
-        {
-            var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
-
-            // TODO：创建通用的拨弄 我们得约定一个输出格式 才能输入
-
-            string msgText = File.ReadAllText(JsonFilePath);
-
-            var msg = DataSerializationUtils.JsonToObject<DialogueTreeDescriptor>(msgText) ?? throw new NullReferenceException("序列化Json失败，请检查你的输入（注：Json中正常的“\"”请用“\\\"”转义）");
-
-            var result = mass.Add(ItemName, msg);
-
-            commandFrame.PrintLine($"Added, mode is {result.ToString().MakeFirstCharLower()}");
-        });
-    }
-}
-
-[Command("OperateDialogueTree", "Only for PipeDreams now")]
-public class OperateDialogueTreeCommand : ICommand
-{
-    public string FileName;
-    public int Id;
-
-    public OperateDialogueTreeCommand(string fileName, string id)
-    {
-        FileName = fileName;
-        Id = int.Parse(id);
-    }
-
-    private static string Edit(ConsoleApplicationContext commandFrame, string ori)
-    {
-        while (true)
-        {
-            bool doTrans = commandFrame.ReadYesOrNo("Do you want to edit it", ConsoleKey.Enter, ConsoleKey.DownArrow);
-
-            if (!doTrans) return ori;
-            string str = commandFrame.ReadLine("Content");
-
-            if (commandFrame.ReadYesOrNo("Save changes", ConsoleKey.Enter, ConsoleKey.Backspace)) return str;
-        }
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        LanguageExtensiveUtils.TryCatchingThenThrow("Operating Dialogue Tree encountered an issue", () =>
-        {
-            var mass = commandFrame.Inject<MassManager>().GetMassFileOrThrow(FileName);
-
-            var dialogue = mass.Get<DialogueTreeDescriptor>(Id);
-
-            var dialogueItemName = mass.IdStrPairs.Where(pair => pair.Value == Id).Select(pair => pair.Key).FirstOrDefault();
-
-            if (dialogue != null)
-            {
-                commandFrame.PrintLine($"{(dialogueItemName != null ? $"Item Name: {dialogueItemName}" : "This is a sub-item, no item name")} Dialogue Tree Namespace: {dialogue.DialogueNameSpace} Conversation Count: {dialogue.ConversationList.Count}");
-
-                bool applyEdit = dialogueItemName != null && commandFrame.ReadYesOrNo("Apply edit mode");
-
-                int no = 1;
-                foreach (var conv in dialogue.ConversationList)
-                {
-                    commandFrame.PrintLine($"--------\nDialogue Part {no}:\nTags: {conv.Tags.ToJson()}\nTags to lock: {conv.TagsToLock.ToJson()}\nTags to unlock: {conv.TagsToUnlock.ToJson()}\nStatus: {conv.Status} Unread: {conv.StateOfDiswatch} Trigger: {conv.Trigger}");
-                    int all = conv.SenderMessagers.Count;
-                    commandFrame.PrintLine($"\nSender's Conversation Count: {all}");
-                    int no2 = 1;
-                    foreach (var send in conv.SenderMessagers)
-                    {
-                        commandFrame.PrintLine($"----\nSender's Conversation {no2}/{all}:\nDate Text: {send.DateText} Time Text: {send.TimeText} Original: {send.Origin}\nTrigger: {send.Trigger} Trigger Time: {send.TriggerTime}\nIdle Time: {send.IdleTime} Typing Time: {send.TypingTime}:\n{send.Message}");
-                        if (applyEdit) send.Message = Edit(commandFrame, send.Message); // else send.Message += "日恁毛";
-                        no2++;
-                    }
-                    all = conv.UserMessages.Count;
-                    commandFrame.PrintLine($"\nUser's Conversation Count: {all}");
-                    no2 = 1;
-                    foreach (var user in conv.UserMessages)
-                    {
-                        commandFrame.PrintLine($"----\nUser's Conversation {no2}/{all} Hidden: {user.IsHidden}:\n{user.Message.Trim()}");
-                        if (applyEdit) user.Message = Edit(commandFrame, user.Message); // else user.Message += "物支浪了吸";
-                        no2++;
-                    }
-                    no++;
-                }
-
-                if (applyEdit && commandFrame.ReadYesOrNo("\n--------\nSave all changes"))
-                {
-                    mass.Add(dialogueItemName!, dialogue);
-                    commandFrame.PrintLine("Changes saved.");
-                }
-            }
-        }, new Dictionary<Type, string> { { typeof(InvalidCastException), "The item got by the id you given is not a Dialogue Tree item" } });
-    }
-}
-
-// Mass那边是否配合完了项目压缩
-[Command("Inflate", "Inflate a file")]
-public class InflateCommand : ICommand
-{
-    public enum FILETYPE
-    {
-        FileSystem,
-        TextureFile
-    }
-
-    public FILETYPE FileType = FILETYPE.FileSystem;
-    public string FileName;
-    // public bool WriteToOriginal = false;
-
-    public InflateCommand(string fileName)
-    {
-        FileName = fileName;
-    }
-
-    public InflateCommand(string fileName, string fileType)
-    {
-        FileName = fileName;
-        FileType = (FILETYPE)int.Parse(fileType);
-    }
-
-    public void Execute(ConsoleApplicationContext commandFrame)
-    {
-        using FileStream fileStream = FileUtils.OpenFile(FileName);
-        Mass mass = FileType switch
-        {
-            FILETYPE.FileSystem => new MassFile(),
-            FILETYPE.TextureFile => new TextureFile(),
-            _ => throw new NotSupportedException("This file type is not supported at the moment."),
-        };
-        mass.Load(fileStream);
-
-        var fileName = FileName + "_inflated";
-        using var writer = FileUtils.OpenFile(fileName, true, true);
-        mass.Save(writer, false);
-
-        commandFrame.PrintLine($"Write out to {fileName}.");
-    }
-}
-
-// TODO:增加一个全体写出到文件夹然后格式化为Json或者就是Raw或者是Dumped

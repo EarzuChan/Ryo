@@ -67,7 +67,7 @@ internal class WpfKurisuWindowManager : IKurisuWindowManager
         await WebView.EnsureCoreWebView2Async(webView2Environment);
     }
 
-    private void InitWebApp(object? _, CoreWebView2InitializationCompletedEventArgs __) => App.Ensured(app =>
+    private void InitWebApp(object? _, CoreWebView2InitializationCompletedEventArgs __) => App.EnsureNotNull(app =>
     {
         // 当浏览器加载好
 

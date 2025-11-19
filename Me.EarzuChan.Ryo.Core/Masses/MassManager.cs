@@ -17,7 +17,7 @@ public class MassManager
     {
         fileName = fileName.Trim().ToLower();
 
-        var massFile = MassFiles.FirstOrDefault(item => item.Key.ToLower() == fileName).Value;
+        var massFile = MassFiles.FirstOrDefault(item => item.Key.Equals(fileName, StringComparison.CurrentCultureIgnoreCase)).Value;
 
         return massFile ?? throw new NoSuchFileException(fileName);
     }

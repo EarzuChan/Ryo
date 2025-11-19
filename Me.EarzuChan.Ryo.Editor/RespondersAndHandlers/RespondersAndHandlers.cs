@@ -19,7 +19,6 @@ using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.Editor.RespondersAndHandlers;
 
-// TODO：新建卷
 [WebEventHandler("NewVolume")]
 public class NewVolumeHandler(string namePrefix) : IWebEventHandler
 {
@@ -80,78 +79,70 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
         MiscUtils.EmitOpenedVolumes(context, context.Inject<LocalVolumeManager>()!.Volumes);
 }
 
-// TODO:如果是基本类型，参数不是JObject，懆称冯的福
+// TODO：另外，无名项目怎么编辑/保存？
+// TODO：如果是基本类型，参数不是JObject，懆称冯的福
 [WebCallResponder("SaveItem")]
-public class SaveItemHandler(string volumeName, string itemName, object data, string dataTypeName) : IWebCallResponder
+public class SaveItemResponder(string volumeName, string itemName, object data, string dataTypeName) : IWebCallResponder
 {
     public WebResponse Respond(KurisuAppContext context)
     {
-        int newId = -1;
+        var newId = -1;
 
         context.Inject<LocalVolumeManager>()!.Also(it =>
         {
             Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
 
             it.GetVolumeByName(volumeName)
-                .Ensured(vol =>
+                .EnsureNotNull(vol =>
                 {
                     RyoType ryoType;
+
                     try
                     {
-                        // 提前给的C#层礼物
-                        ryoType = vol[itemName].RawJavaClass.JavaClassToRyoType();
+                        ryoType = dataTypeName.DataTypeNameToRyoType();
                     }
-                    catch (Exception ex)
+                    catch (Exception e2)
                     {
-                        Trace.WriteLine($"我倒要看看：{ex.Message}");
-                        try
-                        {
-                            ryoType = dataTypeName.DataTypeNameToRyoType();
-                        }
-                        catch (Exception e2)
-                        {
-                            Trace.WriteLine($"我没招了：{e2.Message}");
-                            throw new RyoException("实在是没有RyoType可以取得", e2);
-                        }
+                        Trace.WriteLine($"我没招了：{e2.Message}");
+                        throw new RyoException("取得RyoType失败", e2);
                     }
 
-                    LanguageExtensiveUtils.Ensured(
-                        ryoType.ToCsType(), typ =>
+
+                    ryoType.ToCsType().EnsureNotNull(typ =>
+                    {
+                        Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
+                        switch (data)
                         {
-                            Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
-                            switch (data)
-                            {
-                                case JObject jobj:
-                                    Trace.WriteLine("Data is JObject");
-                                    jobj.ToObject(typ).Ensured(obj =>
-                                    {
-                                        vol.Add(itemName, obj);
-                                        newId = vol[itemName].Id;
-                                    });
-                                    break;
-                                case JArray jarr when typ.IsArray:
-                                    Trace.WriteLine($"Data is JArray, {jarr.Count} items");
-                                    jarr.ToObject(typ).Ensured(arr =>
-                                    {
-                                        vol.Add(itemName, arr);
-                                        newId = vol[itemName].Id;
-                                    });
-                                    break;
-                                default:
-                                    Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
-                                    vol.Add(itemName, data);
+                            case JObject jobj:
+                                Trace.WriteLine("Data is JObject");
+                                jobj.ToObject(typ).EnsureNotNull(obj =>
+                                {
+                                    vol.Add(itemName, obj);
                                     newId = vol[itemName].Id;
-                                    break;
-                            }
-                        });
+                                });
+                                break;
+
+                            case JArray jarr when typ.IsArray:
+                                Trace.WriteLine($"Data is JArray, {jarr.Count} items");
+                                jarr.ToObject(typ).EnsureNotNull(arr =>
+                                {
+                                    vol.Add(itemName, arr);
+                                    newId = vol[itemName].Id;
+                                });
+                                break;
+
+                            default:
+                                Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
+                                vol.Add(itemName, data);
+                                newId = vol[itemName].Id;
+                                break;
+                        }
+                    });
                 });
         });
 
         Trace.WriteLine($"Saved, new id: {newId}");
-        
-        // 应该推送新文件情况
-        MiscUtils.EmitOpenedVolumes(context, context.Inject<LocalVolumeManager>()!.Volumes);
-        
+
         return newId == -1
             ? new WebResponse(WebResponseState.Failure)
             : new WebResponse(WebResponseState.Success, newId);
@@ -179,6 +170,53 @@ public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandle
             var volume = it.GetVolumeByName(volumeName);
             volume?.Also(vol => it.Save(vol, () => MiscUtils.SaveFileByDialog("MassFile", "fs"), saveAs));
         });
+}
+
+[WebEventHandler("GcVolume")] // FIXME：有问题，这样前端的已打开标签页Id怎么刷新？
+public class GcVolumeHandler(string volumeName) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) =>
+        context.Inject<LocalVolumeManager>()!.Also(it =>
+        {
+            var volume = it.GetVolumeByName(volumeName);
+            volume?.CollectGarbage();
+        });
+}
+
+// TODO：复制副本（需要Mass里面改）
+// TODO：客户端未保存提示，未写入后端项目提示
+[WebEventHandler("DeleteItem")]
+public class DeleteItemHandler(string volumeName, string itemName) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        Trace.WriteLine($"Deleting {itemName} of {volumeName}");
+
+        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.Remove(itemName));
+    });
+}
+
+// TODO：前端实现这功能的入口
+[WebEventHandler("GiveItemName")]
+public class GiveItemNameHandler(string volumeName, int id, string name) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        Trace.WriteLine($"Giving No.{id} a name {name} of {volumeName}");
+
+        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.GiveName(id, name));
+    });
+}
+
+[WebEventHandler("RenameItem")]
+public class RenameItemHandler(string volumeName, string oldItemName, string newItemName) : IWebEventHandler
+{
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        Trace.WriteLine($"Renaming {oldItemName} of {volumeName} to {newItemName}");
+
+        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.Rename(oldItemName, newItemName));
+    });
 }
 
 [WebCallResponder("GetFullFileModel")]

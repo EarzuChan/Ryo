@@ -15,6 +15,7 @@ import {useAppStateStore} from "@/stores/AppState"
 import {ensure, TODO} from "@/utils/UsefulUtils"
 import AddItemDialog from "@/views/dialogs/AddItemDialog.vue"
 import {useI18n} from "vue-i18n"
+import RenameItemDialog from "@/views/dialogs/RenameItemDialog.vue";
 
 const TAG = "WorkspaceState"
 
@@ -177,6 +178,21 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeTabExposed.value?.undo()
         }
 
+        function deleteItem(massName: string, itemName: string) {
+            emitWebEvent(makeWebLetter('DeleteItem', massName, itemName))
+        }
+
+        function renameItem(massName: string, oldItemName: string) {
+            dialogState.orderSpecial(RenameItemDialog, {
+                oldName: oldItemName,
+                confirm: (itemName: string) => {
+                    console.log(TAG, massName, "Rename", oldItemName, "To", itemName)
+
+                    emitWebEvent(makeWebLetter('RenameItem', massName, oldItemName, itemName))
+                }
+            })
+        }
+
         async function mentionItem(massName: string, itemId: number) {
             console.log(TAG, "提及项目", massName, itemId)
 
@@ -224,16 +240,20 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             emitWebEvent(makeWebLetter('CloseVolume', massName))
         }
 
+        function gcVolume(massName: string) {
+            emitWebEvent(makeWebLetter('GcVolume', massName))
+        }
+
         function addItemInVolume(massName: string) {
             dialogState.orderSpecial(AddItemDialog, {
                 confirm: (itemName: string, ryoType: RyoType) => {
                     console.log(massName, itemName, ryoType)
-                    
+
                     // 重复检查
                     const volume = openedVolumes.value.find(v => v.name === massName)
                     if (volume) {
                         const existingItem = volume.items?.find(item => item.name === itemName)
-                        
+
                         if (existingItem) {
                             dialogState.order({
                                 headline: `已存在"${itemName}"`,
@@ -301,10 +321,12 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             available,
             clickTab,
             closeTab,
+            deleteItem,
             closeVolume,
             getIsTabUnsaved,
             mentionItem,
             newVolume,
+            gcVolume,
             openTab,
             openVolume,
             openedItems,
@@ -314,6 +336,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             pageRedo,
             pageReload,
             pageSave,
+            renameItem,
             pageUndo,
             saveVolume,
             saveVolumeAs,

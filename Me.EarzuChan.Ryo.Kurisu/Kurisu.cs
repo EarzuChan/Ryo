@@ -394,7 +394,7 @@ public class KurisuAppBuilder
         Dependencies.Add(dependency);
     });
 
-    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.Ensured(it =>
+    public KurisuAppBuilder Provide<T>(string name, T stuff) => this.Also(_ => stuff.EnsureNotNull(it =>
     {
         Stuffs.Add(name, it);
     }));
@@ -431,7 +431,7 @@ public class KurisuAppContext
 
     internal KurisuAppContext(KurisuApp app) => App = app;
 
-    public T? Inject<T>() where T : class => LanguageExtensiveUtils.TryCatchingThenThrow("Cannot inject dependency",
+    public T? Inject<T>() where T : class => LangExt.WrappedTry("Cannot inject dependency",
         () => App.Dependencies.OfType<T>().First(),
         new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 

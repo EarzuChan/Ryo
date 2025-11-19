@@ -99,6 +99,10 @@ function showMenuOf(menuType: MenuBarItem) {
               action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
             },
             {
+              name: t('garbageCollect', {file: workspaceState.activeVolume!}),
+              action: () => workspaceState.gcVolume(workspaceState.activeVolume!)
+            },
+            {
               name: t('saveFileAs', {file: workspaceState.activeVolume!}),
               action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
             })

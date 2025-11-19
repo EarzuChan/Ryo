@@ -203,7 +203,7 @@ public class ConsoleApplicationContext
     internal ConsoleApplicationContext(ConsoleApplication app) => App = app;
 
     public T? Inject<T>() where T : class =>
-        LanguageExtensiveUtils.TryCatchingThenThrow<T>("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
+        LangExt.WrappedTry<T>("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 
     public Dictionary<CommandAttribute, Type> Commands => App.Commands;
 

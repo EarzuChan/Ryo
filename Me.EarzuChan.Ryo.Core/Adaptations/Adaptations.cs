@@ -52,7 +52,7 @@ public interface IAdapter
 }
 
 // 无奈之举
-public class DirectReadRawBytesAdapter : IAdapter
+public class ReadmRawBytesAdapter : IAdapter
 {
     // public string JavaClz => "sengine.mass.serializers.FailedSerializer";
 

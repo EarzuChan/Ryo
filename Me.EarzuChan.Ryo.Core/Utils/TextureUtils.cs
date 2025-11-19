@@ -11,7 +11,7 @@ public static class TextureUtils
     public const int MaxWidthOrHeight = 512;
 
     public static FragmentalImage FastCreateImage(Stream fileStream) =>
-        LanguageExtensiveUtils.TryCatchingThenThrow("Failed to create a fragmental image", () =>
+        LangExt.WrappedTry("Failed to create a fragmental image", () =>
         {
             var image = Image.Load(fileStream) ?? throw new NullReferenceException("Cannot load image texture file");
 

@@ -78,12 +78,24 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
         {
           name: t('openItem'),
           action: () => workspaceState.mentionItem(dad.name, stuff.id)
+        },
+        {
+          name: t('renameItem'),
+          action: () => workspaceState.renameItem(dad.name, stuff.name)
+        },
+        {
+          name: t('deleteItem'),
+          action: () => workspaceState.deleteItem(dad.name, stuff.name)
         }
     )
     else items.push(
         {
           name: t('addItem'),
           action: () => workspaceState.addItemInVolume(stuff.name)
+        },
+        {
+          name: t('garbageCollect'),
+          action: () => workspaceState.gcVolume(stuff.name)
         },
         {
           name: t('saveMass'),
