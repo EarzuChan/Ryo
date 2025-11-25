@@ -19,10 +19,10 @@ public static class MassUtils
         {
             var itemBlob = mass.ItemBlobs[i];
             info.AppendLine(
-                $"-- Id.{i}：适配项ID：{itemBlob.AdaptionId}、长度：{itemBlob.Data?.Length ?? -1}、粘连数目：{itemBlob.StickyCount}、粘连偏移：{itemBlob.StickyOffset}");
+                $"-- Id.{i}：编解码绑定ID：{itemBlob.CodecBindingId}、长度：{itemBlob.Data?.Length ?? -1}、粘连数目：{itemBlob.MetaHeapCount}、粘连偏移：{itemBlob.MetaHeapOffset}");
         }
 
-        var stickyMetaDataCount = mass.StickyMetaDatas.Count;
+        var stickyMetaDataCount = mass.MetaHeap.Count;
         info.AppendLine($"\n粘连元数据数：{stickyMetaDataCount}\n\n粘连元数据：");
 
         var currentIndex = 0;
@@ -31,8 +31,8 @@ public static class MassUtils
             StringBuilder str = new();
             for (var i = 0; i < 4 && currentIndex < stickyMetaDataCount; i++)
             {
-                var refTo = mass.StickyMetaDatas[currentIndex] >> 2;
-                var metaMode = mass.StickyMetaDatas[currentIndex] & 3;
+                var refTo = mass.MetaHeap[currentIndex] >> 2;
+                var metaMode = mass.MetaHeap[currentIndex] & 3;
                 str.Append($"No.{currentIndex}：{refTo} Mode：{metaMode}  ");
                 currentIndex++;
             }
@@ -40,12 +40,12 @@ public static class MassUtils
             info.AppendLine(str.ToString());
         }
 
-        var itemAdaptionsCount = mass.ItemAdaptions.Count;
-        info.AppendLine($"\n数据适配项数：{itemAdaptionsCount}");
-        for (var i = 0; i < itemAdaptionsCount; i++)
+        var codecBindingCount = mass.CodecBindings.Count;
+        info.AppendLine($"\n编解码绑定数：{codecBindingCount}");
+        for (var i = 0; i < codecBindingCount; i++)
         {
-            var item = mass.ItemAdaptions[i];
-            info.AppendLine($"-- Id.{i} {item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+            var item = mass.CodecBindings[i];
+            info.AppendLine($"-- Id.{i} {item.DataJavaClz} 适配器：{item.CodecJavaClz}");
         }
 
         info.AppendLine($"\n正式数据项数：{mass.IdStrPairs.Count}");

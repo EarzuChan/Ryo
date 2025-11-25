@@ -216,7 +216,7 @@ public class LocalVolume
     {
         var result = _massFile.Get<object>(id);
 
-        var jwc = _massFile.ItemAdaptions[_massFile.ItemBlobs[id].AdaptionId].DataJavaClz;
+        var jwc = _massFile.CodecBindings[_massFile.ItemBlobs[id].CodecBindingId].DataJavaClz;
 
         return new LocalVolumeItemModel(id, VolumeName,
             name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,

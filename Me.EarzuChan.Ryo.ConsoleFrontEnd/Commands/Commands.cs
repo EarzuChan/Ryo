@@ -93,7 +93,7 @@ public class ViewCommand(string fileName, string id) : ICommand
         {
             var mass = ctx.Inject<MassManager>()!.GetMassFileOrThrow(fileName);
 
-            var typename = mass.ItemAdaptions[mass.ItemBlobs[_id].AdaptionId].DataJavaClz.JavaClassToRyoType();
+            var typename = mass.CodecBindings[mass.ItemBlobs[_id].CodecBindingId].DataJavaClz.JavaClassToRyoType();
             var item = mass.Get<object>(_id).Data;
             var itemName = mass.IdStrPairs.Where(pair => pair.Value == _id).Select(pair => pair.Key).FirstOrDefault();
 
@@ -174,10 +174,10 @@ public class SearchCommand(string fileName, string searchName) : ICommand
             foreach (var item in map)
             {
                 var itBlob = mass.ItemBlobs[item.Value];
-                var adaTion = mass.ItemAdaptions[itBlob.AdaptionId];
+                var adaTion = mass.CodecBindings[itBlob.CodecBindingId];
                 if (item.Key.Contains(searchName, StringComparison.CurrentCultureIgnoreCase))
                     ctx.PrintLine(
-                        $"Id.{item.Value} Name：{item.Key} Size：{itBlob.Data?.Length ?? -1} Type：{adaTion.DataJavaClz} Adapter：{adaTion.AdapterJavaClz}");
+                        $"Id.{item.Value} Name：{item.Key} Size：{itBlob.Data?.Length ?? -1} Type：{adaTion.DataJavaClz} Codec：{adaTion.CodecJavaClz}");
             }
         });
 }
@@ -430,9 +430,9 @@ public class UnpackImageCommand : ICommand
                     ctx.PrintLine(_fileName.ToUpper() + "的索引信息：\n");
                     ctx.PrintLine($"图片碎片数：{textureFile.ItemBlobs.Count}");
 
-                    ctx.PrintLine($"\n图片模式适配项数：{textureFile.ItemAdaptions.Count}");
-                    foreach (var item in textureFile.ItemAdaptions)
-                        ctx.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.AdapterJavaClz}");
+                    ctx.PrintLine($"\n图片模式适配项数：{textureFile.CodecBindings.Count}");
+                    foreach (var item in textureFile.CodecBindings)
+                        ctx.PrintLine($"-- 数据类型：{item.DataJavaClz} 适配器：{item.CodecJavaClz}");
 
                     ctx.PrintLine($"\n图片项数：{textureFile.ImageIDsArray.Count}");
                     for (var i = 0; i < textureFile.ImageIDsArray.Count; i++)

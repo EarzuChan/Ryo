@@ -15,7 +15,7 @@ public class MassFile : Mass
         AbandonOld
     }
 
-    // TODO：不建议直接使用，可能会有根子对象删除连带问题。建议是复制后赐名？
+    // TIPS：不建议直接使用，可能会有本对象作为人家的子对象时删除本对象造成人家的连带问题。建议是赐名复制（Copy）？
     public void GiveName(int id, string name)
     {
         // 检查 id 是否合法（是否在有效范围内）
@@ -80,11 +80,6 @@ public class MassFile : Mass
         return true;
     }
 
-    // GC 联动：根节点与引用修复
-
-    // GC 必须从这里开始找活对象
-    protected override IEnumerable<int> GetRootIds() => IdStrPairs.Values;
-
     protected override void OnRemove(int id)
     {
         // 警告：这是 O(N) 操作，大文件慎用
@@ -93,7 +88,10 @@ public class MassFile : Mass
         if (targetKey != null) IdStrPairs.Remove(targetKey);
     }
 
-    // GC 整理完内存后，必须回调这里修正 ID 映射
+    // 返回活对象给GC
+    protected override IEnumerable<int> GetRootIds() => IdStrPairs.Values;
+
+    // GC整理的回调
     protected override void UpdateRoots(int[] idMap)
     {
         // 必须转为 List 遍历，因为要在遍历中修改字典的值
@@ -113,13 +111,7 @@ public class MassFile : Mass
             else IdStrPairs.Remove(key);
         }
     }
-    
-    /// <summary>
-    /// [新增] 将名为 sourceToken 的对象复制一份，并命名为 destToken
-    /// </summary>
-    /// <param name="sourceToken">源文件名</param>
-    /// <param name="destToken">目标文件名</param>
-    /// <param name="allowOverride">是否允许覆盖已存在的目标文件</param>
+
     public void Copy(string sourceToken, string destToken, bool allowOverride = false)
     {
         // 1. 基础校验

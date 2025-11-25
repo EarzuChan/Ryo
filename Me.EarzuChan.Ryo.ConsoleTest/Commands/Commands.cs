@@ -1,6 +1,6 @@
 ﻿using Me.EarzuChan.Ryo.ConsoleSystem;
 using Me.EarzuChan.Ryo.ConsoleSystem.Commands;
-using Me.EarzuChan.Ryo.Core.Adaptations;
+using Me.EarzuChan.Ryo.Core.Codecations;
 using Me.EarzuChan.Ryo.Core.Formations.DataFormations.WeakPipe;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Extensions.Utils;
@@ -11,7 +11,7 @@ namespace Me.EarzuChan.Ryo.ConsoleTest.Commands;
 
 // TODO：应该换用单元测试
 
-[AdaptableFormation("我勒个骚纲")]
+[CodecableFormation("我勒个骚纲")]
 public class 骚纲
 {
     public int Inner;

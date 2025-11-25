@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+﻿using Me.EarzuChan.Ryo.Core.Codecations;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Extensions.Exceptions.DataTypeSchemaExceptions;
 using Me.EarzuChan.Ryo.Utils;
@@ -99,13 +99,13 @@ public static class DataTypeSchemaUtils
     public static object[] GetAllDataTypeSchemas()
     {
         // 第一步：遍历源集合，调用GetDataTypeSchema方法
-        var sourceSchemas = AdaptationUtils.BasicRyoTypes.Select(ryoType => ryoType.ToDataTypeSchema());
+        var sourceSchemas = CodecationUtils.BasicRyoTypes.Select(ryoType => ryoType.ToDataTypeSchema());
 
-        // 第二步：遍历当前程序集中所有带有AdaptableFormat注解的类，调用GetDataTypeSchema方法
-        var adaptableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<AdaptableFormationAttribute>().Any())
+        // 第二步：遍历当前程序集中所有带有CodecableFormat注解的类，调用GetDataTypeSchema方法
+        var codecableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<CodecableFormationAttribute>().Any())
             .Select(type => type.ToRyoType().ToDataTypeSchema());
 
         // 第三步：合并两个列表
-        return sourceSchemas.Concat(adaptableSchemas).ToArray();
+        return sourceSchemas.Concat(codecableSchemas).ToArray();
     }
 }

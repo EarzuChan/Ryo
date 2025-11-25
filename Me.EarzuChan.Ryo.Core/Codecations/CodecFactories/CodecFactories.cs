@@ -4,58 +4,54 @@ using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
 using System.Reflection;
 
-namespace Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories;
+namespace Me.EarzuChan.Ryo.Core.Codecations.CodecFactories;
 
-public interface IAdapterFactory
+public interface ICodecFactory
 {
-    IAdapter CreateAdapterForDataRyoType(RyoType type);
+    ICodec CreateCodecForDataRyoType(RyoType type);
 
-    RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType);
-
-    //string? FindAdapterForRyoType
+    RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType);
 }
 
 // 说明：真的智将来的，根据写出的多少个参数（Out方法的输出长度可以内部判断）来对于多长的构造器！高！师爷！
-public class CustomFormatAdapterFactory : IAdapterFactory
+public class CustomFormatCodecFactory : ICodecFactory
 {
-    public class CustomFormatCtorAdapter : IAdapter
+    public class CustomFormatCtorCodec : ICodec
     {
-        private readonly List<ConstructorInfo> Ctors = new();
-        private readonly List<List<Type>> CtorParams = new();
+        private readonly List<ConstructorInfo> _ctors;
+        private readonly List<List<Type>> _ctorParams = [];
 
-        public CustomFormatCtorAdapter(List<ConstructorInfo> constructorInfos)
+        public CustomFormatCtorCodec(List<ConstructorInfo> constructorInfos)
         {
-            Ctors = constructorInfos;
+            _ctors = constructorInfos;
 
-            if (Ctors == null || Ctors.Count == 0) throw new NullReferenceException("构造器不满足条件，为Null或没有、没有、没有");
+            if (_ctors == null || _ctors.Count == 0) throw new NullReferenceException("构造器不满足条件，为Null或没有、没有、没有");
 
             // 遍历参数
-            foreach (var c in Ctors)
+            foreach (var c in _ctors)
             {
                 List<Type> paramTypes = new();
                 foreach (var p in c.GetParameters()) paramTypes.Add(p.ParameterType);
-                CtorParams.Add(paramTypes);
+                _ctorParams.Add(paramTypes);
             }
         }
 
-        // string IAdapter.JavaClz => "sengine.mass.serializers.MassSerializableSerializer";
-
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType)
+        public object From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             ConstructorInfo? ctor = null;
             List<Type>? paramTypes = null;
 
             // 瞄准构造器且匹配参数
-            if (Ctors.Count > 1)
+            if (_ctors.Count > 1)
             {
                 int ctorId = reader.ReadSignedByte();
-                ctor = Ctors[reader.ReadSignedByte()];
-                paramTypes = CtorParams[ctorId];
+                ctor = _ctors[reader.ReadSignedByte()];
+                paramTypes = _ctorParams[ctorId];
             }
             else
             {
-                ctor = Ctors[0];
-                paramTypes = CtorParams[0];
+                ctor = _ctors[0];
+                paramTypes = _ctorParams[0];
             }
 
             // 一个一个参数来读取
@@ -80,19 +76,19 @@ public class CustomFormatAdapterFactory : IAdapterFactory
 
         public void To(object obj, Mass mass, RyoWriter writer)
         {
-            object[] args = ((ICtorAdaptable)obj).GetAdaptedArray() ??
+            object[] args = ((ICtorCodecable)obj).GetCodecatedArray() ??
                             throw new NullReferenceException($"该类型{obj.GetType()}暂不能构建适配列表");
 
             int matchedCtorIndex;
             for (matchedCtorIndex = 0;
-                 matchedCtorIndex < Ctors.Count && CtorParams[matchedCtorIndex].Count != args.Length;
+                 matchedCtorIndex < _ctors.Count && _ctorParams[matchedCtorIndex].Count != args.Length;
                  matchedCtorIndex++) ;
 
-            if (matchedCtorIndex == Ctors.Count) throw new InvalidCastException("适配列表的参数不符合任意构造器参数");
+            if (matchedCtorIndex == _ctors.Count) throw new InvalidCastException("适配列表的参数不符合任意构造器参数");
 
-            if (Ctors.Count > 1) writer.WriteSignedByte((sbyte)matchedCtorIndex);
+            if (_ctors.Count > 1) writer.WriteSignedByte((sbyte)matchedCtorIndex);
 
-            var paramTypes = CtorParams[matchedCtorIndex];
+            var paramTypes = _ctorParams[matchedCtorIndex];
 
             // LogUtils.PrintInfo("参数数：" + paramTypes.Count);
             // foreach (Type tp in paramTypes) LogUtils.PrintInfo("参数类型：" + tp);
@@ -116,7 +112,7 @@ public class CustomFormatAdapterFactory : IAdapterFactory
         }
     }
 
-    public class CustomFormatFieldAdapter : IAdapter
+    public class CustomFormatFieldCodec : ICodec
     {
         private readonly FieldInfo[] FieldInfos;
         private readonly Type ObjectType;
@@ -160,7 +156,7 @@ public class CustomFormatAdapterFactory : IAdapterFactory
             }
         }
 
-        public CustomFormatFieldAdapter(Type type)
+        public CustomFormatFieldCodec(Type type)
         {
             ObjectType = type;
             // FieldInfo[] declaredFields;
@@ -211,23 +207,21 @@ public class CustomFormatAdapterFactory : IAdapterFactory
         }
     }
 
-    public IAdapter CreateAdapterForDataRyoType(RyoType type)
+    public ICodec CreateCodecForDataRyoType(RyoType type)
     {
-        if (!type.IsAdaptableCustom) throw new FormatException("非可适配自定义类型：" + type);
+        if (!type.IsCodecableCustom) throw new FormatException("非可适配自定义类型：" + type);
 
         var formatType = type.ToCsType() ?? throw new NotSupportedException("不支持解析不了的自定义类型：" + type);
 
         try
         {
-            IAdapter adapter = type.IsAdaptWithCtor
-                ? new CustomFormatCtorAdapter(formatType.GetConstructors()
-                    .Where(c => c.GetCustomAttribute<ICtorAdaptable.AdaptableConstructor>() != null)
+            ICodec codec = type.IsCodecateWithCtor
+                ? new CustomFormatCtorCodec(formatType.GetConstructors()
+                    .Where(c => c.GetCustomAttribute<ICtorCodecable.CodecableConstructor>() != null)
                     .OrderBy(c => c.GetParameters().Length).ToList())
-                : new CustomFormatFieldAdapter(formatType);
+                : new CustomFormatFieldCodec(formatType);
 
-            // LogUtils.PrintInfo($"{type} 拥有：{adapter.GetType()}");
-
-            return adapter;
+            return codec;
         }
         catch (Exception ex)
         {
@@ -235,29 +229,29 @@ public class CustomFormatAdapterFactory : IAdapterFactory
         }
     }
 
-    public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+    public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType)
     {
-        if (ryoType.IsAdaptableCustom && !ryoType.IsArray)
+        if (ryoType.IsCodecableCustom && !ryoType.IsArray)
             return new()
             {
-                JavaClassName = ryoType.IsAdaptWithCtor
+                JavaClassName = ryoType.IsCodecateWithCtor
                     ? "sengine.mass.serializers.MassSerializableSerializer"
                     : "sengine.mass.serializers.FieldSerialize",
-                CsType = typeof(CustomFormatAdapterFactory)
+                CsType = typeof(CustomFormatCodecFactory)
             };
         else throw new InvalidDataException("类型不属于可适配自定义类型：" + ryoType);
     }
 }
 
-public class NormalTypeAdapterFactory : IAdapterFactory
+public class NormalTypeCodecFactory : ICodecFactory
 {
-    public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new()
+    public static readonly Dictionary<Type, RyoType> DataCodecRyoTypePairs = new()
     {
         {
             typeof(int),
             new()
             {
-                JavaClassName = "sengine.mass.serializers.DefaultSerializers$IntSerializer", CsType = typeof(IntAdapter)
+                JavaClassName = "sengine.mass.serializers.DefaultSerializers$IntSerializer", CsType = typeof(IntCodec)
             }
         },
         {
@@ -265,7 +259,7 @@ public class NormalTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultSerializers$IntSerializer",
-                CsType = typeof(BooleanAdapter)
+                CsType = typeof(BooleanCodec)
             }
         },
         {
@@ -273,7 +267,7 @@ public class NormalTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultSerializers$StringSerializer",
-                CsType = typeof(StringAdapter)
+                CsType = typeof(StringCodec)
             }
         },
         {
@@ -281,33 +275,33 @@ public class NormalTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultSerializers$EnumSerializer",
-                CsType = typeof(EnumAdapter)
+                CsType = typeof(EnumCodec)
             }
         },
     };
 
-    public class BooleanAdapter : IAdapter
+    public class BooleanCodec : ICodec
     {
         public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBoolean();
 
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteBoolean((bool)obj);
     }
 
-    public class IntAdapter : IAdapter
+    public class IntCodec : ICodec
     {
         public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadInt();
 
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteInt((int)obj);
     }
 
-    public class StringAdapter : IAdapter
+    public class StringCodec : ICodec
     {
         public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
         public void To(object obj, Mass mass, RyoWriter writer) => writer.WrintString((string)obj);
     }
 
-    public class EnumAdapter : IAdapter
+    public class EnumCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType type)
         {
@@ -324,44 +318,40 @@ public class NormalTypeAdapterFactory : IAdapterFactory
         }
     }
 
-    public IAdapter CreateAdapterForDataRyoType(RyoType ryoType)
+    public ICodec CreateCodecForDataRyoType(RyoType ryoType)
     {
         // 需要内联吗？
-        // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-        if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsCsTypeUnidentified)
-        {
-            foreach (var item in DataAdapterRyoTypePairs)
-                if (ryoType.CsType == item.Key)
-                    return (IAdapter)Activator.CreateInstance(item.Value.CsType!)!;
-        }
+        if (ryoType.IsArray || ryoType.IsCodecableCustom || ryoType.IsCsTypeUnidentified)
+            throw new NotSupportedException("类型不属于基本类型或暂不支持：" + ryoType);
+        
+        foreach (var item in DataCodecRyoTypePairs.Where(item => ryoType.CsType == item.Key))
+            return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
 
         throw new NotSupportedException("类型不属于基本类型或暂不支持：" + ryoType);
     }
 
-    public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+    public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType)
     {
-        // Type baseType = AdaptionManager.INSTANCE.GetCsClzByRyoType(ryoType) ?? throw new NullReferenceException("不能为不能解析的类型创建适配器：" + ryoType);
-        if (!ryoType.IsArray && !ryoType.IsAdaptableCustom && !ryoType.IsCsTypeUnidentified)
-        {
-            foreach (var item in DataAdapterRyoTypePairs)
-                if (ryoType.CsType == item.Key)
-                    return item.Value;
-        }
+        if (ryoType.IsArray || ryoType.IsCodecableCustom || ryoType.IsCsTypeUnidentified)
+            throw new InvalidDataException("不属于基本类型或暂不支持：" + ryoType);
+        
+        foreach (var item in DataCodecRyoTypePairs.Where(item => ryoType.CsType == item.Key))
+            return item.Value;
 
         throw new InvalidDataException("不属于基本类型或暂不支持：" + ryoType);
     }
 }
 
-public class BaseArrayTypeAdapterFactory : IAdapterFactory
+public class BaseArrayTypeCodecFactory : ICodecFactory
 {
-    public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new()
+    public static readonly Dictionary<Type, RyoType> DataCodecRyoTypePairs = new()
     {
         {
             typeof(int),
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$IntArraySerializer",
-                CsType = typeof(IntArrayAdapter)
+                CsType = typeof(IntArrayCodec)
             }
         },
         {
@@ -369,7 +359,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$FloatArraySerializer",
-                CsType = typeof(FloatArrayAdapter)
+                CsType = typeof(FloatArrayCodec)
             }
         },
         {
@@ -377,7 +367,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$ShortArraySerializer",
-                CsType = typeof(ShortArrayAdapter)
+                CsType = typeof(ShortArrayCodec)
             }
         },
         {
@@ -385,7 +375,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$ByteArraySerializer",
-                CsType = typeof(ByteArrayAdapter)
+                CsType = typeof(ByteArrayCodec)
             }
         },
         {
@@ -393,12 +383,12 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
             new()
             {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer",
-                CsType = typeof(StringArrayAdapter)
+                CsType = typeof(StringArrayCodec)
             }
         },
     };
 
-    public class IntArrayAdapter : IAdapter
+    public class IntArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
@@ -421,7 +411,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
     }
 
     // Untested
-    public class ShortArrayAdapter : IAdapter
+    public class ShortArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
@@ -447,7 +437,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
     }
 
     // Untested
-    public class FloatArrayAdapter : IAdapter
+    public class FloatArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
@@ -472,43 +462,37 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
         }
     }
 
-    public class ObjectArrayAdapter : IAdapter
+    public class ObjectArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
             // TODO：优化类型判断过程，和RyoType的GetSubitemRyoType有关
 
             var oriItemType = ryoType.ToCsType()?.GetElementType();
-            // LogUtils.INSTANCE.PrintInfo($"这是类型：{ryoType} 这是结果：{ryoType.IsAdaptableCustom}");
-            Type itemType = oriItemType ?? typeof(object);
+            var itemType = oriItemType ?? typeof(object);
 
             // 读个数
-            Array? objArr = Array.CreateInstance(itemType, reader.ReadInt());
-            // LogUtils.INSTANCE.PrintInfo(ryoType + "列表类型：" + itemType + "、大小：" + objArr.Length);
-
-            //mass.Reference(objArr);
+            var objArr = Array.CreateInstance(itemType, reader.ReadInt());
 
             // 读子项
-            for (int i = 0; i < objArr.Length; i++) objArr.SetValue(mass.Read<object>(), i);
+            for (var i = 0; i < objArr.Length; i++) objArr.SetValue(mass.Read<object>(), i);
 
             // 额外匹配类型
             if (oriItemType == null)
             {
                 if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
                 // LogUtils.INSTANCE.PrintInfo("额外重写匹配 类型为" + itemType);
-                if (itemType != typeof(object))
+                if (itemType == typeof(object)) return objArr;
+                var newArray = Array.CreateInstance(itemType, objArr.Length);
+
+                for (var i = 0; i < objArr.Length; i++)
                 {
-                    Array? newArray = Array.CreateInstance(itemType, objArr.Length);
-
-                    for (int i = 0; i < objArr.Length; i++)
-                    {
-                        object obj = objArr.GetValue(i)!; // 获取objArr中的当前项
-                        object convertedObj = Convert.ChangeType(obj, itemType); // 将当前项转换为type类型
-                        newArray.SetValue(convertedObj, i); // 将转换后的值赋值给新数组中的对应位置
-                    }
-
-                    return newArray;
+                    var obj = objArr.GetValue(i)!; // 获取objArr中的当前项
+                    var convertedObj = Convert.ChangeType(obj, itemType); // 将当前项转换为type类型
+                    newArray.SetValue(convertedObj, i); // 将转换后的值赋值给新数组中的对应位置
                 }
+
+                return newArray;
             }
 
             return objArr;
@@ -527,7 +511,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
         }
     }
 
-    public class ByteArrayAdapter : IAdapter
+    public class ByteArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
 
@@ -539,7 +523,7 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
         }
     }
 
-    public class StringArrayAdapter : IAdapter
+    public class StringArrayCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
@@ -557,43 +541,43 @@ public class BaseArrayTypeAdapterFactory : IAdapterFactory
         }
     }
 
-    public IAdapter CreateAdapterForDataRyoType(RyoType ryoType)
+    public ICodec CreateCodecForDataRyoType(RyoType ryoType)
     {
         if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
 
-        foreach (var item in DataAdapterRyoTypePairs)
+        foreach (var item in DataCodecRyoTypePairs)
             if (ryoType.CsType == item.Key)
-                return (IAdapter)Activator.CreateInstance(item.Value.CsType!)!;
-        return new ObjectArrayAdapter();
+                return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
+        return new ObjectArrayCodec();
     }
 
-    public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+    public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType)
     {
         if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
 
-        foreach (var item in DataAdapterRyoTypePairs)
+        foreach (var item in DataCodecRyoTypePairs)
             if (ryoType.CsType == item.Key)
                 return item.Value;
 
         return new()
         {
             JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer",
-            CsType = typeof(ObjectArrayAdapter)
+            CsType = typeof(ObjectArrayCodec)
         };
     }
 }
 
-public class SpecialFormatAdapterFactory : IAdapterFactory
+public class SpecialFormatCodecFactory : ICodecFactory
 {
-    public static readonly Dictionary<Type, RyoType> DataAdapterRyoTypePairs = new()
+    public static readonly Dictionary<Type, RyoType> DataCodecRyoTypePairs = new()
     {
         {
             typeof(FragmentalImage),
-            new() { JavaClassName = "sengine.graphics2d.texturefile.FIFormat", CsType = typeof(FragmentalImageAdapter) }
+            new() { JavaClassName = "sengine.graphics2d.texturefile.FIFormat", CsType = typeof(FragmentalImageCodec) }
         },
     };
 
-    public class FragmentalImageAdapter : IAdapter
+    public class FragmentalImageCodec : ICodec
     {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType)
         {
@@ -722,20 +706,20 @@ public class SpecialFormatAdapterFactory : IAdapterFactory
         }
     }
 
-    public IAdapter CreateAdapterForDataRyoType(RyoType type)
+    public ICodec CreateCodecForDataRyoType(RyoType type)
     {
         //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-        foreach (var item in DataAdapterRyoTypePairs)
+        foreach (var item in DataCodecRyoTypePairs)
             if (type.CsType == item.Key)
-                return (IAdapter)Activator.CreateInstance(item.Value.CsType!)!;
+                return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
 
         throw new FormatException(type + "没有合适的特殊类型适配器");
     }
 
-    public RyoType FindAdapterRyoTypeForDataRyoType(RyoType ryoType)
+    public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType)
     {
-        foreach (var item in DataAdapterRyoTypePairs)
+        foreach (var item in DataCodecRyoTypePairs)
             if (ryoType.CsType == item.Key)
                 return item.Value;
 

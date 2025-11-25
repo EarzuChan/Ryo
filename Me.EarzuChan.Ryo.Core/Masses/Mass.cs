@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+﻿using Me.EarzuChan.Ryo.Core.Codecations;
 using Me.EarzuChan.Ryo.Core.IO;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Exceptions;
@@ -42,45 +42,41 @@ public abstract class Mass : IMass
 
     private Dictionary<int, object>? _savedItems;
 
-    // [新增] 处理队列，用于解决非连续 ID 的递归处理问题
+    // 处理队列，用于解决非连续 ID 的递归处理问题
     private List<int>? _processingQueue;
 
-    public class ItemBlob(int adaptionId, int stickyOffset, int stickyCount, byte[]? data)
+    public class ItemFrame(int codecBindingId, int metaHeapOffset, int metaHeapCount, byte[]? data)
     {
-        public int AdaptionId = adaptionId;
+        public int CodecBindingId = codecBindingId; // 标为-1表示逻辑删除
 
-        // [新增] 内存态：元数据在 StickyMetaDatas 中的起始位置
-        public int StickyOffset = stickyOffset;
+        // 内存态：元数据在 StickyMetaDatas 中的起始位置
+        public int MetaHeapOffset = metaHeapOffset;
 
-        // [新增] 内存态：元数据长度
-        public int StickyCount = stickyCount;
+        // 内存态：元数据长度
+        public int MetaHeapCount = metaHeapCount;
 
-        public byte[]? Data = data;
+        public byte[]? Data = data; // 设为null表示逻辑删除
 
         // 构造函数调整，兼容旧逻辑的同时初始化新字段
     }
 
-    public class ItemAdaption(string? dataJavaClz, string? adapterFactoryJavaClz)
-    {
-        public readonly string? DataJavaClz = dataJavaClz;
-        public readonly string? AdapterJavaClz = adapterFactoryJavaClz;
-    }
+    public record CodecBinding(string? DataJavaClz, string? CodecJavaClz);
 
-    public readonly List<ItemBlob> ItemBlobs = [];
-    public readonly List<ItemAdaption> ItemAdaptions = [];
-    public readonly List<int> StickyMetaDatas = []; // 现在这是一个允许碎片的堆
+    public readonly List<ItemFrame> ItemBlobs = [];
+    public readonly List<CodecBinding> CodecBindings = [];
+    public readonly List<int> MetaHeap = []; // 现在是允许碎片的堆（因为有GC能整理）
 
-    public int FindAdaptionIdForDataRyoType(RyoType ryoType)
+    protected int CalculateCodecBindingIdForDataRyoType(RyoType ryoType)
     {
         var javaClz = ryoType.ToJavaClass()!;
-        var result = ItemAdaptions.Find(a => a.DataJavaClz == javaClz);
-        if (result != null) return ItemAdaptions.IndexOf(result);
+        var result = CodecBindings.Find(a => a.DataJavaClz == javaClz);
+        if (result != null) return CodecBindings.IndexOf(result);
 
-        var adapterRyoType = ryoType.DataRyoTypeFindAdapterRyoType() ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
+        var codecRyoType = ryoType.DataRyoTypeFindCodecRyoType() ?? throw new FormatException("该类型没有可用的适配器：" + ryoType);
 
-        var itemAdaption = new ItemAdaption(javaClz, adapterRyoType.ToJavaClass()!);
-        ItemAdaptions.Add(itemAdaption);
-        return ItemAdaptions.IndexOf(itemAdaption);
+        var codecBinding = new CodecBinding(javaClz, codecRyoType.ToJavaClass()!);
+        CodecBindings.Add(codecBinding);
+        return CodecBindings.IndexOf(codecBinding);
     }
 
     public int Add<T>(T obj)
@@ -89,7 +85,7 @@ public abstract class Mass : IMass
         var id = ItemBlobs.Count;
 
         // 占位，防止递归死循环
-        ItemBlobs.Add(new ItemBlob(0, 0, 0, []));
+        ItemBlobs.Add(new ItemFrame(0, 0, 0, []));
 
         SetInternal(id, obj);
 
@@ -120,7 +116,7 @@ public abstract class Mass : IMass
         // 注意：如果是 Add 操作调用此处，id 对应的占位符此时已经存在于 ItemBlobs 中，
         // 所以 undoBlobStart 实际上包含了当前这个 root blob。
         var undoBlobStart = ItemBlobs.Count;
-        var undoStickyStart = StickyMetaDatas.Count;
+        var undoStickyStart = MetaHeap.Count;
 
         try
         {
@@ -135,27 +131,27 @@ public abstract class Mass : IMass
                 var currentId = _processingQueue[queueIndex];
                 var nowObj = _savedItems[currentId];
 
-                // 1. 准备适配器
+                // 1. 准备编解码器
                 var dataRyoType = nowObj.GetType().ToRyoType();
-                var adaptionId = FindAdaptionIdForDataRyoType(dataRyoType);
-                var adaption = ItemAdaptions[adaptionId];
-                var adapter = AdaptationUtils.CreateAdapter(adaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
+                var codecBindingId = CalculateCodecBindingIdForDataRyoType(dataRyoType);
+                var codecBinding = CodecBindings[codecBindingId];
+                var codec = CodecationUtils.CreateCodec(codecBinding.CodecJavaClz.JavaClassToRyoType(), dataRyoType);
 
-                // 2. 序列化（关键点：这里会向 StickyMetaDatas 追加数据，并可能递归调用 SetInternal 向 ItemBlobs 追加子项）
-                var stickyStart = StickyMetaDatas.Count;
+                // 2. 编码（关键点：这里会向 MetaHeap 追加数据，并可能递归调用 SetInternal 向 ItemBlobs 追加子项）
+                var stickyStart = MetaHeap.Count;
 
                 using var writer = new RyoWriter(new MemoryStream());
-                adapter.To(nowObj, this, writer); // <--- 可能发生异常
+                codec.To(nowObj, this, writer); // <--- 可能发生异常
 
                 writer.PositionToZero();
 
-                var stickyEnd = StickyMetaDatas.Count;
+                var stickyEnd = MetaHeap.Count;
                 var stickyCount = stickyEnd - stickyStart;
                 var data = new RyoReader(writer).ReadAllBytes();
 
                 // 3. 提交数据到 Blob
                 // 注意：ItemBlobs[currentId] 必定已存在（要么是 root id，要么是递归时 Add 的占位符）
-                ItemBlobs[currentId] = new ItemBlob(adaptionId, stickyStart, stickyCount, data);
+                ItemBlobs[currentId] = new ItemFrame(codecBindingId, stickyStart, stickyCount, data);
 
                 queueIndex++;
             }
@@ -174,8 +170,8 @@ public abstract class Mass : IMass
 
             // 2. 回滚元数据堆 (StickyMetaDatas)
             // 移除本次操作中追加的所有元数据
-            if (StickyMetaDatas.Count > undoStickyStart)
-                StickyMetaDatas.RemoveRange(undoStickyStart, StickyMetaDatas.Count - undoStickyStart);
+            if (MetaHeap.Count > undoStickyStart)
+                MetaHeap.RemoveRange(undoStickyStart, MetaHeap.Count - undoStickyStart);
 
             // 3. 回滚对象表 (ItemBlobs)
             // 移除本次递归过程中产生的所有**新**子对象占位符
@@ -190,8 +186,8 @@ public abstract class Mass : IMass
             {
                 var blob = ItemBlobs[id];
                 blob.Data = null;
-                blob.StickyCount = 0;
-                blob.AdaptionId = -1; // 重置类型引用
+                blob.MetaHeapCount = 0;
+                blob.CodecBindingId = -1; // 重置类型引用
             }
 
             // 重新抛出异常通知上层
@@ -210,19 +206,19 @@ public abstract class Mass : IMass
         // 已经被逻辑删除
         if (itemBlob.Data == null) throw new InvalidOperationException($"对象已被删除：{id}"); // 就是这个，子项删了夫项寄了
 
-        var itemAdaption = ItemAdaptions[itemBlob.AdaptionId];
-        var dataRyoType = itemAdaption.DataJavaClz.JavaClassToRyoType();
+        var codecBinding = CodecBindings[itemBlob.CodecBindingId];
+        var dataRyoType = codecBinding.DataJavaClz.JavaClassToRyoType();
 
-        IAdapter adapter;
+        ICodec codec;
         try
         {
-            adapter = AdaptationUtils.CreateAdapter(itemAdaption.AdapterJavaClz.JavaClassToRyoType(), dataRyoType);
+            codec = CodecationUtils.CreateCodec(codecBinding.CodecJavaClz.JavaClassToRyoType(), dataRyoType);
         }
         catch (Exception ex)
         {
-            adapter = new ReadmRawBytesAdapter();
+            codec = new ReadRawBytesCodec();
             parseSuccess = false;
-            errorMessage = $"{id}的适配器创建失败，回退到RawBytesAdapter：" + ex.Message;
+            errorMessage = $"{id}的适配器创建失败，回退到RawBytesCodec：" + ex.Message;
             LogUtils.PrintWarning(errorMessage);
         }
 
@@ -234,11 +230,11 @@ public abstract class Mass : IMass
 
         // 切换上下文
         _savedId = id;
-        _currentStickyMetadataPtr = itemBlob.StickyOffset; // 指向该对象在堆中的起始元数据
-        _currentStickyMetadataEnd = itemBlob.StickyOffset + itemBlob.StickyCount; // 设定边界
+        _currentStickyMetadataPtr = itemBlob.MetaHeapOffset; // 指向该对象在堆中的起始元数据
+        _currentStickyMetadataEnd = itemBlob.MetaHeapOffset + itemBlob.MetaHeapCount; // 设定边界
         _workingBuffer.Buffer = itemBlob.Data;
 
-        var item = (T)adapter.From(this, _workingBuffer.Buffer, dataRyoType);
+        var item = (T)codec.From(this, _workingBuffer.Buffer, dataRyoType);
 
         // 恢复上下文
         _workingBuffer = prevBuffer;
@@ -256,7 +252,7 @@ public abstract class Mass : IMass
         if (_currentStickyMetadataPtr >= _currentStickyMetadataEnd) throw new InvalidDataException("尝试读取超出对象边界的元数据");
 
         // 获取元数据
-        var metaData = StickyMetaDatas[_currentStickyMetadataPtr];
+        var metaData = MetaHeap[_currentStickyMetadataPtr];
 
         // 指针后移
         _currentStickyMetadataPtr++;
@@ -284,10 +280,10 @@ public abstract class Mass : IMass
         else if (obj.GetType().ToRyoType().IsJavaPrimitiveType) throw new NotImplementedException();
         else newStickyMetaData = (Add(obj) << 2) | 3;
 
-        StickyMetaDatas.Add(newStickyMetaData); // 这里的 Add 是在 Adapter.To 内部调用的，对应 SetInternal 里的流程
+        MetaHeap.Add(newStickyMetaData); // 这里的 Add 是在 Codec.To 内部调用的，对应 SetInternal 里的流程
     }
 
-    // CHECK：虽然这些可能不是本方法的范畴，但是：如果父是数组或者别的啥，子对象（即成员）为Null，不若无此成员；父需要非空类型，可能需要给初始化的空对象。这些可能需要改适配器（序列化器）逻辑
+    // TIPS：虽然这些不属于本方法的管辖范围，但是：如果父是数组或者别的啥，子对象（即成员）为Null，不若无此成员；父需要非空类型，可能需要给初始化的空对象。这些可能需要改适配器（序列化器）逻辑
     private T? GetSubitemSafely<T>(int id)
     {
         if (id < 0 || id >= ItemBlobs.Count) return default; // 越界当作 null，本应不会发生，防御性
@@ -325,8 +321,8 @@ public abstract class Mass : IMass
         // 在 CollectGarbage 的 Mark 阶段，遇到 Data == null 的对象会停止追踪其子项
         // 从而产生级联的垃圾回收效果
         ItemBlobs[id].Data = null;
-        ItemBlobs[id].StickyCount = 0;
-        ItemBlobs[id].AdaptionId = -1;
+        ItemBlobs[id].MetaHeapCount = 0;
+        ItemBlobs[id].CodecBindingId = -1;
 
         OnRemove(id);
 
@@ -342,9 +338,7 @@ public abstract class Mass : IMass
 
     public void CollectGarbage()
     {
-        // =================================================
-        // 阶段 1: 标记活对象 (Mark Alive Objects)
-        // =================================================
+        // 一：标记活对象
         HashSet<int> aliveIds = [];
         Queue<int> traceQueue = new();
 
@@ -362,9 +356,9 @@ public abstract class Mass : IMass
             var currentId = traceQueue.Dequeue();
             var blob = ItemBlobs[currentId];
 
-            for (var i = blob.StickyOffset; i < blob.StickyOffset + blob.StickyCount; i++)
+            for (var i = blob.MetaHeapOffset; i < blob.MetaHeapOffset + blob.MetaHeapCount; i++)
             {
-                var meta = StickyMetaDatas[i];
+                var meta = MetaHeap[i];
                 if ((meta & 3) != 3) continue; // 只关心对象引用
 
                 var childId = meta >> 2;
@@ -375,34 +369,30 @@ public abstract class Mass : IMass
             }
         }
 
-        // =================================================
-        // 阶段 2: [新增] 标记活适配项并构建映射 (Mark & Map Adaptions)
-        // =================================================
+        // 二：标记活编解码器绑定并构建映射
         // 只有活对象引用的适配项才是活适配项
-        HashSet<int> usedAdaptionIds = [];
-        foreach (var id in aliveIds) usedAdaptionIds.Add(ItemBlobs[id].AdaptionId);
+        HashSet<int> usedCodecBindingIds = [];
+        foreach (var id in aliveIds) usedCodecBindingIds.Add(ItemBlobs[id].CodecBindingId);
 
-        // 构建适配项的新旧映射表 (OldAdaptionId -> NewAdaptionId)
-        var adaptionIdMap = new int[ItemAdaptions.Count];
-        List<ItemAdaption> newAdaptions = [];
-        var newAdaptionCounter = 0;
+        // 构建编解码器绑定的新旧映射表
+        var bindingIdMap = new int[CodecBindings.Count];
+        List<CodecBinding> newBindings = [];
+        var newBindingCounter = 0;
 
-        for (var i = 0; i < ItemAdaptions.Count; i++)
+        for (var i = 0; i < CodecBindings.Count; i++)
         {
-            if (usedAdaptionIds.Contains(i))
+            if (usedCodecBindingIds.Contains(i))
             {
-                adaptionIdMap[i] = newAdaptionCounter++;
-                newAdaptions.Add(ItemAdaptions[i]);
+                bindingIdMap[i] = newBindingCounter++;
+                newBindings.Add(CodecBindings[i]);
             }
-            else adaptionIdMap[i] = -1; // 该类型已死，将被丢弃
+            else bindingIdMap[i] = -1; // 该类型已死，将被丢弃
         }
 
-        // =================================================
-        // 阶段 3: 计划对象重映射 (Plan Object Remap)
-        // =================================================
+        // 三：计划对象重映射 (Plan Object Remap)
         // oldObjectId -> newObjectId
         var objectIdMap = new int[ItemBlobs.Count];
-        List<ItemBlob> newBlobs = [];
+        List<ItemFrame> newBlobs = [];
         List<int> newStickies = [];
         var newIdCounter = 0;
 
@@ -412,9 +402,7 @@ public abstract class Mass : IMass
             else objectIdMap[oldId] = -1; // Dead
         }
 
-        // =================================================
-        // 阶段 4: 压缩与修正 (Compact & Relocate)
-        // =================================================
+        // 四：压缩与修正 (Compact & Relocate)
         for (var oldId = 0; oldId < ItemBlobs.Count; oldId++)
         {
             if (objectIdMap[oldId] == -1) continue;
@@ -423,9 +411,9 @@ public abstract class Mass : IMass
 
             // 修正1：处理 StickyMeta (子对象引用 ID 修正)
             var newStickyStart = newStickies.Count;
-            for (var k = oldBlob.StickyOffset; k < oldBlob.StickyOffset + oldBlob.StickyCount; k++)
+            for (var k = oldBlob.MetaHeapOffset; k < oldBlob.MetaHeapOffset + oldBlob.MetaHeapCount; k++)
             {
-                var oldMeta = StickyMetaDatas[k];
+                var oldMeta = MetaHeap[k];
                 var newMeta = oldMeta;
 
                 if ((oldMeta & 3) == 3)
@@ -439,29 +427,27 @@ public abstract class Mass : IMass
                 newStickies.Add(newMeta);
             }
 
-            // 修正2：[关键] 使用映射后的新 AdaptionId
-            int newAdaptionId = adaptionIdMap[oldBlob.AdaptionId];
+            // 修正2：[关键] 使用映射后的新 BindingId
+            var newBindingId = bindingIdMap[oldBlob.CodecBindingId];
 
-            // 防御性检查：如果 newAdaptionId 是 -1，说明逻辑有严重漏洞（活对象引用了死类型）
-            if (newAdaptionId == -1) throw new InvalidOperationException("Alive object references dead adaption type.");
+            // 防御性检查：如果 newBindingId 是 -1，说明逻辑有严重漏洞（活对象引用了死类型）
+            if (newBindingId == -1) throw new InvalidOperationException("Alive object references dead codecation type.");
 
-            newBlobs.Add(new ItemBlob(newAdaptionId, newStickyStart, oldBlob.StickyCount, oldBlob.Data));
+            newBlobs.Add(new ItemFrame(newBindingId, newStickyStart, oldBlob.MetaHeapCount, oldBlob.Data));
         }
 
-        // =================================================
-        // 阶段 5: 应用变更 (Apply)
-        // =================================================
+        // 五：应用变更
         // 替换对象表
         ItemBlobs.Clear();
         ItemBlobs.AddRange(newBlobs);
 
         // 替换元数据堆
-        StickyMetaDatas.Clear();
-        StickyMetaDatas.AddRange(newStickies);
+        MetaHeap.Clear();
+        MetaHeap.AddRange(newStickies);
 
-        // [新增] 替换适配项表
-        ItemAdaptions.Clear();
-        ItemAdaptions.AddRange(newAdaptions);
+        // 替换适配项表
+        CodecBindings.Clear();
+        CodecBindings.AddRange(newBindings);
 
         // 通知子类更新根引用
         UpdateRoots(objectIdMap);
@@ -470,7 +456,7 @@ public abstract class Mass : IMass
     protected virtual void UpdateRoots(int[] idMap)
     {
     }
-    
+
     public int Copy(int oriId)
     {
         if (oriId < 0 || oriId >= ItemBlobs.Count) throw new ArgumentOutOfRangeException(nameof(oriId));
@@ -478,7 +464,7 @@ public abstract class Mass : IMass
 
         // 事务保护
         var undoBlobStart = ItemBlobs.Count;
-        var undoStickyStart = StickyMetaDatas.Count;
+        var undoStickyStart = MetaHeap.Count;
 
         // 1. 准备队列和映射表 (BFS 核心)
         // 映射表: OldId -> NewId
@@ -490,8 +476,8 @@ public abstract class Mass : IMass
             // 2. 初始化根对象
             // 先创建占位符，确立 NewId
             var newRootId = ItemBlobs.Count;
-            ItemBlobs.Add(new ItemBlob(0, 0, 0, [])); // 占位
-            
+            ItemBlobs.Add(new ItemFrame(0, 0, 0, [])); // 占位
+
             idMap[oriId] = newRootId;
             queue.Enqueue(oriId);
 
@@ -506,12 +492,12 @@ public abstract class Mass : IMass
 
                 // 记录当前新对象的元数据起始位置
                 // 因为是 BFS，现在的 Count 一定是堆的最末尾，绝对不会比之前的 offset 小
-                var newStickyStart = StickyMetaDatas.Count;
+                var newStickyStart = MetaHeap.Count;
 
                 // 4. 处理元数据
-                for (var i = 0; i < oldBlob.StickyCount; i++)
+                for (var i = 0; i < oldBlob.MetaHeapCount; i++)
                 {
-                    var oldMeta = StickyMetaDatas[oldBlob.StickyOffset + i];
+                    var oldMeta = MetaHeap[oldBlob.MetaHeapOffset + i];
                     var type = oldMeta & 3;
                     var newMeta = oldMeta;
 
@@ -528,11 +514,11 @@ public abstract class Mass : IMass
                             {
                                 // 新发现的子对象：立即占位并入队
                                 newChildId = ItemBlobs.Count;
-                                ItemBlobs.Add(new ItemBlob(0, 0, 0, [])); // 占位
+                                ItemBlobs.Add(new ItemFrame(0, 0, 0, [])); // 占位
                                 idMap[oldChildId] = newChildId;
                                 queue.Enqueue(oldChildId);
                             }
-                            
+
                             // 更新元数据指向新 ID
                             newMeta = (newChildId << 2) | 3;
                         }
@@ -540,10 +526,10 @@ public abstract class Mass : IMass
 
                     // 立即写入全局堆
                     // BFS 保证了我们此刻写入的一定是当前这一层的数据
-                    StickyMetaDatas.Add(newMeta);
+                    MetaHeap.Add(newMeta);
                 }
 
-                var newStickyEnd = StickyMetaDatas.Count;
+                var newStickyEnd = MetaHeap.Count;
 
                 // 5. 复制实体数据
                 byte[]? newData = null;
@@ -554,7 +540,7 @@ public abstract class Mass : IMass
                 }
 
                 // 6. 提交 Blob (替换占位符)
-                ItemBlobs[currentNewId] = new ItemBlob(oldBlob.AdaptionId, newStickyStart, newStickyEnd - newStickyStart, newData);
+                ItemBlobs[currentNewId] = new ItemFrame(oldBlob.CodecBindingId, newStickyStart, newStickyEnd - newStickyStart, newData);
             }
 
             return newRootId;
@@ -562,8 +548,8 @@ public abstract class Mass : IMass
         catch (Exception ex)
         {
             // 回滚逻辑
-            if (StickyMetaDatas.Count > undoStickyStart)
-                StickyMetaDatas.RemoveRange(undoStickyStart, StickyMetaDatas.Count - undoStickyStart);
+            if (MetaHeap.Count > undoStickyStart)
+                MetaHeap.RemoveRange(undoStickyStart, MetaHeap.Count - undoStickyStart);
 
             if (ItemBlobs.Count > undoBlobStart) ItemBlobs.RemoveRange(undoBlobStart, ItemBlobs.Count - undoBlobStart);
 
@@ -590,7 +576,7 @@ public abstract class Mass : IMass
         // 临时容器
         List<bool> isItemBlobDeflatedList = [];
         List<int> itemBlobEndPositions = [];
-        List<int> itemBlobAdaptionIds = [];
+        List<int> itemBlobCodecBindingIds = [];
         List<int> fileStickyEndPositions = [];
         var objCount = 0;
 
@@ -607,12 +593,12 @@ public abstract class Mass : IMass
                 // [修正] 检查墓碑标记
                 if (itemBlobInfo == -1)
                 {
-                    itemBlobAdaptionIds.Add(-1); // 标记为已删除
+                    itemBlobCodecBindingIds.Add(-1); // 标记为已删除
                     isItemBlobDeflatedList.Add(false); // 既然删除了，压不压缩无所谓
                 }
                 else
                 {
-                    itemBlobAdaptionIds.Add(itemBlobInfo >> 1);
+                    itemBlobCodecBindingIds.Add(itemBlobInfo >> 1);
                     isItemBlobDeflatedList.Add((itemBlobInfo & 1) != 0);
                 }
             }
@@ -624,19 +610,19 @@ public abstract class Mass : IMass
             for (var i = 0; i < objCount; i++) fileStickyEndPositions.Add(inflatedDataReader.ReadInt());
 
             // 2.4 读所有元数据 (按文件顺序读入内存，此时内存是连续的)
-            StickyMetaDatas.Clear();
+            MetaHeap.Clear();
             var stickyMetaDataCount = objCount == 0 ? 0 : fileStickyEndPositions.Last();
-            for (var i = 0; i < stickyMetaDataCount; i++) StickyMetaDatas.Add(inflatedDataReader.ReadInt());
+            for (var i = 0; i < stickyMetaDataCount; i++) MetaHeap.Add(inflatedDataReader.ReadInt());
 
             // 2.5 读适配器定义
-            int regCount = inflatedDataReader.ReadInt();
-            ItemAdaptions.Clear();
+            var regCount = inflatedDataReader.ReadInt();
+            CodecBindings.Clear();
             for (var i = 0; i < regCount; i++)
             {
                 inflatedDataReader.ReadInt(); // ID (冗余，按顺序即可)
                 var str1 = inflatedDataReader.ReadString();
                 var str2 = inflatedDataReader.ReadString();
-                ItemAdaptions.Add(new ItemAdaption(str1, str2));
+                CodecBindings.Add(new CodecBinding(str1, str2));
             }
 
             // 钩子
@@ -653,14 +639,14 @@ public abstract class Mass : IMass
         for (var i = 0; i < objCount; i++)
         {
             // 计算实体数据
-            int blobStart = i == 0 ? 0 : itemBlobEndPositions[i - 1];
-            int blobLength = itemBlobEndPositions[i] - blobStart;
+            var blobStart = i == 0 ? 0 : itemBlobEndPositions[i - 1];
+            var blobLength = itemBlobEndPositions[i] - blobStart;
 
             // [修正] 根据标记决定 Data 是 null 还是 byte[]
             byte[]? itemBlobData;
 
             // 还原为“逻辑删除”状态
-            if (itemBlobAdaptionIds[i] == -1) itemBlobData = null;
+            if (itemBlobCodecBindingIds[i] == -1) itemBlobData = null;
             else
             {
                 var rawData = blobsReader.ReadBytes(blobLength); // 即使长度为0，这里也会返回 byte[0]
@@ -670,13 +656,13 @@ public abstract class Mass : IMass
 
             // [关键转换]：将文件的"结束位置"转换为内存的"Offset/Count"
             // 此时 StickyMetaDatas 是刚刚连续读入的，所以 Offset = prevStickyEnd
-            int currentStickyEnd = fileStickyEndPositions[i];
-            int stickyCount = currentStickyEnd - prevStickyEnd;
-            int stickyOffset = prevStickyEnd;
+            var currentStickyEnd = fileStickyEndPositions[i];
+            var stickyCount = currentStickyEnd - prevStickyEnd;
+            var stickyOffset = prevStickyEnd;
 
             prevStickyEnd = currentStickyEnd;
 
-            ItemBlobs.Add(new ItemBlob(itemBlobAdaptionIds[i], stickyOffset, stickyCount, itemBlobData));
+            ItemBlobs.Add(new ItemFrame(itemBlobCodecBindingIds[i], stickyOffset, stickyCount, itemBlobData));
         }
     }
 
@@ -687,9 +673,7 @@ public abstract class Mass : IMass
 
         var objCount = ItemBlobs.Count;
 
-        // -------------------------------------------------------
-        // 步骤 0：预处理数据 (Pre-calculation)
-        // -------------------------------------------------------
+        // 步骤 0：预处理数据
         // 我们需要先确定哪些项目要压缩，以及压缩后的长度，才能正确写入索引
         var finalDataChunks = new byte[objCount][];
         var isChunkDeflated = new bool[objCount];
@@ -736,9 +720,7 @@ public abstract class Mass : IMass
             }
         }
 
-        // -------------------------------------------------------
-        // 步骤 1：构建索引 (Index Building)
-        // -------------------------------------------------------
+        // 步骤 1：构建索引
         using var indexWriter = new RyoWriter(new MemoryStream());
         indexWriter.WriteInt(objCount);
 
@@ -751,7 +733,7 @@ public abstract class Mass : IMass
             if (ItemBlobs[i].Data == null) indexWriter.WriteInt(-1);
             else
             {
-                var info = ItemBlobs[i].AdaptionId << 1;
+                var info = ItemBlobs[i].CodecBindingId << 1;
                 if (isChunkDeflated[i]) info |= 1;
                 indexWriter.WriteInt(info);
             }
@@ -769,36 +751,34 @@ public abstract class Mass : IMass
         var currentVirtualStickyIndex = 0;
         for (var i = 0; i < objCount; i++)
         {
-            currentVirtualStickyIndex += ItemBlobs[i].StickyCount;
+            currentVirtualStickyIndex += ItemBlobs[i].MetaHeapCount;
             indexWriter.WriteInt(currentVirtualStickyIndex);
         }
 
         // 1.4 写入元数据 (碎片整理 - Defragmentation)
         foreach (var blob in ItemBlobs)
-            for (var k = 0; k < blob.StickyCount; k++)
-                indexWriter.WriteInt(StickyMetaDatas[blob.StickyOffset + k]);
+            for (var k = 0; k < blob.MetaHeapCount; k++)
+                indexWriter.WriteInt(MetaHeap[blob.MetaHeapOffset + k]);
 
         // 1.5 写入适配器定义
-        if (ItemAdaptions.Count == 0) indexWriter.WriteInt(0);
+        if (CodecBindings.Count == 0) indexWriter.WriteInt(0);
         else
         {
-            indexWriter.WriteInt(ItemAdaptions.Count);
+            indexWriter.WriteInt(CodecBindings.Count);
 
-            for (var i = 0; i < ItemAdaptions.Count; i++)
+            for (var i = 0; i < CodecBindings.Count; i++)
             {
-                var itemAdaption = ItemAdaptions[i];
+                var codecBinding = CodecBindings[i];
                 indexWriter.WriteInt(i);
-                indexWriter.WrintString(itemAdaption.DataJavaClz);
-                indexWriter.WrintString(itemAdaption.AdapterJavaClz);
+                indexWriter.WrintString(codecBinding.DataJavaClz);
+                indexWriter.WrintString(codecBinding.CodecJavaClz);
             }
         }
 
         // 1.6 后处理钩子
         AfterSavingIndex(indexWriter);
 
-        // -------------------------------------------------------
-        // 步骤 2：写入索引块 (Index Write)
-        // -------------------------------------------------------
+        // 步骤 2：写入索引块
         indexWriter.PositionToZero();
         var indexBytes = new RyoReader(indexWriter).ReadAllBytes();
 
@@ -816,9 +796,7 @@ public abstract class Mass : IMass
             fileWriter.WriteBytes(indexBytes);
         }
 
-        // -------------------------------------------------------
-        // 步骤 3：写入实体数据 (Body Write)
-        // -------------------------------------------------------
+        // 步骤 3：写入实体数据
         // 直接写入我们预处理好的 finalDataChunks
         for (var i = 0; i < objCount; i++)
         {
@@ -828,7 +806,6 @@ public abstract class Mass : IMass
         }
     }
 
-    // 必须保留的抽象方法/虚方法钩子
     protected virtual void AfterLoadingIndex(RyoReader reader)
     {
     }

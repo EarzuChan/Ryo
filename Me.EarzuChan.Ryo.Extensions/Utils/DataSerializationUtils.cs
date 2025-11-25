@@ -1,5 +1,5 @@
 ﻿using Me.EarzuChan.Ryo.Core.IO;
-using Me.EarzuChan.Ryo.Core.Adaptations;
+using Me.EarzuChan.Ryo.Core.Codecations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -52,8 +52,8 @@ public static class DataSerializationUtils
             return $"{{\"{type.GetElementType()?.Name}数组:{strList.Count}\":[{string.Join(',', strList)}]}}";
 
         }
-        else if (typeof(ICtorAdaptable).IsAssignableFrom(type))
-            return ToJsonWithInternalAlgorithm(((ICtorAdaptable)item).GetAdaptedArray(), type.Name);
+        else if (typeof(ICtorCodecable).IsAssignableFrom(type))
+            return ToJsonWithInternalAlgorithm(((ICtorCodecable)item).GetCodecatedArray(), type.Name);
         else
         {
             string? str = item.ToString()!.Replace("\n", "\\n").Replace("\"", "\\\"");

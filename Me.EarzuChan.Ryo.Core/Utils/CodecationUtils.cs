@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
-using Me.EarzuChan.Ryo.Core.Adaptations;
-using Me.EarzuChan.Ryo.Core.Adaptations.AdapterFactories;
-using Me.EarzuChan.Ryo.Core.Exceptions.AdaptationExceptions;
+using Me.EarzuChan.Ryo.Core.Codecations;
+using Me.EarzuChan.Ryo.Core.Codecations.CodecFactories;
+using Me.EarzuChan.Ryo.Core.Exceptions.CodecationExceptions;
 using Me.EarzuChan.Ryo.Core.Formations.HelperFormations;
 using Me.EarzuChan.Ryo.Exceptions;
 using Me.EarzuChan.Ryo.Utils;
@@ -10,17 +10,17 @@ using System.Text;
 
 namespace Me.EarzuChan.Ryo.Core.Utils;
 
-public static class AdaptationUtils
+public static class CodecationUtils
 {
     public static readonly HashSet<RyoType> RyoTypes = [];
     public static readonly HashSet<RyoType> BasicRyoTypes = [];
     private static bool _hasRyoTypesRegistered;
-    
+
     private static readonly ConcurrentDictionary<string, RyoType> JavaClassToRyoTypeCache = new();
     private static readonly ConcurrentDictionary<Type, RyoType> CsTypeToRyoTypeCache = new();
 
     // 静态构造函数
-    static AdaptationUtils() => RegDefaultRyoTypes();
+    static CodecationUtils() => RegDefaultRyoTypes();
 
     // 注册默认Ryo类型
     private static void RegDefaultRyoTypes()
@@ -51,34 +51,34 @@ public static class AdaptationUtils
         // 注册工厂类
         RyoTypes.Add(new()
         {
-            JavaClassName = "sengine.mass.serializers.DefaultSerializers$*", CsType = typeof(NormalTypeAdapterFactory)
+            JavaClassName = "sengine.mass.serializers.DefaultSerializers$*", CsType = typeof(NormalTypeCodecFactory)
         });
         RyoTypes.Add(new()
         {
             JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$*",
-            CsType = typeof(BaseArrayTypeAdapterFactory)
+            CsType = typeof(BaseArrayTypeCodecFactory)
         });
         RyoTypes.Add(new()
         {
             JavaClassName = "sengine.mass.serializers.CollectionSerializer$*",
-            CsType = typeof(BaseArrayTypeAdapterFactory)
+            CsType = typeof(BaseArrayTypeCodecFactory)
         });
         RyoTypes.Add(new()
         {
-            JavaClassName = "sengine.mass.serializers.MapSerializer$*", CsType = typeof(BaseArrayTypeAdapterFactory)
+            JavaClassName = "sengine.mass.serializers.MapSerializer$*", CsType = typeof(BaseArrayTypeCodecFactory)
         });
         RyoTypes.Add(new()
         {
             JavaClassName = "sengine.mass.serializers.MassSerializableSerializer$*",
-            CsType = typeof(CustomFormatAdapterFactory)
+            CsType = typeof(CustomFormatCodecFactory)
         });
         RyoTypes.Add(new()
         {
-            JavaClassName = "sengine.mass.serializers.FieldSerializer$*", CsType = typeof(CustomFormatAdapterFactory)
+            JavaClassName = "sengine.mass.serializers.FieldSerializer$*", CsType = typeof(CustomFormatCodecFactory)
         });
         RyoTypes.Add(new()
         {
-            JavaClassName = "sengine.graphics2d.texturefile.FIFormat$*", CsType = typeof(SpecialFormatAdapterFactory)
+            JavaClassName = "sengine.graphics2d.texturefile.FIFormat$*", CsType = typeof(SpecialFormatCodecFactory)
         });
 
         // 注册额外项目（从文件）：TODO
@@ -87,21 +87,17 @@ public static class AdaptationUtils
         _hasRyoTypesRegistered = true;
     }
 
-    public static Type? SearchAdaptableFormationsByJavaClass(this string? clzName)
+    public static Type? SearchCodecableFormationsByJavaClass(this string? clzName)
     {
         Type? baseType = null;
         var types = TypeUtils.GetAppAllTypes();
         foreach (var item in types)
         {
-            var attribute = item.GetCustomAttribute<AdaptableFormationAttribute>();
-            if (attribute != null)
-            {
-                if (attribute.FormationName == clzName)
-                {
-                    baseType = item;
-                    break;
-                }
-            }
+            var attribute = item.GetCustomAttribute<CodecableFormationAttribute>();
+            if (attribute == null || attribute.FormationName != clzName) continue;
+
+            baseType = item;
+            break;
         }
 
         return baseType;
@@ -151,8 +147,8 @@ public static class AdaptationUtils
             CsType = newCsType,
 
             // CHECK：按理，下面这个多维不继承：只对本级负责
-            IsAdaptableCustom = !oldWasArray && oldRyoType.IsAdaptableCustom,
-            IsAdaptWithCtor = !oldWasArray && oldRyoType.IsAdaptWithCtor,
+            IsCodecableCustom = !oldWasArray && oldRyoType.IsCodecableCustom,
+            IsCodecateWithCtor = !oldWasArray && oldRyoType.IsCodecateWithCtor,
 
             IsArray = true,
             IsListInternally = false // CHECK：新建的数组类型默认不是 List
@@ -176,10 +172,10 @@ public static class AdaptationUtils
         var rawClzName = clzName;
 
         // 是否是列表
-        bool isArray = clzName.StartsWith('[');
+        var isArray = clzName.StartsWith('[');
 
         // 先拨弄短名，只有是数组下才以短名示人
-        string? shortName = isArray ? clzName[1..] : null;
+        var shortName = isArray ? clzName[1..] : null;
         if (clzName.StartsWith("[[")) clzName = clzName[1..]; // 是嵌套Java类名，保留去一层的原始类名
 
         // 是否是基本类型
@@ -190,23 +186,17 @@ public static class AdaptationUtils
                 clzName = clzName[2..^1];
                 shortName = null;
             }
-            else if (shortName.Length != 1)
-                throw new RyoTypeParsingException($"Illegal Java Class input: {clzName}"); // 但是开头没有L怎么办
+            else if (shortName.Length != 1) throw new RyoTypeParsingException($"Illegal Java Class input: {clzName}"); // 但是开头没有L怎么办
         }
 
         // 初始化
-        RyoType? ryoType = null;
+        var ryoType = BasicRyoTypes.Concat(RyoTypes)
+            .Where(item => shortName != null ? item.JavaShortName == shortName :
+                item.IsJavaUniversalType ? clzName.StartsWith(item.JavaClassName![..^2]) : clzName == item.JavaClassName!)
+            .Select(item => new RyoType { JavaShortName = item.JavaShortName, JavaClassName = item.JavaClassName, CsType = item.CsType })
+            .FirstOrDefault();
 
         // 匹配注册的类
-        foreach (var item in BasicRyoTypes.Concat(RyoTypes).Where(item =>
-                     shortName != null ? item.JavaShortName == shortName :
-                     item.IsJavaUniversalType ? clzName.StartsWith(item.JavaClassName![..^2]) :
-                     clzName == item.JavaClassName!))
-        {
-            ryoType = new RyoType
-                { JavaShortName = item.JavaShortName, JavaClassName = item.JavaClassName, CsType = item.CsType };
-            break;
-        }
 
         // 没有就创建新的
         if (ryoType == null)
@@ -215,17 +205,15 @@ public static class AdaptationUtils
                 throw new RyoTypeParsingException($"There should be no class with such a short name: {shortName}");
 
             // 查找可适配自定义
-            Type? baseType = SearchAdaptableFormationsByJavaClass(clzName);
-            bool isAdaptableCustom = baseType != null;
-
-            bool isAdaptWithCtor = baseType != null && typeof(ICtorAdaptable).IsAssignableFrom(baseType);
+            Type? baseType = SearchCodecableFormationsByJavaClass(clzName);
+            var isCodecableCustom = baseType != null;
+            var isCodecateWithCtor = baseType != null && typeof(ICtorCodecable).IsAssignableFrom(baseType);
 
             // 不是可适配自定义就没有BaseType：加个策略然后抛出以免非法RyoType
-            // if (!isAdaptableCustom) throw new RyoTypeParsingException($"Unknown class, that would be a problem for us: {clzName}");
             ryoType = new()
             {
-                IsAdaptableCustom = isAdaptableCustom, JavaClassName = clzName, CsType = baseType,
-                IsAdaptWithCtor = isAdaptWithCtor
+                IsCodecableCustom = isCodecableCustom, JavaClassName = clzName, CsType = baseType,
+                IsCodecateWithCtor = isCodecateWithCtor
             };
         }
 
@@ -237,54 +225,72 @@ public static class AdaptationUtils
         return ryoType;
     }
 
-    // GetJavaByRyo
-    // 会有问题，影响外面的实例
-    public static string? ToJavaClass(this RyoType ryoType)
+    // GetJavaByRyo和GetCsByRyo
+    extension(RyoType ryoType)
     {
-        LogUtils.PrintInfo($"Resolve Java Class for: {ryoType}");
-
-        var typeNamePrefix = new StringBuilder("");
-        while (ryoType.IsArray)
+        public string? ToJavaClass()
         {
-            typeNamePrefix.Append('[');
-            ryoType = ryoType.GetArrayElementRyoType();
-            LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
+            LogUtils.PrintInfo($"Resolve Java Class for: {ryoType}");
+
+            var typeNamePrefix = new StringBuilder("");
+            while (ryoType.IsArray)
+            {
+                typeNamePrefix.Append('[');
+                ryoType = ryoType.GetArrayElementRyoType();
+                LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
+            }
+
+            if (ryoType.JavaClassName == null) return null;
+
+            return typeNamePrefix.Length != 0
+                ? ryoType.JavaShortName != null
+                    ? typeNamePrefix + ryoType.JavaShortName
+                    : typeNamePrefix.ToString() + 'L' + ryoType.JavaClassName + ';'
+                : ryoType.JavaClassName;
         }
 
-        if (ryoType.JavaClassName == null) return null;
-
-        return typeNamePrefix.Length != 0
-            ? ryoType.JavaShortName != null
-                ? typeNamePrefix + ryoType.JavaShortName
-                : typeNamePrefix.ToString() + 'L' + ryoType.JavaClassName + ';'
-            : ryoType.JavaClassName;
-    }
-
-    // GetCsByRyo
-    // 会有问题，影响外面的实例
-    public static Type? ToCsType(this RyoType ryoType)
-    {
-        LogUtils.PrintInfo($"Resolve C# Type for: {ryoType}");
-
-        List<int> arrayLevelAndTypes = [];
-        while (ryoType.IsArray)
+        public Type? ToCsType()
         {
-            arrayLevelAndTypes.Add(ryoType.IsListInternally ? 1 : 0);
-            ryoType = ryoType.GetArrayElementRyoType();
-            LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
+            LogUtils.PrintInfo($"Resolve C# Type for: {ryoType}");
+
+            List<int> arrayLevelAndTypes = [];
+            while (ryoType.IsArray)
+            {
+                arrayLevelAndTypes.Add(ryoType.IsListInternally ? 1 : 0);
+                ryoType = ryoType.GetArrayElementRyoType();
+                LogUtils.PrintInfo($"Array sublevel: {ryoType}: {ryoType.GetHashCode()}");
+            }
+
+            arrayLevelAndTypes.Reverse();
+
+            return ryoType.CsType == null
+                ? null
+                : arrayLevelAndTypes.Aggregate(ryoType.CsType,
+                    (current, arrayType) => arrayType == 0 ? current.MakeArrayType() : typeof(List<>).MakeGenericType(current));
         }
 
-        arrayLevelAndTypes.Reverse();
-
-        if (ryoType.CsType == null) return null;
-        Type baseType = ryoType.CsType;
-
-        foreach (int arrayType in arrayLevelAndTypes)
+        public RyoType? DataRyoTypeFindCodecRyoType()
         {
-            baseType = arrayType == 0 ? baseType.MakeArrayType() : typeof(List<>).MakeGenericType(baseType);
-        }
+            RyoType? result = null;
+            var types = TypeUtils.GetAppAllTypes();
+            foreach (var item in types)
+            {
+                if (!typeof(ICodecFactory).IsAssignableFrom(item)) continue;
 
-        return baseType;
+                try
+                {
+                    result = ((ICodecFactory)Activator.CreateInstance(item)!).FindCodecRyoTypeForDataRyoType(ryoType);
+                }
+                catch
+                {
+                    // HACK：暂不理
+                }
+
+                if (result != null) break;
+            }
+
+            return result;
+        }
     }
 
     // GetRyoByCs
@@ -300,8 +306,8 @@ public static class AdaptationUtils
         var rawType = type;
 
         // 列表相关
-        bool isArray = type.IsArray;
-        bool isList = false;
+        var isArray = type.IsArray;
+        var isList = false;
         if (isArray) type = type.GetElementType()!;
         else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
         {
@@ -312,22 +318,16 @@ public static class AdaptationUtils
         }
 
         // 初始化
-        RyoType? ryoType = null;
+        var ryoType = BasicRyoTypes.Concat(RyoTypes).Where(item => item.CsType == type).Select(item => new RyoType { JavaShortName = item.JavaShortName, JavaClassName = item.JavaClassName, CsType = item.CsType }).FirstOrDefault();
 
         // 匹配注册的类
-        foreach (var item in BasicRyoTypes.Concat(RyoTypes).Where(item => item.CsType == type))
-        {
-            ryoType = new RyoType
-                { JavaShortName = item.JavaShortName, JavaClassName = item.JavaClassName, CsType = item.CsType };
-            break;
-        }
 
         if (ryoType == null)
         {
             // 如果为可适配自定义，那么就有attr_format_name，就不用if 然后检测字段还是构造器
-            var attr = type.GetCustomAttribute<AdaptableFormationAttribute>();
+            var attr = type.GetCustomAttribute<CodecableFormationAttribute>();
             var clzName = attr?.FormationName;
-            bool isAdaptWithCtor = clzName != null && typeof(ICtorAdaptable).IsAssignableFrom(type);
+            bool isCodecateCodCoWithCtor = clzName != null && typeof(ICtorCodecable).IsAssignableFrom(type);
             //clzName ??= type.Name; 
             // Java不友好也不行
             // if (attr == null) throw new RyoTypeParsingException($"Unknown type, that would be a problem for us: {type}");
@@ -335,7 +335,7 @@ public static class AdaptationUtils
             // 没有就创建新的
             ryoType = new()
             {
-                IsAdaptableCustom = attr != null, IsAdaptWithCtor = isAdaptWithCtor, JavaClassName = clzName,
+                IsCodecableCustom = attr != null, IsCodecateWithCtor = isCodecateCodCoWithCtor, JavaClassName = clzName,
                 CsType = type
             };
         }
@@ -348,36 +348,11 @@ public static class AdaptationUtils
         return ryoType;
     }
 
-    // CreateAdapter（时机）
-    public static IAdapter CreateAdapter(RyoType adapterFactoryRyoType, RyoType dataRyoType)
+    // CreateCodec（时机）
+    public static ICodec CreateCodec(RyoType codecRyoType, RyoType dataRyoType)
     {
-        var factoryType = ToCsType(adapterFactoryRyoType);
+        var factoryType = ToCsType(codecRyoType);
 
-        if (typeof(IAdapterFactory).IsAssignableFrom(factoryType))
-            return ((IAdapterFactory)Activator.CreateInstance(factoryType)!).CreateAdapterForDataRyoType(dataRyoType);
-        else throw new InvalidCastException($"{adapterFactoryRyoType}不是一个适配器工厂类");
-    }
-
-    public static RyoType? DataRyoTypeFindAdapterRyoType(this RyoType ryoType)
-    {
-        RyoType? result = null;
-        var types = TypeUtils.GetAppAllTypes();
-        foreach (var item in types)
-        {
-            if (!typeof(IAdapterFactory).IsAssignableFrom(item)) continue;
-
-            try
-            {
-                result = ((IAdapterFactory)Activator.CreateInstance(item)!).FindAdapterRyoTypeForDataRyoType(ryoType);
-            }
-            catch
-            {
-                // HACK：暂不理
-            }
-
-            if (result != null) break;
-        }
-
-        return result;
+        return typeof(ICodecFactory).IsAssignableFrom(factoryType) ? ((ICodecFactory)Activator.CreateInstance(factoryType)!).CreateCodecForDataRyoType(dataRyoType) : throw new InvalidCastException($"{codecRyoType}不是一个适配器工厂类");
     }
 }

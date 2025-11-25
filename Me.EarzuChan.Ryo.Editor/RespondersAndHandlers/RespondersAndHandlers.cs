@@ -5,7 +5,7 @@ using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
 using System.IO;
-using Me.EarzuChan.Ryo.Core.Adaptations;
+using Me.EarzuChan.Ryo.Core.Codecations;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Core.Utils;
 using Me.EarzuChan.Ryo.Editor.Data;

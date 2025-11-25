@@ -1,4 +1,4 @@
-﻿using Me.EarzuChan.Ryo.Core.Adaptations;
+﻿using Me.EarzuChan.Ryo.Core.Codecations;
 using System;
 
 namespace Me.EarzuChan.Ryo.Core.Formations
@@ -7,15 +7,15 @@ namespace Me.EarzuChan.Ryo.Core.Formations
     {
         namespace Universe
         {
-            [AdaptableFormation("sengine.graphics2d.FontSprites")]
-            public class FontSprites : ICtorAdaptable
+            [CodecableFormation("sengine.graphics2d.FontSprites")]
+            public class FontSprites : ICtorCodecable
             {
                 public int[] IArr;
                 public byte[][] BArr;
                 public float F;
                 public int I;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public FontSprites(int[] iArr, byte[][] bArr, float f, int i)
                 {
                     IArr = iArr;
@@ -24,11 +24,11 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     I = i;
                 }
 
-                object[] ICtorAdaptable.GetAdaptedArray() => [IArr, BArr, F, I];
+                object[] ICtorCodecable.GetCodecatedArray() => [IArr, BArr, F, I];
             }
 
-            /*[AdaptableFormat("sengine.materials.SimpleMaterial")]
-            public class SimpleMaterial : ICtorAdaptable
+            /*[CodecableFormation("sengine.materials.SimpleMaterial")]
+            public class SimpleMaterial : ICtorCodecable
             {
                 public int I;
                 public bool Z;
@@ -47,7 +47,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 // 我干宁娘 public Texture.TextureWrap VWrap;
                 public float TGarbageTime;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public SimpleMaterial(int i, bool z, int i2, int i3, int i4, string str, float f, TextureZero r10, Shader r11, float f2, bool z2, Texture.TextureFilter textureFilter, Texture.TextureFilter textureFilter2, Texture.TextureWrap textureWrap, Texture.TextureWrap textureWrap2, float f3)
                 {
                     I = i;
@@ -68,26 +68,26 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     TGarbageTime = f3;
                 }
 
-                public object[] GetAdaptedArray()
+                public object[] GetCodecatedArray()
                 {
                     throw new NotImplementedException();
                 }
             }*/
 
-            [AdaptableFormation("sengine.graphics2d.TextureZERO")]
+            [CodecableFormation("sengine.graphics2d.TextureZERO")]
             public class TextureZero
             {
             } // TODO：Mass
 
-            [AdaptableFormation("sengine.graphics2d.Shader")]
+            [CodecableFormation("sengine.graphics2d.Shader")]
             public class Shader
             {
-            } // TODO：ShaderAdapter
+            } // TODO：ShaderCodec
         }
 
         namespace PipeDream
         {
-            [AdaptableFormation("game31.model.PhoneAppModel")]
+            [CodecableFormation("game31.model.PhoneAppModel")]
             public class PhoneAppModel
             {
                 public ContactModel[] contacts;
@@ -97,7 +97,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string[] emergency_numbers = [];
             }
 
-            [AdaptableFormation("game31.model.PhoneAppModel$PhoneRecentModel")]
+            [CodecableFormation("game31.model.PhoneAppModel$PhoneRecentModel")]
             public class PhoneRecentModel
             {
                 public string name;
@@ -105,7 +105,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string type;
             }
 
-            [AdaptableFormation("game31.model.ContactModel")]
+            [CodecableFormation("game31.model.ContactModel")]
             public class ContactModel
             {
                 public string device;
@@ -120,7 +120,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public ContactAttributeModel[] attributes = [];
             }
 
-            [AdaptableFormation("game31.model.ContactModel$ContactAttributeModel")]
+            [CodecableFormation("game31.model.ContactModel$ContactAttributeModel")]
             public class ContactAttributeModel
             {
                 public string action;
@@ -129,13 +129,13 @@ namespace Me.EarzuChan.Ryo.Core.Formations
             }
 
 
-            [AdaptableFormation("game31.DialogueTree$DialogueTreeDescriptor")]
-            public class DialogueTreeDescriptor : ICtorAdaptable
+            [CodecableFormation("game31.DialogueTree$DialogueTreeDescriptor")]
+            public class DialogueTreeDescriptor : ICtorCodecable
             {
                 public string DialogueNameSpace;
                 public List<Conversation> ConversationList;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public DialogueTreeDescriptor(string nsps, Conversation[] cons)
                 {
                     DialogueNameSpace = nsps;
@@ -147,11 +147,11 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => [DialogueNameSpace, ConversationList.ToArray()];
+                public object[] GetCodecatedArray() => [DialogueNameSpace, ConversationList.ToArray()];
             }
 
-            [AdaptableFormation("game31.DialogueTree$Conversation")]
-            public class Conversation : ICtorAdaptable
+            [CodecableFormation("game31.DialogueTree$Conversation")]
+            public class Conversation : ICtorCodecable
             {
                 public List<string> Tags;
                 public string Status;
@@ -162,7 +162,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public List<string> TagsToLock;
                 public string Trigger;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public Conversation(string[] tags, string status, UserMessage[] userMessages, bool stateOfDiswatch,
                     SenderMessage[] senderMessagers, string[] tagsToUnlock, string[] tagsToLock, string trigger)
                 {
@@ -181,20 +181,20 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() =>
+                public object[] GetCodecatedArray() =>
                 [
                     Tags.ToArray(), Status, UserMessages.ToArray(), StateOfDiswatch, SenderMessagers.ToArray(),
                     TagsToUnlock.ToArray(), TagsToLock.ToArray(), Trigger
                 ];
             }
 
-            [AdaptableFormation("game31.DialogueTree$UserMessage")]
-            public class UserMessage : ICtorAdaptable
+            [CodecableFormation("game31.DialogueTree$UserMessage")]
+            public class UserMessage : ICtorCodecable
             {
                 public bool IsHidden;
                 public string Message;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public UserMessage(string str, bool z)
                 {
                     Message = str;
@@ -206,11 +206,11 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() => [Message, IsHidden];
+                public object[] GetCodecatedArray() => [Message, IsHidden];
             }
 
-            [AdaptableFormation("game31.DialogueTree$SenderMessage")]
-            public class SenderMessage : ICtorAdaptable
+            [CodecableFormation("game31.DialogueTree$SenderMessage")]
+            public class SenderMessage : ICtorCodecable
             {
                 public string DateText;
                 public string Message;
@@ -221,7 +221,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string TimeText;
                 public string Trigger;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public SenderMessage(string message, string origin, string dataText, string timeText, float idleTime,
                     float typingTime, string trigger, float triggerTime)
                 {
@@ -240,7 +240,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 {
                 }
 
-                public object[] GetAdaptedArray() =>
+                public object[] GetCodecatedArray() =>
                 [
                     Message, Origin, DateText, TimeText, IdleTime, TypingTime, Trigger, TriggerTime
                 ];
@@ -249,41 +249,41 @@ namespace Me.EarzuChan.Ryo.Core.Formations
 
         namespace WeakPipe
         {
-            [AdaptableFormation("me.earzuchan.weakpipe.Outer")]
-            public class Outer : ICtorAdaptable
+            [CodecableFormation("me.earzuchan.weakpipe.Outer")]
+            public class Outer : ICtorCodecable
             {
                 public string Origin;
                 public Inner Inner;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public Outer(string origin, Inner inner)
                 {
                     Origin = origin;
                     Inner = inner;
                 }
 
-                public object[] GetAdaptedArray() => [Origin, Inner];
+                public object[] GetCodecatedArray() => [Origin, Inner];
             }
 
-            [AdaptableFormation("me.earzuchan.weakpipe.Inner")]
-            public class Inner : ICtorAdaptable
+            [CodecableFormation("me.earzuchan.weakpipe.Inner")]
+            public class Inner : ICtorCodecable
             {
                 public string Origin;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public Inner(string origin) => Origin = origin;
 
-                public object[] GetAdaptedArray() => [Origin];
+                public object[] GetCodecatedArray() => [Origin];
             }
 
-            [AdaptableFormation("me.earzuchan.weakpipe.HugeOuter")]
-            public class HugeOuter : ICtorAdaptable
+            [CodecableFormation("me.earzuchan.weakpipe.HugeOuter")]
+            public class HugeOuter : ICtorCodecable
             {
                 public string Origin;
                 public Inner Inner;
                 public Inner[] Inners;
 
-                [ICtorAdaptable.AdaptableConstructor]
+                [ICtorCodecable.CodecableConstructor]
                 public HugeOuter(string origin, Inner inner, Inner[] inners)
                 {
                     Origin = origin;
@@ -291,13 +291,13 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                     Inners = inners;
                 }
 
-                public object[] GetAdaptedArray() => [Origin, Inner, Inners];
+                public object[] GetCodecatedArray() => [Origin, Inner, Inners];
             }
         }
 
         namespace SIM
         {
-            [AdaptableFormation("game23.model.DialogueTreeModel")]
+            [CodecableFormation("game23.model.DialogueTreeModel")]
             public class SaraDialogueTree
             {
                 public ConditionMacroModel[] ConditionMacros;
@@ -306,14 +306,14 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public string Namespace;
             }
 
-            [AdaptableFormation("game23.model.DialogueTreeModel$ConditionMacroModel")]
+            [CodecableFormation("game23.model.DialogueTreeModel$ConditionMacroModel")]
             public class ConditionMacroModel
             {
                 public string Condition;
                 public string Name;
             }
 
-            [AdaptableFormation("game23.model.DialogueTreeModel$ConversationModel")]
+            [CodecableFormation("game23.model.DialogueTreeModel$ConversationModel")]
             public class ConversationModel
             {
                 public string Condition;
@@ -326,7 +326,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public UserMessageModel[] UserMessages;
             }
 
-            [AdaptableFormation("game23.model.DialogueTreeModel$SenderMessageModel")]
+            [CodecableFormation("game23.model.DialogueTreeModel$SenderMessageModel")]
             // ReSharper disable once ClassNeverInstantiated.Global
             public class SenderMessageModel
             {
@@ -340,7 +340,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
                 public float TypingTime;
             }
 
-            [AdaptableFormation("game23.model.DialogueTreeModel$UserMessageModel")]
+            [CodecableFormation("game23.model.DialogueTreeModel$UserMessageModel")]
             public class UserMessageModel
             {
                 public bool IsHidden;
