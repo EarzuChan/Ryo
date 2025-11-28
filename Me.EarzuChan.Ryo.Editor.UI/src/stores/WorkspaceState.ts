@@ -103,6 +103,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             } else internalCloseTab(index)
         }
 
+        // 可能要加入关闭ItemPage就关掉对应openedItem的逻辑
         function internalCloseTab(index: number) {
             openedTabs.value.splice(index, 1)
 
@@ -249,12 +250,19 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 confirm: (itemName: string, ryoType: RyoType) => {
                     console.log(massName, itemName, ryoType)
 
-                    // 重复检查
                     const volume = openedVolumes.value.find(v => v.name === massName)
                     if (volume) {
-                        const existingItem = volume.items?.find(item => item.name === itemName)
+                        const backendExists = volume.items?.find(item => item.name === itemName)
 
-                        if (existingItem) {
+                        // 如果后端没找到，再找本地。利用短路特性。
+                        // 注意：这里必须显式用变量存 index，不要和 ItemModel 混用
+                        let localIndex = -1
+                        if (!backendExists) localIndex = openedItems.value.findIndex(item =>
+                            item.fromFile === massName && item.name === itemName && item.id === -1
+                        )
+
+                        // 只要有任意一个存在
+                        if (backendExists || localIndex !== -1) {
                             dialogState.order({
                                 headline: `已存在"${itemName}"`,
                                 description: "不可重复创建同名项目，是否跳转到已有项目？",
@@ -262,12 +270,18 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                                     {text: "取消"},
                                     {
                                         text: "跳转", onClick() {
-                                            mentionItem(massName, existingItem.id!)
+                                            if (backendExists) mentionItem(massName, backendExists.id!)
+                                            else {
+                                                // 肯定是 localIndex !== -1
+                                                const tabIndex = openedTabs.value.findIndex(tab => tab.data === localIndex)
+                                                if (tabIndex !== -1) activeTabIndex.value = tabIndex
+                                                else openTab(TabType.Item, localIndex)
+                                            }
                                         }
                                     }
                                 ]
                             })
-                            return // 终止创建流程
+                            return // 终止
                         }
                     }
 
@@ -299,6 +313,38 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     openedVolumes.value = args[0]
                 })
                 console.log(TAG, "OpenedVolumesChanged监听器已创建")
+
+                addWebEventListener("VolumeItemRenamed", (args: string[]) => {
+                    const [massName, oldName, newName] = args
+                    console.log(TAG, massName, "接收重命名", oldName, "->", newName)
+
+                    const targetIdx = openedItems.value.findIndex(i => i.fromFile === massName && i.name === oldName)
+                    if (targetIdx !== -1) openedItems.value[targetIdx].name = newName
+
+                    const thePage = openedTabs.value.find(tab => tab.data === targetIdx)
+                    if (thePage) thePage.name = newName
+                })
+                console.log(TAG, "ItemRenamed监听器已创建")
+
+                addWebEventListener("VolumeItemDeleted", (args: any[]) => {
+                    const [massName, id] = args as [string, number]
+                    console.log(TAG, massName, "接收删除", id)
+                    const index = openedItems.value.findIndex(i => i.fromFile === massName && i.id === id)
+                    if (index !== -1) openedItems.value[index].id = -1 // 标记为未写入后端，对了，可能要重置unsaved、dirty啥的状态
+                })
+                console.log(TAG, "ItemDeleted监听器已创建")
+
+                addWebEventListener("VolumeIdsRemapped", (args: any[]) => {
+                    const [massName, intArr] = args as [string, number[]]
+                    console.log(TAG, massName, "已打开项目的ID重新同步", intArr) // 主要是处理openedItems里面的ID
+                    openedItems.value.forEach(item => {
+                        if (item.fromFile === massName && item.id !== -1) {
+                            const newId = intArr[item.id]
+                            if (newId !== -1) item.id = newId
+                        }
+                    })
+                })
+                console.log(TAG, "VolumeIdsRemapped监听器已创建")
 
                 emitWebEvent(makeWebLetter('NotifyOpenedVolumes'))
                 console.log(TAG, "已提醒发送OpenedVolumes")

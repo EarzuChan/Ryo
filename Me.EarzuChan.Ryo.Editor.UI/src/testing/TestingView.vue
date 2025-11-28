@@ -4,12 +4,13 @@
                   v-model="testingState.testingData" ref="testingEditor">
       <div class="testing-action-bar">
         <TextButton class="a-button" button-style="filled" id="leave-butt"
-                    @click="appState.preferTesting = false">离开测试模式
+                    @click="appState.preferTesting = false">{{ $t("leaveTestMode") }}
         </TextButton>
-        <TextButton class="a-button" button-style="filled" @click="reloadEditor">重载编辑器</TextButton>
-        <TextButton class="a-button" button-style="filled" @click="testingState.reinitData" id="reset-butt">重置数据
+        <TextButton class="a-button" button-style="filled" @click="reloadEditor">{{ $t("reloadEditor") }}</TextButton>
+        <TextButton class="a-button" button-style="filled" @click="testingState.reinitData" id="reset-butt">
+          {{ $t("resetData") }}
         </TextButton>
-        <TextButton class="a-button" button-style="filled" @click="printData" id="print-butt">打印数据</TextButton>
+        <TextButton class="a-button" button-style="filled" @click="printData" id="print-butt">{{ $t("printData") }}</TextButton>
       </div>
     </EditorHolder>
   </div>

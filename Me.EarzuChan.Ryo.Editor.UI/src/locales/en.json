@@ -111,5 +111,16 @@
   "deleteItem": "Delete Item",
   "renameItem": "Rename Item",
   "makeItemCopy": "Make Item Copy",
-  "unsaved": "Unsaved"
-}
+  "unsaved": "Unsaved",
+  "cantNameSame": "Cannot be the same as the original name",
+  "garbageCollectFile": "Compact {file}",
+  "noWrapper": "No wrapper",
+  "array": "Array",
+  "array2D": "2D Array",
+  "exitRyo": "Exit Ryo",
+  "areYouSureToExit": "Are you sure you want to exit Ryo?",
+  "enterTestMode": "Enter Test Mode",
+  "leaveTestMode": "Leave Test Mode",
+  "resetData": "Reset Data",
+  "printData": "Print Data"
+} 

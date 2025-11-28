@@ -7,6 +7,8 @@ public class MassFile : Mass
 {
     public readonly Dictionary<string, int> IdStrPairs = new();
 
+    public event Action<int[]>? OnItemIdsRemap;
+
     public MassFile() => ExtendedName = "FileSystem";
 
     public enum AddType
@@ -31,7 +33,7 @@ public class MassFile : Mass
     public AddType Add(string token, object obj)
     {
         // 不要直接Set老Id为新内容
-        
+
         // 1. 解绑旧名字
         var isAbandonOld = IdStrPairs.Remove(token);
 
@@ -39,10 +41,10 @@ public class MassFile : Mass
         var newId = Add(obj);
 
         // 3. 至于 oldId，如果没有其他对象引用它，下次 GC 就会被回收。
-        
+
         // 新增映射
         IdStrPairs.Add(token, newId);
-        
+
         return isAbandonOld ? AddType.AbandonOld : AddType.Add;
     }
 
@@ -94,6 +96,8 @@ public class MassFile : Mass
     // GC整理的回调
     protected override void UpdateRoots(int[] idMap)
     {
+        OnItemIdsRemap?.Invoke(idMap);
+
         // 必须转为 List 遍历，因为要在遍历中修改字典的值
         var keys = IdStrPairs.Keys.ToList();
 
@@ -125,7 +129,7 @@ public class MassFile : Mass
         if (IdStrPairs.ContainsKey(destToken))
         {
             if (!allowOverride) throw new DuplicateNameException($"同名项目已存在: {destToken}");
-            
+
             // 如果覆盖，先删除旧的目标（逻辑删除）
             Remove(destToken);
         }
@@ -137,7 +141,7 @@ public class MassFile : Mass
         // 4. 绑定新名字
         // 注意：如果是 overwrite 模式，Remove(destToken) 已经移除了 Key，这里是安全的 Add
         // 如果 Remove 只是标记 ID 删除但没移除 Key（取决于你的 Remove 实现），这里应该用索引器
-        IdStrPairs[destToken] = newId; 
+        IdStrPairs[destToken] = newId;
     }
 
     protected override void AfterLoadingIndex(RyoReader reader)

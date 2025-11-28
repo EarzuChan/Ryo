@@ -111,5 +111,16 @@
   "deleteItem": "Удалить элемент",
   "renameItem": "Переименовать элемент",
   "makeItemCopy": "Сделать копию элемента",
-  "unsaved": "Несохранено"
+  "unsaved": "Несохранено",
+  "cantNameSame": "Не может быть таким же, как исходное имя",
+  "garbageCollectFile": "Очистить {file}",
+  "noWrapper": "Без обёртки",
+  "array": "Массив",
+  "array2D": "Двумерный массив",
+  "exitRyo": "Выйти из Ryo",
+  "areYouSureToExit": "Вы уверены, что хотите выйти из Ryo?",
+  "enterTestMode": "Войти в тестовый режим",
+  "leaveTestMode": "Выйти из тестового режима",
+  "resetData": "Сбросить данные",
+  "printData": "Распечатать данные"
 }

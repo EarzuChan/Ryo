@@ -99,7 +99,7 @@ function showMenuOf(menuType: MenuBarItem) {
               action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
             },
             {
-              name: t('garbageCollect', {file: workspaceState.activeVolume!}),
+              name: t('garbageCollectFile', {file: workspaceState.activeVolume!}),
               action: () => workspaceState.gcVolume(workspaceState.activeVolume!)
             },
             {
@@ -124,8 +124,8 @@ function showMenuOf(menuType: MenuBarItem) {
             name: t('exit'), action: () => {
               dialogState.order({
                 icon: 'ryo',
-                headline: '退出Ryo',
-                description: '您确定要退出Ryo吗？',
+                headline: t('exitRyo'),
+                description: t('areYouSureToExit'),
                 actions: [
                   {
                     text: t('cancel')

@@ -106,7 +106,6 @@
   "ignoreCase": "不区分大小写",
   "useGangAndMinor": "仅建议使用小写字母、点、横杠和数字，用'/'分割路径",
   "noResultCheckUrInput": "没有结果，请检查你的输入",
-  "enterTestMode": "进入测试模式",
   "selectWrapperType": "选择包装器类型",
   "makeArray": "弄为数组",
   "garbageCollect": "整理本卷",
@@ -114,5 +113,15 @@
   "renameItem": "重命名项目",
   "makeItemCopy": "创建项目副本",
   "unsaved": "未保存",
-  "cantNameSame": "不可与原名相同"
+  "cantNameSame": "不可与原名相同",
+  "garbageCollectFile": "整理{file}",
+  "noWrapper": "无包装",
+  "array": "数组",
+  "array2D": "二维数组",
+  "exitRyo": "退出Ryo",
+  "areYouSureToExit": "您确定要退出Ryo吗？",
+  "enterTestMode": "进入测试模式",
+  "leaveTestMode": "离开测试模式",
+  "resetData": "重置数据",
+  "printData": "打印数据"
 }

@@ -67,8 +67,12 @@ public class AppInitializedHandler : IAppEventHandler
 {
     public void Handle(KurisuAppContext context)
     {
-        context.Inject<LocalVolumeManager>()!.VolumesChanged +=
-            (volumes) => MiscUtils.EmitOpenedVolumes(context, volumes);
+        var man = context.Inject<LocalVolumeManager>()!;
+        
+        man.VolumesChanged += (volumes) => MiscUtils.EmitOpenedVolumes(context, volumes);
+        man.VolumeItemDeleted += (volume, itemId) => { context.EmitWebEvent(new("VolumeItemDeleted", volume, itemId)); };
+        man.VolumeItemRenamed += (volume, old, name) => { context.EmitWebEvent(new("VolumeItemRenamed", volume, old, name)); };
+        man.VolumeIdsRemapped += (volume, idMap) => { context.EmitWebEvent(new("VolumeIdsRemapped", volume, idMap)); };
     }
 }
 

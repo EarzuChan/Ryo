@@ -69,7 +69,7 @@ const typeFilterErrorText = ref("")
 
 const itemNameErrorText = ref("")
 
-const wrapperTypes = ["无包装", "数组", "二维数组"]
+const wrapperTypes = ["noWrapper", "array", "array2d"]
 
 const preferredWrapperType = ref(0)
 

@@ -13,6 +13,12 @@ public class LocalVolumeManager
 
     public event Action<Dictionary<LocalVolume, LocalVolumeMetaData>>? VolumesChanged;
 
+    public event Action<string, string, string>? VolumeItemRenamed;
+
+    public event Action<string, int>? VolumeItemDeleted;
+
+    public event Action<string, int[]>? VolumeIdsRemapped;
+
     public LocalVolume CreateNewVolume(string fileName)
     {
         var massFile = new MassFile();
@@ -101,6 +107,15 @@ public class LocalVolumeManager
 
     // 虽然通知卷更改，但是前端的标签页唯一可信源这一块导致不同步
     internal void NotifyVolumesChanged() => VolumesChanged?.Invoke(Volumes);
+
+    internal void NotifyVolumeItemRenamed(string volumeName, string oldName, string newName) =>
+        VolumeItemRenamed?.Invoke(volumeName, oldName, newName);
+
+    internal void NotifyVolumeItemDeleted(string volumeName, int id) =>
+        VolumeItemDeleted?.Invoke(volumeName, id);
+
+    internal void NotifyVolumeIdsRemapped(string volumeName, int[] idMap) =>
+        VolumeIdsRemapped?.Invoke(volumeName, idMap);
 }
 
 public record LocalVolumeMetaData(string? LocalPath);
@@ -121,6 +136,8 @@ public class LocalVolume
         _massFile = massFile;
         _manager = manager;
         VolumeName = fileName;
+
+        massFile.OnItemIdsRemap += idMap => _manager.NotifyVolumeIdsRemapped(VolumeName, idMap);
     }
 
     public int Count => _massFile.IdStrPairs.Count;
@@ -139,7 +156,7 @@ public class LocalVolume
         _manager.NotifyVolumesChanged();
         return ret;
     }
-    
+
     public void GiveName(int id, string name)
     {
         _massFile.GiveName(id, name);
@@ -192,8 +209,14 @@ public class LocalVolume
 
     public bool Remove(string name, bool gc = false)
     {
-        var state = _massFile.Remove(name);
+        var id = IdStrPairs.GetValueOrDefault(name, -1);
+
+        if (id == -1) return false;
+
+        var state = _massFile.Remove(id);
         Unsaved = true;
+
+        if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
         if (gc) _massFile.CollectGarbage();
 
@@ -204,7 +227,9 @@ public class LocalVolume
     public bool Remove(int id, bool gc = false)
     {
         var state = _massFile.Remove(id);
-        Unsaved = true;
+        Unsaved = state || Unsaved;
+
+        if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
         if (gc) _massFile.CollectGarbage();
 
@@ -244,8 +269,9 @@ public class LocalVolume
     public void Rename(string oldName, string newName)
     {
         _massFile.Rename(oldName, newName);
-
         Unsaved = true;
+
+        _manager.NotifyVolumeItemRenamed(VolumeName, oldName, newName);
         _manager.NotifyVolumesChanged();
     }
 }
