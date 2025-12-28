@@ -1,13 +1,29 @@
-﻿# 鿌 (Me.EarzuChan.Ryo)
+﻿## 📢 维护状态与征集维护者
+
+**注意：本项目正在寻求新的维护者。**
+
+由于我个人职业和生活重心的转移，我已无法继续为这个生态系统提供其应有的积极维护。在过去的三年里，我将全部热忱倾注于这些项目中——尽管没有任何经济回报，但我经历了巨大的成长，也感受到了社区带来的喜悦。
+
+愿景依然宏大，根基依然稳固：
+*   [RyoCore](Me.EarzuChan.Ryo.Core)：具有强大的性能与合理的架构，由本人精益求精地用C#打造。
+*   [RyoEditor](Me.EarzuChan.Ryo.Editor)：致力于美观UI与强大功能、高性能、高稳定性，虽离完全达成目标仍有距离。
+*   Teio：一个尚未开发的具有社区潜力的多平台Simulacra系列游戏启动器。
+*   [Sakiko](https://github.com/earzuchan/sakiko)：一个全新的、统一的Kotlin多平台Hook框架，正等待着它的第一个重大应用。
+
+经过三年的潜心开发，由于个人职业生涯的转变，我正将此项目转入被动维护状态。虽然我无法再亲临一线，但该生态系统的路线图依然宏大且可行。
+
+我正在远去（悲），但“火焰”不应熄灭。我正在寻找一位有远见的人——不仅是一个能“修复漏洞”的人，而是一个能将这些蓝图带向最终形态的**火炬手**。
+
+致下一任负责人：你是在继承一份凝聚了三年汗水与架构演进的遗产。你是这份伟大愿景的传达者。如果你有动力将这些可能性变为现实，请联系我或提交Issue，商讨维护权/管理权的移交事宜。
 
 ## 概述
 
-鿌 是一个综合解决方案，专为浏览和编辑由 SEngine 开发的 Simulacra
+涼 是一个综合解决方案，专为浏览和编辑由 SEngine 开发的 Simulacra
 系列游戏资源而设计。该解决方案支持各种游戏数据类型，包括游戏剧情、存档、模型、配置和游戏内的视听资源。开发栈主要由 .NET C#
 组成后端，前端用户界面部分由 TypeScript 和 Vue3 组成。
 
-鿌
-的名字源于日文，鿌实际上是动漫作品[孤独摇滚！](https://zh.wikipedia.org/wiki/%E5%AD%A4%E7%8D%A8%E6%90%96%E6%BB%BE%EF%BC%81_(%E5%8B%95%E7%95%AB))
+涼
+的名字源于日文，涼实际上是动漫作品[孤独摇滚！](https://zh.wikipedia.org/wiki/%E5%AD%A4%E7%8D%A8%E6%90%96%E6%BB%BE%EF%BC%81_(%E5%8B%95%E7%95%AB))
 中的一个角色。
 
 ## 特性
@@ -19,7 +35,7 @@
 
 ## 使用说明
 
-如果你是普通用户，想立即编辑游戏资源，请在 [发布页](https://github.com/earzuchan/ryo/releases) 下载 鿌
+如果你是普通用户，想立即编辑游戏资源，请在 [发布页](https://github.com/earzuchan/ryo/releases) 下载 涼
 Editor。如需支持和更新，请加入官方
 Discord 社区 [Hello Simulacra](https://discord.gg/KBhhVy2s)。
 
@@ -27,9 +43,9 @@ Discord 社区 [Hello Simulacra](https://discord.gg/KBhhVy2s)。
 
 ### Me.EarzuChan.Ryo.Core
 
-也叫 鿌 Library。
+也叫 涼 Library。
 
-这是提供 鿌 解决方案主要功能的核心库。
+这是提供 涼 解决方案主要功能的核心库。
 
 要开始使用此库，您可以查看我们的 [Wiki](https://github.com/EarzuChan/Ryo/wiki) 以获取详细文档。
 
@@ -70,12 +86,12 @@ txfile.Save(saveStream);
 
 ### Me.EarzuChan.Ryo.Editor
 
-也叫 鿌 Editor。
+也叫 涼 Editor。
 
-一个正在开发中的 鿌 GUI，使用 Me.EarzuChan.Ryo.Kurisu 框架构建。它是一个优雅且用户友好的编辑器应用程序，允许用户同时打开和编辑多个资源包，使用类似
+一个正在开发中的 涼 GUI，使用 Me.EarzuChan.Ryo.Kurisu 框架构建。它是一个优雅且用户友好的编辑器应用程序，允许用户同时打开和编辑多个资源包，使用类似
 VSCode 的可视化编辑器视图。这款强大的编辑器应用程序旨在为普通用户提供简便的使用体验。
 
-我们有一个官方的 鿌 Editor 用户指南，你可以在软件的帮助菜单中找到。
+我们有一个官方的 涼 Editor 用户指南，你可以在软件的帮助菜单中找到。
 
 ### Me.EarzuChan.Ryo.Editor.UI
 
@@ -89,14 +105,14 @@ Me.EarzuChan.Ryo.Editor 的前端 UI 部分，使用 Vue3 和 TypeScript 构建�
 
 ### Me.EarzuChan.Ryo.ConsoleFrontEnd
 
-也叫 鿌 Console。
+也叫 涼 Console。
 
 使用 Me.EarzuChan.Ryo.ConsoleSystem 框架构建的命令行前端应用程序。用户手书在 [这里](RYO_CONSOLE_USER_HANDBOOK.md)
 。（由于我们不计划积极更新此项目，因此我们暂不会为该文档撰写中文版）
 
 ### Me.EarzuChan.Ryo.ConsoleTest
 
-一个用于测试 鿌 系统的应用程序，同样使用 Me.EarzuChan.Ryo.ConsoleSystem 框架构建。
+一个用于测试 涼 系统的应用程序，同样使用 Me.EarzuChan.Ryo.ConsoleSystem 框架构建。
 
 ### Me.EarzuChan.Ryo.Extensions
 
@@ -115,7 +131,7 @@ WebCall（类似于 RESTful 请求）和 WebEvent（双向通信）。
 - **TeioAPI**：一套提供给 Teio Mod 开发者的 API，用于与启动器进行交互，以及对游戏和资源进行操作。
 - **~~Soyorin~~没想好名字**：一个为 Simulacra 玩家制作的 IDE，旨在创作 Mod
   和衍生版本。它将方便解包原版游戏应用（用户需自行提供原版包）、管理游戏资源、一键打包改版资源，并与
-  鿌 Editor 联动。
+  涼 Editor 联动。
 - **Sakiko**：次世代JvmHook框架，计划支持桌面和安卓平台，为TeioAPI提供游戏生命周期事件注册与自定义Hook的能力。
 
 ## 联系方式
