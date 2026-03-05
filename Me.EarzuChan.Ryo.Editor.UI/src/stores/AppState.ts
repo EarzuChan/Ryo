@@ -1,6 +1,6 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
-import {makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
+import {emitWebEvent, makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
 import {type EditorDescriptor, type RyoType, type TypeSchema} from "@/models/AppModels"
 import NumberEditor from "@/components/editors/NumberEditor.vue"
 import TextEditor from "@/components/editors/TextEditor.vue"
@@ -8,6 +8,7 @@ import BooleanEditor from "@/components/editors/BooleanEditor.vue"
 import ArrayEditor from "@/components/editors/ArrayEditor.vue"
 import FieldEditor from "@/components/editors/FieldEditor.vue"
 import {setLanguage, sysLang} from "@/misc/I18n"
+import {i18n} from "@/misc/I18n"
 
 const TAG = "AppState"
 
@@ -29,11 +30,19 @@ export const useAppStateStore = defineStore('app-state', () => {
         const dataTypeSchemas = ref<TypeSchema[]>([])
         const sidePanelExpanded = ref(true)
         const reffedAppLanguage = ref(sysLang)
+        function applyLanguage(value: string, persist: boolean) {
+            if (reffedAppLanguage.value === value && i18n.global.locale.value === value) return
+            if (setLanguage(value)) {
+                reffedAppLanguage.value = value as "zh" | "en" | "ru"
+                if (persist) emitWebEvent(makeWebLetter("Preference:Language", value))
+            }
+        }
+
         const appLanguage = computed({
             get: () => reffedAppLanguage.value,
             set(value: string) {
                 console.log(TAG, "设置语言", value)
-                if (setLanguage(value)) reffedAppLanguage.value = value
+                applyLanguage(value, true)
             }
         })
 
@@ -45,7 +54,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             const editors: EditorDescriptor[] = []
 
             if (ryoType.isArray) {
-                editors.push({id: "generic.array", title: "数组编辑器", component: ArrayEditor, priority: 10})
+                editors.push({id: "generic.array", titleKey: "editorGenericArray", component: ArrayEditor, priority: 10})
                 return editors
             }
 
@@ -54,7 +63,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             switch (ryoType.baseType.type) {
                 case "java.lang.String":
                 case "java.lang.Character":
-                    editors.push({id: "generic.text", title: "文本编辑器", component: TextEditor, priority: 10})
+                    editors.push({id: "generic.text", titleKey: "editorGenericText", component: TextEditor, priority: 10})
                     break
                 case "java.lang.Integer":
                 case "java.lang.Long":
@@ -62,15 +71,15 @@ export const useAppStateStore = defineStore('app-state', () => {
                 case "java.lang.Double":
                 case "java.lang.Short":
                 case "java.lang.Byte":
-                    editors.push({id: "generic.number", title: "数字编辑器", component: NumberEditor, priority: 10})
+                    editors.push({id: "generic.number", titleKey: "editorGenericNumber", component: NumberEditor, priority: 10})
                     break
                 case "java.lang.Void":
                     break
                 case "java.lang.Boolean":
-                    editors.push({id: "generic.boolean", title: "布尔编辑器", component: BooleanEditor, priority: 10})
+                    editors.push({id: "generic.boolean", titleKey: "editorGenericBoolean", component: BooleanEditor, priority: 10})
                     break
                 default:
-                    editors.push({id: "generic.field", title: "对象编辑器", component: FieldEditor, priority: 10})
+                    editors.push({id: "generic.field", titleKey: "editorGenericField", component: FieldEditor, priority: 10})
                     break
             }
 
@@ -197,28 +206,29 @@ export const useAppStateStore = defineStore('app-state', () => {
 
         function validateDataByRyoType(type: RyoType, data: any): ValidationResult {
             const issues: ValidationIssue[] = []
+            const tr = i18n.global.t
 
-            const walk = (t: RyoType, val: any, path: string) => {
+            const walk = (ryoType: RyoType, val: any, path: string) => {
                 if (val === null || val === undefined) return
 
-                if (t.isArray) {
+                if (ryoType.isArray) {
                     if (!Array.isArray(val)) {
-                        issues.push({path, message: `期望数组，实际为 ${typeof val}`})
+                        issues.push({path, message: tr("validationExpectedArrayActualType", {actual: typeof val}) as string})
                         return
                     }
 
-                    const sub = getRyoTypeByDataTypeName(t.typeName)
+                    const sub = getRyoTypeByDataTypeName(ryoType.typeName)
                     val.forEach((it: any, index: number) => walk(sub, it, `${path}[${index}]`))
                     return
                 }
 
-                const baseType = t.baseType
+                const baseType = ryoType.baseType
                 if (!baseType) return
 
                 switch (baseType.type) {
                     case "java.lang.String":
                     case "java.lang.Character":
-                        if (typeof val !== "string") issues.push({path, message: `期望字符串，实际为 ${typeof val}`})
+                        if (typeof val !== "string") issues.push({path, message: tr("validationExpectedStringActualType", {actual: typeof val}) as string})
                         return
                     case "java.lang.Integer":
                     case "java.lang.Long":
@@ -226,16 +236,16 @@ export const useAppStateStore = defineStore('app-state', () => {
                     case "java.lang.Double":
                     case "java.lang.Short":
                     case "java.lang.Byte":
-                        if (typeof val !== "number" || Number.isNaN(val)) issues.push({path, message: `期望数字，实际为 ${typeof val}`})
+                        if (typeof val !== "number" || Number.isNaN(val)) issues.push({path, message: tr("validationExpectedNumberActualType", {actual: typeof val}) as string})
                         return
                     case "java.lang.Boolean":
-                        if (typeof val !== "boolean") issues.push({path, message: `期望布尔值，实际为 ${typeof val}`})
+                        if (typeof val !== "boolean") issues.push({path, message: tr("validationExpectedBooleanActualType", {actual: typeof val}) as string})
                         return
                     case "java.lang.Void":
                         return
                     default:
                         if (typeof val !== "object" || Array.isArray(val)) {
-                            issues.push({path, message: `期望对象，实际为 ${typeof val}`})
+                            issues.push({path, message: tr("validationExpectedObjectActualType", {actual: typeof val}) as string})
                             return
                         }
 
@@ -275,7 +285,7 @@ export const useAppStateStore = defineStore('app-state', () => {
 
                 const fetchedLanguage = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("Preference:Language", reffedAppLanguage.value)))[0]
                 console.log(TAG, "Language fetched", fetchedLanguage)
-                appLanguage.value = fetchedLanguage
+                applyLanguage(fetchedLanguage, false)
 
                 const fetchedTesting = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:5")))[0]
                 console.log(TAG, "Testing fetched", fetchedTesting)

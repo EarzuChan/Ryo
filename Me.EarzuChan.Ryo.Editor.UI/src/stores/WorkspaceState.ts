@@ -512,20 +512,16 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function buildValidationError(item: FileModel, payload: any): CommandError | null {
-            if (!item.fromFile || !item.name || !item.dataTypeName) {
-                return {
-                    code: CommandErrorCode.Validation,
-                    message: "项目信息不完整，无法保存。",
-                    recoverHint: "请检查项目名称、所属文件和类型信息是否完整。",
-                }
+            if (!item.fromFile || !item.name || !item.dataTypeName) return {
+                code: CommandErrorCode.Validation,
+                message: t("saveErrorItemInfoIncomplete"),
+                recoverHint: t("saveErrorCheckItemMetaHint"),
             }
 
-            if (!item.ryoType) {
-                return {
-                    code: CommandErrorCode.Validation,
-                    message: "项目类型信息缺失，无法保存。",
-                    recoverHint: "请重新打开该项目后重试。",
-                }
+            if (!item.ryoType) return {
+                code: CommandErrorCode.Validation,
+                message: t("saveErrorItemTypeMissing"),
+                recoverHint: t("saveErrorReopenAndRetryHint"),
             }
 
             const validation = appState.validateDataByRyoType(item.ryoType, payload)
@@ -533,11 +529,13 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 const top = validation.issues.slice(0, 5)
                     .map(issue => `${issue.path}: ${issue.message}`)
                     .join("\n")
-                const remain = validation.issues.length > 5 ? `\n... 其余 ${validation.issues.length - 5} 项` : ""
+                const remain = validation.issues.length > 5
+                    ? t("saveErrorValidationRemaining", {count: validation.issues.length - 5})
+                    : ""
                 return {
                     code: CommandErrorCode.Validation,
-                    message: `数据校验失败：\n${top}${remain}`,
-                    recoverHint: "请修正非法字段后再保存。",
+                    message: t("saveErrorValidationFailedWithDetails", {details: top, remain}),
+                    recoverHint: t("saveErrorFixInvalidFieldsHint"),
                 }
             }
 
@@ -568,8 +566,10 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         function formatErrorReason(reason: any): string {
             if (typeof reason === "object" && reason && "message" in reason) {
-                const msg = `${(reason as CommandError).message}`
-                const recoverHint = (reason as CommandError).recoverHint
+                const commandError = reason as CommandError
+                const msg = `${commandError.message}`
+                const recoverHint = commandError.recoverHint
+                    ?? (commandError.code === CommandErrorCode.Conflict ? t("saveErrorConflictRecoverHint") : undefined)
                 return recoverHint ? `${msg}\n${recoverHint}` : msg
             }
             if (reason instanceof Error) return reason.message
@@ -585,7 +585,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             return new Promise(resolve => {
                 dialogState.order({
                     icon: "close",
-                    headline: `保存${itemName}失败`,
+                    headline: t("saveItemFailed", {item: itemName}),
                     description: formatErrorReason(reason),
                     actions: [{text: t('confirm')}],
                     onClosed: () => resolve(),
@@ -610,7 +610,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             }
 
             console.error(TAG, "保存项目失败", item, result.error)
-            if (showErrorDialog) await showSaveErrorDialog(item.name ?? "Unknown", result.error)
+            if (showErrorDialog) await showSaveErrorDialog(item.name ?? t("unknown"), result.error)
             return false
         }
 
@@ -674,7 +674,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     const item = getItemByKey(itemKey)
                     if (!item || !item.unsaved) continue
 
-                    const action = await askUnsavedItemAction(item.name ?? "Unnamed")
+                    const action = await askUnsavedItemAction(item.name ?? t("noNameItem"))
                     if (action === "cancel") return
                     if (action === "save") {
                         const saved = await saveItemByKey(itemKey, true)

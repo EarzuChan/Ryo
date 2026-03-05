@@ -24,7 +24,7 @@ export interface RyoType {
 
 export interface EditorDescriptor {
     id: string
-    title: string
+    titleKey: string
     component: any
     priority?: number
 }

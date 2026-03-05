@@ -79,8 +79,8 @@ const supportedEditors = computed(() => {
 })
 const supportedEditorTitles = computed(() => {
   const editors = supportedEditors.value
-  if (editors.length === 0) return ["未知类型 无可用编辑器"]
-  return editors.map(editor => editor.title)
+  if (editors.length === 0) return [t("noAvailableEditorForUnknownType")]
+  return editors.map(editor => t(editor.titleKey))
 })
 const inOutMethods = computed(() => {
   const typeName = itemData.value.ryoType

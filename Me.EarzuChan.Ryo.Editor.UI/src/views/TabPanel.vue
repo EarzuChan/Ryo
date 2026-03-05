@@ -21,11 +21,13 @@
       <div id="separator"/>
     </div>
     <div id="content_container">
-      <KeepAlive include="ItemPage">
-        <Component class="content" :key="workspaceState.activeTab?.key ?? workspaceState.activeTabIndex"
-                   :is="currentTabPageOrEmptyPage"
-                   :data="workspaceState.activeTab?.data"/>
-      </KeepAlive>
+      <div class="content_shell" :class="{'page-padding': shouldPadActivePage}">
+        <KeepAlive include="ItemPage">
+          <Component class="content" :key="workspaceState.activeTab?.key ?? workspaceState.activeTabIndex"
+                     :is="currentTabPageOrEmptyPage"
+                     :data="workspaceState.activeTab?.data"/>
+        </KeepAlive>
+      </div>
     </div>
   </div>
 </template>
@@ -35,12 +37,18 @@ import IconButton from "@/components/IconButton.vue"
 import {computed, ref} from "vue"
 import EmptyPage from "@/views/pages/EmptyPage.vue"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import ItemPage from "@/views/pages/ItemPage.vue"
+import WelcomePage from "@/views/pages/WelcomePage.vue"
 
 const TAG = "Tabs"
 
 const tabIconHovering = ref(-1)
 const workspaceState = useWorkspaceStateStore()
 const currentTabPageOrEmptyPage = computed(() => workspaceState.activeTab?.page || EmptyPage)
+const shouldPadActivePage = computed(() => {
+  const page = workspaceState.activeTab?.page
+  return page === ItemPage || page === WelcomePage
+})
 
 function clickTab(index: number) {
   console.log(TAG, "点击了第" + (index + 1) + "个标签")
@@ -155,7 +163,13 @@ function closeTab(index: number) {
 #content_container {
   flex: 1;
   overflow: auto;
+}
 
+.content_shell {
+  min-height: 100%;
+}
+
+.content_shell.page-padding {
   padding: 24px;
 }
 

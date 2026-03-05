@@ -23,7 +23,6 @@ export function normalizeCommandError(err: any, fallbackCode: CommandErrorCode =
     if (message.includes("卷版本冲突")) return {
         code: CommandErrorCode.Conflict,
         message,
-        recoverHint: "该项目已被其他操作修改，请先刷新编辑器后再重试保存。",
         cause: err,
     }
 
