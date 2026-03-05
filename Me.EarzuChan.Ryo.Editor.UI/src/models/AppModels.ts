@@ -24,6 +24,7 @@ export interface RyoType {
 
 export interface FileModel {
     id: number
+    itemKey?: string
     fromFile?: string
     name?: string
     unsaved?: boolean
@@ -48,6 +49,7 @@ export interface Pair<T, U> {
 }
 
 export interface TabModel {
+    key?: string
     name: string,
     nonResident?: boolean
     page?: any
@@ -57,7 +59,8 @@ export interface TabModel {
 export enum TabType {
     Welcome,
     Item,
-    Empty
+    Empty,
+    Settings
 }
 
 export type SessionPathSegment = string | number

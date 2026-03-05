@@ -2,7 +2,8 @@
   <div id="tab_panel">
     <div id="tab_panel_top_bar" v-if="workspaceState.openedTabs.length!==0">
       <div id="tab_panel_container">
-        <div v-for="(tab,index) in workspaceState.openedTabs" @dblclick="anchorTab(index)" @click="clickTab(index)"
+        <div v-for="(tab,index) in workspaceState.openedTabs" :key="tab.key ?? index"
+             @dblclick="anchorTab(index)" @click="clickTab(index)"
              class="tab_container"
              :class="{'active':workspaceState.activeTabIndex===index}">
           <div class="tab_top_padding"/>
@@ -21,7 +22,8 @@
     </div>
     <div id="content_container">
       <KeepAlive include="ItemPage">
-        <Component class="content" :is="currentTabPageOrEmptyPage"
+        <Component class="content" :key="workspaceState.activeTab?.key ?? workspaceState.activeTabIndex"
+                   :is="currentTabPageOrEmptyPage"
                    :data="workspaceState.activeTab?.data"/>
       </KeepAlive>
     </div>

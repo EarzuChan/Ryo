@@ -9,7 +9,7 @@
       <div id="side-panel-control-buttons">
         <IconButton :size="48" :icon="appState.sidePanelExpanded?'panel_narrow':'panel'"
                     @click="appState.sidePanelExpanded=!appState.sidePanelExpanded"/>
-        <IconButton :size="48" disabled icon="settings" @click="openSettings"/>
+        <IconButton :size="48" icon="settings" @click="openSettings"/>
       </div>
     </div>
     <div id="side-panel-content" v-show="appState.sidePanelExpanded">
@@ -25,6 +25,8 @@ import IconButton from "@/components/IconButton.vue"
 import {ref} from "vue"
 import ExplorerPanel from "@/views/sidePanels/ExplorerPanel.vue"
 import {useAppStateStore} from "@/stores/AppState"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import {TabType} from "@/models/AppModels"
 
 interface SidePanelItem {
   name: string
@@ -38,8 +40,10 @@ const sidePanelItems = [
 const currentPanel = ref<number>(0)
 
 const appState = useAppStateStore()
+const workspaceState = useWorkspaceStateStore()
 
 function openSettings() {
+  workspaceState.openTab(TabType.Settings)
 }
 
 function clickPanelTab(item: SidePanelItem, index: number) {

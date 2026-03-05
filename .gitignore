@@ -12,6 +12,7 @@
 Me.EarzuChan.Ryo.Editor/WebResources
 
 .idea
+.tmp_build
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

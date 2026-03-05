@@ -91,7 +91,13 @@ function afterLeave() {
 
 .dialog-enter-from,
 .dialog-leave-to {
-  transform: scale(5);
+  transform: translateY(12px) scale(0.96);
   opacity: 0;
+}
+
+.dialog-enter-to,
+.dialog-leave-from {
+  transform: translateY(0) scale(1);
+  opacity: 1;
 }
 </style>

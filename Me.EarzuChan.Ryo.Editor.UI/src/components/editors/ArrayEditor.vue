@@ -123,6 +123,8 @@ function addItem() {
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 8px;
 }
 

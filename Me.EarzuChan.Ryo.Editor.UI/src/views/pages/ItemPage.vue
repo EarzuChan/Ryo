@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import {computed, getCurrentInstance, onActivated, onDeactivated, ref, watch} from "vue"
-import {arrayToText, boolToText, deepCopy, ensure, getSfcName, TODO} from "@/utils/UsefulUtils"
+import {arrayToText, boolToText, ensure, getSfcName, TODO} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
 import TextButton from "@/components/TextButton.vue"
@@ -53,19 +53,19 @@ const workspaceState = useWorkspaceStateStore()
 重做编辑器容器底部栏 弄成插槽？*/
 
 const props = defineProps({
-  data: Number
+  data: String
 })
 
-const itemIndex = computed(() => ensure(props.data) ? props.data! : -1)
+const itemKey = computed(() => ensure(props.data) ? props.data! : "")
 
 const itemData = computed<FileModel>(() => {
-  console.debug(TAG, "获取项目数据", props.data, workspaceState.openedItems.length)
-  if (itemIndex.value > -1 && itemIndex.value < workspaceState.openedItems.length) {
-    const item = workspaceState.openedItems[itemIndex.value]
-    workspaceState.ensureItemSession(itemIndex.value)
+  console.debug(TAG, "获取项目数据", props.data)
+  const item = workspaceState.openedItems.find(i => i.itemKey === itemKey.value)
+  if (item) {
+    workspaceState.ensureItemSession(itemKey.value)
     return item
   } else {
-    console.error(TAG, "无效的项目数据索引")
+    console.error(TAG, "无效的项目Key")
     return {id: -1, parseSuccess: false}
   }
 })
@@ -91,10 +91,10 @@ watch(() => {
   if (!ensure(item.tempData)) return undefined
   return JSON.stringify(item.tempData)
 }, (newJson, oldJson) => {
-  if (!ensure(newJson) || !ensure(oldJson) || newJson === oldJson || itemIndex.value < 0) return
+  if (!ensure(newJson) || !ensure(oldJson) || newJson === oldJson || !itemKey.value) return
 
   try {
-    workspaceState.recordItemSessionChange(itemIndex.value, JSON.parse(oldJson!), JSON.parse(newJson!))
+    workspaceState.recordItemSessionChange(itemKey.value, JSON.parse(oldJson!), JSON.parse(newJson!))
   } catch (err) {
     console.error(TAG, "记录编辑会话变更失败", err)
   }
@@ -111,31 +111,9 @@ function save(onSaved?: () => void) {
       {
         text: t('confirm'), onClick() {
           (async () => {
-            if (itemIndex.value < 0) return
-            if (!itemData.value.fromFile || !itemData.value.name || !itemData.value.dataTypeName) {
-              console.error(TAG, "保存失败，项目缺少关键信息", itemData.value)
-              return
-            }
-
-            try {
-              console.log(TAG, "异步保存")
-              const payload = itemData.value.tempData === undefined ? itemData.value.tempData : deepCopy(itemData.value.tempData)
-              const saveResult = await workspaceState.saveItem(
-                  itemData.value.fromFile, itemData.value.id,
-                  itemData.value.name, payload, itemData.value.dataTypeName,
-                  itemData.value.volumeRevision ?? -1
-              )
-
-              itemData.value.data = payload
-              console.log(TAG, "保存成功", saveResult)
-
-              itemData.value.id = saveResult.itemId
-              itemData.value.volumeRevision = saveResult.volumeRevision
-              workspaceState.commitItemSessionAsSaved(itemIndex.value, payload)
-              onSaved?.()
-            } catch (err) {
-              console.error(TAG, "保存失败", err)
-            }
+            if (!itemKey.value) return
+            const saved = await workspaceState.saveItemByKey(itemKey.value, true)
+            if (saved) onSaved?.()
           })()
         }
       },
@@ -153,14 +131,14 @@ function discard() {
       {text: t('cancel')},
       {
         text: t('confirm'), onClick: () => {
-          if (itemIndex.value < 0) return
-          workspaceState.discardItemSessionChanges(itemIndex.value)
+          if (!itemKey.value) return
+          workspaceState.discardItemSessionChanges(itemKey.value)
         }
       },
       {
         text: t('confirmAndReload'), onClick() { // TODO:重不重载弄个偏好设置
-          if (itemIndex.value < 0) return
-          workspaceState.discardItemSessionChanges(itemIndex.value)
+          if (!itemKey.value) return
+          workspaceState.discardItemSessionChanges(itemKey.value)
           reload(true)
         }
       }
@@ -183,23 +161,23 @@ function reload(fromSystem: boolean = false) {
 }
 
 function undo() {
-  if (itemIndex.value < 0) return
-  workspaceState.undoItemSession(itemIndex.value)
+  if (!itemKey.value) return
+  workspaceState.undoItemSession(itemKey.value)
 }
 
 function redo() {
-  if (itemIndex.value < 0) return
-  workspaceState.redoItemSession(itemIndex.value)
+  if (!itemKey.value) return
+  workspaceState.redoItemSession(itemKey.value)
 }
 
 function canUndo() {
-  if (itemIndex.value < 0) return false
-  return workspaceState.canUndoItemSession(itemIndex.value)
+  if (!itemKey.value) return false
+  return workspaceState.canUndoItemSession(itemKey.value)
 }
 
 function canRedo() {
-  if (itemIndex.value < 0) return false
-  return workspaceState.canRedoItemSession(itemIndex.value)
+  if (!itemKey.value) return false
+  return workspaceState.canRedoItemSession(itemKey.value)
 }
 
 defineExpose({
