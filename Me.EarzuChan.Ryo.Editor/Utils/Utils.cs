@@ -37,6 +37,7 @@ public static class MiscUtils
             dic.Select(pair => new
             {
                 name = pair.Key.VolumeName,
+                revision = pair.Key.Revision,
                 items = pair.Key.IdStrPairs.Select(item =>
                     new
                     {

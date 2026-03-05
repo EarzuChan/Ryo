@@ -84,6 +84,8 @@ function showMenuOf(menuType: MenuBarItem) {
   lastMenu.value = menuType
 
   const pageNotOk = workspaceState.activeTabExposed === null
+  const canUndo = !pageNotOk && workspaceState.activeTabExposed?.canUndo?.() === true
+  const canRedo = !pageNotOk && workspaceState.activeTabExposed?.canRedo?.() === true
 
   switch (menuType.id) {
     case 'file':
@@ -147,8 +149,8 @@ function showMenuOf(menuType: MenuBarItem) {
     case 'edit':
       currentMenu.value = showMenu({
         items: [
-          {name: t('undo'), disabled: pageNotOk, action: () => workspaceState.pageUndo()},
-          {name: t('redo'), disabled: pageNotOk, action: () => workspaceState.pageRedo()},
+          {name: t('undo'), disabled: pageNotOk || !canUndo, action: () => workspaceState.pageUndo()},
+          {name: t('redo'), disabled: pageNotOk || !canRedo, action: () => workspaceState.pageRedo()},
           {name: t('reloadEditor'), disabled: pageNotOk, action: () => workspaceState.pageReload()},
           {name: t('discardUnsavedChanges'), disabled: pageNotOk, action: () => workspaceState.pageDiscard()},
           {name: t('saveCurrentTab'), disabled: pageNotOk, action: () => workspaceState.pageSave()},

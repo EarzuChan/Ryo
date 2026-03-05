@@ -148,10 +148,18 @@ public class LocalVolume
 
     public bool Unsaved { get; internal set; }
 
+    public int Revision { get; private set; }
+
+    private void Touch()
+    {
+        Unsaved = true;
+        Revision++;
+    }
+
     public int Add(object value)
     {
         var ret = _massFile.Add(value);
-        Unsaved = true;
+        Touch();
 
         _manager.NotifyVolumesChanged();
         return ret;
@@ -160,7 +168,7 @@ public class LocalVolume
     public void GiveName(int id, string name)
     {
         _massFile.GiveName(id, name);
-        Unsaved = true;
+        Touch();
 
         _manager.NotifyVolumesChanged();
     }
@@ -168,7 +176,7 @@ public class LocalVolume
     public void Set(int id, object value, bool gc = false)
     {
         _massFile.Set(id, value);
-        Unsaved = true;
+        Touch();
 
         if (gc) _massFile.CollectGarbage();
 
@@ -178,7 +186,7 @@ public class LocalVolume
     public AddType Add(string name, object value, bool gc = false)
     {
         var val = _massFile.Add(name, value) == MassFile.AddType.Add ? AddType.Add : AddType.AbandonOld;
-        Unsaved = true;
+        Touch();
 
         if (gc) _massFile.CollectGarbage();
 
@@ -194,7 +202,7 @@ public class LocalVolume
 
         // Perform
 
-        Unsaved = true;
+        Touch();
 
         _manager.NotifyVolumesChanged();
     }
@@ -202,7 +210,7 @@ public class LocalVolume
     public void CollectGarbage()
     {
         _massFile.CollectGarbage();
-        Unsaved = true;
+        Touch();
 
         _manager.NotifyVolumesChanged();
     }
@@ -214,7 +222,7 @@ public class LocalVolume
         if (id == -1) return false;
 
         var state = _massFile.Remove(id);
-        Unsaved = true;
+        if (state) Touch();
 
         if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
@@ -227,7 +235,7 @@ public class LocalVolume
     public bool Remove(int id, bool gc = false)
     {
         var state = _massFile.Remove(id);
-        Unsaved = state || Unsaved;
+        if (state) Touch();
 
         if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
@@ -247,7 +255,7 @@ public class LocalVolume
             name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
             jwc.JavaClassToRyoType()
                 .ResolveDataTypeName()
-            , result.Data, result.ParseSuccess);
+            , result.Data, result.ParseSuccess, Revision);
     }
 
     public LocalVolumeItemModel this[string key] => GetWrappedItem(IdStrPairs[key], key);
@@ -269,7 +277,7 @@ public class LocalVolume
     public void Rename(string oldName, string newName)
     {
         _massFile.Rename(oldName, newName);
-        Unsaved = true;
+        Touch();
 
         _manager.NotifyVolumeItemRenamed(VolumeName, oldName, newName);
         _manager.NotifyVolumesChanged();
@@ -282,5 +290,6 @@ public record LocalVolumeItemModel(
     string? Name,
     string? DataTypeName,
     object Data,
-    bool ParseSuccess
+    bool ParseSuccess,
+    int VolumeRevision
 );

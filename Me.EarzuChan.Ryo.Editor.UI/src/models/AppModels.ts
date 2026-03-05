@@ -2,6 +2,7 @@ const TAG = "AppModels"
 
 export interface VolumeModel {
     name: string
+    revision?: number
     items: FileModel[]
 }
 
@@ -29,9 +30,11 @@ export interface FileModel {
     dataTypeName?: string
     ryoType?: RyoType
     parseSuccess: boolean
+    volumeRevision?: number
     data?: any
-    history?: HistoryRecord[]
+    history?: SessionFrame[]
     tempData?: any
+    session?: EditorSession
 }
 
 export interface RecentFile {
@@ -57,7 +60,31 @@ export enum TabType {
     Empty
 }
 
-export interface HistoryRecord {
+export type SessionPathSegment = string | number
+
+export interface SessionOperation {
+    type: 'set' | 'remove'
+    path: SessionPathSegment[]
+    value?: any
+}
+
+export interface SessionFrame {
+    forward: SessionOperation[]
+    backward: SessionOperation[]
+    timestamp: number
+}
+
+export interface EditorSession {
+    sessionId: string
+    baselineData: any
+    currentData: any
+    undoStack: SessionFrame[]
+    redoStack: SessionFrame[]
+    applying: boolean
+    maxUndo: number
+}
+
+export interface HistoryRecord extends SessionFrame {
 }
 
 export interface ResLinkModel {

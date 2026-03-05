@@ -9,13 +9,14 @@ import {
     sendWebCallAndTakeItsReturnValues
 } from "@/utils/KurisuUtils"
 import {useDialogStateStore} from "@/stores/DialogState"
-import {type FileModel, type VolumeModel, TabType, type RyoType} from "@/models/AppModels"
+import {type EditorSession, type FileModel, type VolumeModel, TabType, type RyoType} from "@/models/AppModels"
 import type {TabModel} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
-import {ensure, TODO} from "@/utils/UsefulUtils"
+import {deepCopy, ensure, generateId} from "@/utils/UsefulUtils"
 import AddItemDialog from "@/views/dialogs/AddItemDialog.vue"
 import {useI18n} from "vue-i18n"
-import RenameItemDialog from "@/views/dialogs/RenameItemDialog.vue";
+import RenameItemDialog from "@/views/dialogs/RenameItemDialog.vue"
+import {applyOperations, buildSessionFrame, hasRedo, hasUndo, pushUndoFrame} from "@/utils/SessionUtils"
 
 const TAG = "WorkspaceState"
 
@@ -28,17 +29,170 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         const activeTabExposed = ref<any>(null)
 
+        const openedVolumes = ref<VolumeModel[]>([])
+        const openedItems = ref<FileModel[]>([])
         const openedTabs = ref<TabModel[]>([])
         const activeTabIndex = ref(-1)
         const activeTab = computed(() => openedTabs.value[activeTabIndex.value])
-        const activeVolume = computed(() => activeItem.value?.fromFile)
+        const activeItemIndex = computed(() =>
+            typeof activeTab.value?.data === "number" ? activeTab.value.data : -1)
         const activeItem = computed(() => openedItems.value[activeTab.value?.data])
-
-        const openedVolumes = ref<VolumeModel[]>([])
-
-        const openedItems = ref<FileModel[]>([])
+        const activeVolume = computed(() => {
+            const candidate = activeItem.value?.fromFile
+            if (!candidate) return undefined
+            return openedVolumes.value.some(v => v.name === candidate) ? candidate : undefined
+        })
 
         const dialogState = useDialogStateStore()
+        const DEFAULT_MAX_UNDO = 200
+
+        function copyData<T>(value: T): T {
+            if (value === undefined) return value
+            return deepCopy(value)
+        }
+
+        function getVolumeRevision(volumeName?: string): number {
+            if (!volumeName) return -1
+            return openedVolumes.value.find(v => v.name === volumeName)?.revision ?? -1
+        }
+
+        function makeSessionId(item: FileModel) {
+            return `${item.fromFile ?? "unknown"}:${item.id}:${item.name ?? "unnamed"}:${generateId(Date.now())}`
+        }
+
+        function refreshItemTabState(itemIndex: number) {
+            const item = openedItems.value[itemIndex]
+            if (!item) return
+
+            for (const tab of openedTabs.value) {
+                if (tab.data === itemIndex) {
+                    tab.nonResident = !item.unsaved
+                    if (item.name) tab.name = item.name
+                }
+            }
+        }
+
+        function setItemUnsaved(itemIndex: number, unsaved: boolean) {
+            const item = openedItems.value[itemIndex]
+            if (!item) return
+
+            item.unsaved = unsaved
+            refreshItemTabState(itemIndex)
+        }
+
+        function buildItemSession(item: FileModel): EditorSession {
+            const baselineData = copyData(item.data)
+            return {
+                sessionId: makeSessionId(item),
+                baselineData,
+                currentData: copyData(baselineData),
+                undoStack: [],
+                redoStack: [],
+                applying: false,
+                maxUndo: DEFAULT_MAX_UNDO,
+            }
+        }
+
+        function isSessionDirty(item: FileModel, session: EditorSession) {
+            return item.id === -1 || session.undoStack.length > 0
+        }
+
+        function ensureItemSession(itemIndex: number): EditorSession | undefined {
+            const item = openedItems.value[itemIndex]
+            if (!item) return
+
+            if (!item.session) item.session = buildItemSession(item)
+
+            if (item.tempData === undefined || item.session.applying) item.tempData = copyData(item.session.currentData)
+            setItemUnsaved(itemIndex, isSessionDirty(item, item.session))
+            return item.session
+        }
+
+        function syncSessionToItem(itemIndex: number, session: EditorSession) {
+            const item = openedItems.value[itemIndex]
+            if (!item) return
+
+            item.tempData = copyData(session.currentData)
+            setItemUnsaved(itemIndex, isSessionDirty(item, session))
+        }
+
+        function recordItemSessionChange(itemIndex: number, _oldData: any, newData: any) {
+            const session = ensureItemSession(itemIndex)
+            if (!session || session.applying) return
+
+            const frame = buildSessionFrame(session.currentData, newData)
+            if (!frame) return
+
+            pushUndoFrame(session.undoStack, frame, session.maxUndo)
+            session.redoStack = []
+            session.currentData = copyData(newData)
+            syncSessionToItem(itemIndex, session)
+        }
+
+        function undoItemSession(itemIndex: number): boolean {
+            const session = ensureItemSession(itemIndex)
+            if (!session || !hasUndo(session.undoStack)) return false
+
+            const frame = session.undoStack.pop()!
+
+            session.applying = true
+            session.currentData = applyOperations(session.currentData, frame.backward)
+            session.redoStack.push(frame)
+            syncSessionToItem(itemIndex, session)
+            session.applying = false
+            return true
+        }
+
+        function redoItemSession(itemIndex: number): boolean {
+            const session = ensureItemSession(itemIndex)
+            if (!session || !hasRedo(session.redoStack)) return false
+
+            const frame = session.redoStack.pop()!
+
+            session.applying = true
+            session.currentData = applyOperations(session.currentData, frame.forward)
+            session.undoStack.push(frame)
+            syncSessionToItem(itemIndex, session)
+            session.applying = false
+            return true
+        }
+
+        function discardItemSessionChanges(itemIndex: number) {
+            const session = ensureItemSession(itemIndex)
+            if (!session) return
+
+            session.applying = true
+            session.currentData = copyData(session.baselineData)
+            session.undoStack = []
+            session.redoStack = []
+
+            syncSessionToItem(itemIndex, session)
+            session.applying = false
+        }
+
+        function commitItemSessionAsSaved(itemIndex: number, savedData: any) {
+            const session = ensureItemSession(itemIndex)
+            if (!session) return
+
+            session.applying = true
+            session.baselineData = copyData(savedData)
+            session.currentData = copyData(savedData)
+            session.undoStack = []
+            session.redoStack = []
+
+            syncSessionToItem(itemIndex, session)
+            session.applying = false
+        }
+
+        function canUndoItemSession(itemIndex: number) {
+            const session = ensureItemSession(itemIndex)
+            return !!session && hasUndo(session.undoStack)
+        }
+
+        function canRedoItemSession(itemIndex: number) {
+            const session = ensureItemSession(itemIndex)
+            return !!session && hasRedo(session.redoStack)
+        }
 
         function openVolume() {
             emitWebEvent(makeWebLetter('OpenVolume'))
@@ -70,8 +224,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeTabIndex.value = index
 
             if (getIsTabUnsaved(index)) {
-                // 相应询问等操作
-                let close = true
+                let closeAction: "save" | "discard" | "cancel" = "cancel"
 
                 dialogState.order({
                     headline: "是否要保存对 " + tab.name + " 的更改？",
@@ -79,25 +232,31 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     actions: [
                         {
                             text: "保存", onClick() {
-                                TODO(TAG, "保存")
+                                closeAction = "save"
                             }
                         },
                         {
                             text: "不保存", onClick() {
-                                TODO(TAG, "不保存")
+                                closeAction = "discard"
                             }
                         },
                         {
                             text: "取消", onClick() {
-                                TODO(TAG, "取消")
-                                close = false
+                                closeAction = "cancel"
                             }
                         }
                     ],
                     onClose() {
-                        if (!close) return
-
-                        internalCloseTab(index)
+                        switch (closeAction) {
+                            case "save":
+                                activeTabExposed.value?.save?.(() => internalCloseTab(index))
+                                break
+                            case "discard":
+                                internalCloseTab(index)
+                                break
+                            case "cancel":
+                                break
+                        }
                     }
                 })
             } else internalCloseTab(index)
@@ -125,6 +284,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
                 case TabType.Item:
                     const fileModel = openedItems.value[data]
+                    ensureItemSession(data)
 
                     let name = fileModel.name
                     if (name === undefined) name = t('noNameItem')
@@ -220,6 +380,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             console.log(TAG, "获取项目", massName, itemId)
             const fileModel = (await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetFullFileModel', massName, itemId)))[0] as FileModel
             fileModel.ryoType = appState.getRyoTypeByDataTypeName(fileModel.dataTypeName!)
+            fileModel.unsaved = false
+            if (fileModel.volumeRevision === undefined) fileModel.volumeRevision = getVolumeRevision(massName)
             console.log(TAG, "获取到项目", massName, itemId, fileModel)
 
             return fileModel
@@ -233,8 +395,21 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             emitWebEvent(makeWebLetter('SaveVolume', massName, true))
         }
 
-        async function saveItem(massName: string, itemName: string, data: any, tsRyoTypeName: string) {
-            return (await sendWebCallAndTakeItsReturnValues(makeWebLetter('SaveItem', massName, itemName, data, tsRyoTypeName)))[0]
+        async function saveItem(
+            massName: string,
+            itemId: number,
+            itemName: string,
+            data: any,
+            tsRyoTypeName: string,
+            expectedVolumeRevision: number
+        ) {
+            const ret = await sendWebCallAndTakeItsReturnValues(
+                makeWebLetter('SaveItem', massName, itemId, itemName, data, tsRyoTypeName, expectedVolumeRevision)
+            )
+            return {
+                itemId: ret[0] as number,
+                volumeRevision: ret[1] as number,
+            }
         }
 
         function closeVolume(massName: string) {
@@ -291,6 +466,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                         id: -1, // 未保存，则未分配（-1）
                         name: itemName,
                         parseSuccess: true,
+                        volumeRevision: getVolumeRevision(massName),
                         ryoType: ryoType,
                         dataTypeName: appState.getDataTypeNameByRyoType(ryoType),
                         unsaved: true
@@ -359,6 +535,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         return {
             activeItem,
+            activeItemIndex,
             activeTab,
             activeTabIndex,
             activeTabExposed,
@@ -369,6 +546,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             closeTab,
             deleteItem,
             closeVolume,
+            ensureItemSession,
             getIsTabUnsaved,
             mentionItem,
             newVolume,
@@ -382,8 +560,15 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             pageRedo,
             pageReload,
             pageSave,
+            recordItemSessionChange,
             renameItem,
             pageUndo,
+            undoItemSession,
+            redoItemSession,
+            canUndoItemSession,
+            canRedoItemSession,
+            discardItemSessionChanges,
+            commitItemSessionAsSaved,
             saveVolume,
             saveVolumeAs,
             saveItem,

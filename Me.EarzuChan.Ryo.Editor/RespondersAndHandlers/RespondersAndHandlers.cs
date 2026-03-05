@@ -34,8 +34,7 @@ public class NewVolumeHandler(string namePrefix) : IWebEventHandler
 [WebCallResponder("GetAllDataTypes")]
 public class GetAllDataTypesResponder : IWebCallResponder
 {
-    public WebResponse Respond(KurisuAppContext context) =>
-        new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
+    public WebResponse Respond(KurisuAppContext context) => new(WebResponseState.Success, DataTypeSchemaUtils.GetAllDataTypeSchemas());
 }
 
 [WebEventHandler("OpenVolume")]
@@ -68,7 +67,7 @@ public class AppInitializedHandler : IAppEventHandler
     public void Handle(KurisuAppContext context)
     {
         var man = context.Inject<LocalVolumeManager>()!;
-        
+
         man.VolumesChanged += (volumes) => MiscUtils.EmitOpenedVolumes(context, volumes);
         man.VolumeItemDeleted += (volume, itemId) => { context.EmitWebEvent(new("VolumeItemDeleted", volume, itemId)); };
         man.VolumeItemRenamed += (volume, old, name) => { context.EmitWebEvent(new("VolumeItemRenamed", volume, old, name)); };
@@ -86,19 +85,40 @@ public class NotifyOpenedFilesHandler : IWebEventHandler
 // TODO：另外，无名项目怎么编辑/保存？
 // TODO：如果是基本类型，参数不是JObject，懆称冯的福
 [WebCallResponder("SaveItem")]
-public class SaveItemResponder(string volumeName, string itemName, object data, string dataTypeName) : IWebCallResponder
+public class SaveItemResponder(string volumeName, int itemId, string itemName, object data, string dataTypeName, int expectedVolumeRevision) : IWebCallResponder
 {
+    private static object ConvertPayload(object payload, Type targetType)
+    {
+        switch (payload)
+        {
+            case JObject jobj:
+                Trace.WriteLine("Data is JObject");
+                return jobj.ToObject(targetType) ?? throw new RyoException($"无法将 JObject 转换到 {targetType}");
+
+            case JArray jarr when targetType.IsArray:
+                Trace.WriteLine($"Data is JArray, {jarr.Count} items");
+                return jarr.ToObject(targetType) ?? throw new RyoException($"无法将 JArray 转换到 {targetType}");
+
+            default:
+                Trace.WriteLine($"Data is not JObject/JArray, fallback raw type: {payload.GetType()}");
+                return payload;
+        }
+    }
+
     public WebResponse Respond(KurisuAppContext context)
     {
         var newId = -1;
+        var volumeRevision = -1;
 
         context.Inject<LocalVolumeManager>()!.Also(it =>
         {
-            Trace.WriteLine($"Saving {itemName} of {volumeName}: {data.GetType()}");
+            Trace.WriteLine($"Saving {itemName}#{itemId} of {volumeName}: {data.GetType()}");
 
             it.GetVolumeByName(volumeName)
                 .EnsureNotNull(vol =>
                 {
+                    if (expectedVolumeRevision >= 0 && vol.Revision != expectedVolumeRevision) throw new RyoException($"卷版本冲突：期望{expectedVolumeRevision}，当前{vol.Revision}。请先刷新后再保存。");
+
                     RyoType ryoType;
 
                     try
@@ -115,76 +135,71 @@ public class SaveItemResponder(string volumeName, string itemName, object data, 
                     ryoType.ToCsType().EnsureNotNull(typ =>
                     {
                         Trace.WriteLine($"Got Cs Type {itemName}: {typ}");
-                        switch (data)
+                        var payload = ConvertPayload(data, typ);
+
+                        var targetId = itemId;
+                        var hasTargetId = targetId >= 0 && vol.IdStrPairs.Values.Contains(targetId);
+                        if (!hasTargetId && vol.IdStrPairs.TryGetValue(itemName, out var idByName))
                         {
-                            case JObject jobj:
-                                Trace.WriteLine("Data is JObject");
-                                jobj.ToObject(typ).EnsureNotNull(obj =>
-                                {
-                                    vol.Add(itemName, obj);
-                                    newId = vol[itemName].Id;
-                                });
-                                break;
-
-                            case JArray jarr when typ.IsArray:
-                                Trace.WriteLine($"Data is JArray, {jarr.Count} items");
-                                jarr.ToObject(typ).EnsureNotNull(arr =>
-                                {
-                                    vol.Add(itemName, arr);
-                                    newId = vol[itemName].Id;
-                                });
-                                break;
-
-                            default:
-                                Trace.WriteLine($"Data is not JObject or JArray, but {data.GetType()}");
-                                vol.Add(itemName, data);
-                                newId = vol[itemName].Id;
-                                break;
+                            targetId = idByName;
+                            hasTargetId = true;
                         }
+
+                        if (hasTargetId)
+                        {
+                            Trace.WriteLine($"Upsert by id: {targetId}");
+                            vol.Set(targetId, payload);
+                            newId = targetId;
+                        }
+                        else
+                        {
+                            Trace.WriteLine($"Upsert as add: {itemName}");
+                            vol.Add(itemName, payload);
+                            newId = vol[itemName].Id;
+                        }
+
+                        volumeRevision = vol.Revision;
                     });
                 });
         });
 
-        Trace.WriteLine($"Saved, new id: {newId}");
+        Trace.WriteLine($"Saved, new id: {newId}, revision: {volumeRevision}");
 
-        return newId == -1
+        return newId == -1 || volumeRevision == -1
             ? new WebResponse(WebResponseState.Failure)
-            : new WebResponse(WebResponseState.Success, newId);
+            : new WebResponse(WebResponseState.Success, newId, volumeRevision);
     }
 }
 
 [WebEventHandler("CloseVolume")]
 public class CloseVolumeHandler(string volumeName) : IWebEventHandler
 {
-    public void Handle(KurisuAppContext context) =>
-        context.Inject<LocalVolumeManager>()!.Also(it =>
-        {
-            var volume = it.GetVolumeByName(volumeName);
-            volume?.Also(it.Close);
-        });
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        var volume = it.GetVolumeByName(volumeName);
+        volume?.Also(it.Close);
+    });
 }
 
 [WebEventHandler("SaveVolume")]
 public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandler
 {
-    public void Handle(KurisuAppContext context) =>
-        context.Inject<LocalVolumeManager>()!.Also(it =>
-        {
-            Trace.WriteLine($"保存{volumeName} {saveAs}");
-            var volume = it.GetVolumeByName(volumeName);
-            volume?.Also(vol => it.Save(vol, () => MiscUtils.SaveFileByDialog("MassFile", "fs"), saveAs));
-        });
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        Trace.WriteLine($"保存{volumeName} {saveAs}");
+        var volume = it.GetVolumeByName(volumeName);
+        volume?.Also(vol => it.Save(vol, () => MiscUtils.SaveFileByDialog("MassFile", "fs"), saveAs));
+    });
 }
 
 [WebEventHandler("GcVolume")] // FIXME：有问题，这样前端的已打开标签页Id怎么刷新？
 public class GcVolumeHandler(string volumeName) : IWebEventHandler
 {
-    public void Handle(KurisuAppContext context) =>
-        context.Inject<LocalVolumeManager>()!.Also(it =>
-        {
-            var volume = it.GetVolumeByName(volumeName);
-            volume?.CollectGarbage();
-        });
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it =>
+    {
+        var volume = it.GetVolumeByName(volumeName);
+        volume?.CollectGarbage();
+    });
 }
 
 // TODO：复制副本（需要Mass里面改）
