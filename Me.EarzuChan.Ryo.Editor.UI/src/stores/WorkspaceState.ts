@@ -18,6 +18,8 @@ import AddItemDialog from "@/views/dialogs/AddItemDialog.vue"
 import {useI18n} from "vue-i18n"
 import RenameItemDialog from "@/views/dialogs/RenameItemDialog.vue"
 import {applyOperations, buildSessionFrame, hasRedo, hasUndo, pushUndoFrame} from "@/utils/SessionUtils"
+import {CommandErrorCode, type CommandError, type CommandResult} from "@/models/CommandModels"
+import {fail, normalizeCommandError, ok} from "@/utils/CommandUtils"
 
 const TAG = "WorkspaceState"
 
@@ -148,7 +150,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             setItemUnsaved(itemIndex, isSessionDirty(item, session))
         }
 
-        function recordItemSessionChange(itemRef: number | string, _oldData: any, newData: any) {
+        function recordItemSessionChange(itemRef: number | string, newData: any) {
             const itemIndex = resolveItemIndex(itemRef)
             const session = ensureItemSession(itemIndex)
             if (!session || session.applying) return
@@ -509,7 +511,67 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             }
         }
 
+        function buildValidationError(item: FileModel, payload: any): CommandError | null {
+            if (!item.fromFile || !item.name || !item.dataTypeName) {
+                return {
+                    code: CommandErrorCode.Validation,
+                    message: "项目信息不完整，无法保存。",
+                    recoverHint: "请检查项目名称、所属文件和类型信息是否完整。",
+                }
+            }
+
+            if (!item.ryoType) {
+                return {
+                    code: CommandErrorCode.Validation,
+                    message: "项目类型信息缺失，无法保存。",
+                    recoverHint: "请重新打开该项目后重试。",
+                }
+            }
+
+            const validation = appState.validateDataByRyoType(item.ryoType, payload)
+            if (!validation.valid) {
+                const top = validation.issues.slice(0, 5)
+                    .map(issue => `${issue.path}: ${issue.message}`)
+                    .join("\n")
+                const remain = validation.issues.length > 5 ? `\n... 其余 ${validation.issues.length - 5} 项` : ""
+                return {
+                    code: CommandErrorCode.Validation,
+                    message: `数据校验失败：\n${top}${remain}`,
+                    recoverHint: "请修正非法字段后再保存。",
+                }
+            }
+
+            return null
+        }
+
+        async function executeSaveItemCommand(item: FileModel, payload: any): Promise<CommandResult<{
+            itemId: number
+            volumeRevision: number
+        }>> {
+            const validationError = buildValidationError(item, payload)
+            if (validationError) return fail(validationError)
+
+            try {
+                const saved = await saveItem(
+                    item.fromFile!,
+                    item.id,
+                    item.name!,
+                    payload,
+                    item.dataTypeName!,
+                    item.volumeRevision ?? -1
+                )
+                return ok(saved)
+            } catch (err) {
+                return fail(normalizeCommandError(err))
+            }
+        }
+
         function formatErrorReason(reason: any): string {
+            if (typeof reason === "object" && reason && "message" in reason) {
+                const msg = `${(reason as CommandError).message}`
+                const recoverHint = (reason as CommandError).recoverHint
+                return recoverHint ? `${msg}\n${recoverHint}` : msg
+            }
             if (reason instanceof Error) return reason.message
             if (typeof reason === "string") return reason
             try {
@@ -537,31 +599,19 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             if (!item.unsaved) return true
 
             const payload = copyData(item.tempData)
-            if (!item.fromFile || !item.name || !item.dataTypeName) {
-                if (showErrorDialog) await showSaveErrorDialog(item.name ?? "Unknown", "项目信息不完整")
-                return false
-            }
-
-            try {
-                const saved = await saveItem(
-                    item.fromFile,
-                    item.id,
-                    item.name,
-                    payload,
-                    item.dataTypeName,
-                    item.volumeRevision ?? -1
-                )
-
+            const result = await executeSaveItemCommand(item, payload)
+            if (result.ok) {
+                const saved = result.value
                 item.id = saved.itemId
                 item.volumeRevision = saved.volumeRevision
                 item.data = payload
                 commitItemSessionAsSaved(itemKey, payload)
                 return true
-            } catch (err) {
-                console.error(TAG, "保存项目失败", item, err)
-                if (showErrorDialog) await showSaveErrorDialog(item.name ?? "Unknown", err)
-                return false
             }
+
+            console.error(TAG, "保存项目失败", item, result.error)
+            if (showErrorDialog) await showSaveErrorDialog(item.name ?? "Unknown", result.error)
+            return false
         }
 
         async function askUnsavedItemAction(itemName: string): Promise<"save" | "discard" | "cancel"> {

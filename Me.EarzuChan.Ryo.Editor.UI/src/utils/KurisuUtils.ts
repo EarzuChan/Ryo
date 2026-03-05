@@ -3,21 +3,31 @@ import {WebResponseState} from "@/models/KurisuModels"
 
 declare const chrome: any
 const TAG = "KurisuUtils"
-const webEventListeners = new Map<string, Function>()
+const webEventListeners = new Map<string, Set<Function>>()
 
 export function emitWebEvent(webEvent: WebLetter) {
     chrome.webview.postMessage(webEvent)
 }
 
-export function addWebEventListener(name: string, lambda: Function) {
+export function addWebEventListener(name: string, lambda: Function): () => void {
     console.log(TAG, `添加${name}WebEvent监听器`)
-    if (webEventListeners.has(name)) throw new Error(`已存在${name}WebEvent监听器`)
-    webEventListeners.set(name, lambda)
+    if (!webEventListeners.has(name)) webEventListeners.set(name, new Set())
+    webEventListeners.get(name)!.add(lambda)
+    return () => removeWebEventListener(name, lambda)
 }
 
-export function removeWebEventListener(name: string) {
+export function removeWebEventListener(name: string, lambda?: Function) {
     console.log(TAG, `移除${name}WebEvent监听器`)
-    webEventListeners.delete(name)
+    if (!webEventListeners.has(name)) return
+
+    if (!lambda) {
+        webEventListeners.delete(name)
+        return
+    }
+
+    const listeners = webEventListeners.get(name)!
+    listeners.delete(lambda)
+    if (listeners.size === 0) webEventListeners.delete(name)
 }
 
 export function emitWebEventByApi(event: WebLetter) {
@@ -38,29 +48,27 @@ export async function emitWebEventAndWaitForItsCallBack(webEvent: WebLetter, tim
     const callBackName = `CallBack${webEvent.name}`
     return new Promise((resolve, reject) => {
         let fulfilled = false
+        let timeoutId: any = null
 
         const lambda = (e: any[]) => {
             if (fulfilled) return
             fulfilled = true
 
             try {
-                // console.log(TAG, `解决${callBackName}`)
                 resolve(e)
             } catch (err) {
-                // console.log(TAG, `解决${callBackName}承诺异常`, err)
                 reject(err)
             } finally {
-                // console.log(TAG, `正常移除${callBackName}监听器`)
-                removeWebEventListener(callBackName)
+                if (timeoutId) clearTimeout(timeoutId)
+                removeWebEventListener(callBackName, lambda)
             }
         }
-        addWebEventListener(callBackName, lambda)
+        const unsubscribe = addWebEventListener(callBackName, lambda)
 
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
             if (!fulfilled) {
-                fulfilled = true // 设置 Promise 为已完成
-                // console.log(TAG, `超时移除${callBackName}监听器`)
-                chrome.webview.removeEventListener(callBackName, lambda)
+                fulfilled = true
+                unsubscribe()
                 reject(new Error("等待返回事件时超时"))
             }
         }, timeout)
@@ -85,7 +93,7 @@ try {
                 webEventListeners.forEach((v, n) => {
                     if (n === event.name) {
                         console.log(TAG, `${event.name}真是监监又听听`)
-                        v.call(null, event.args)
+                        v.forEach(listener => listener.call(null, event.args))
                     }
                 })
             } else throw new Error(`返回的事件为Null`)

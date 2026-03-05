@@ -13,7 +13,7 @@
 
 import {computed, nextTick, type PropType, ref} from "vue"
 import {ensure} from "@/utils/UsefulUtils"
-import type {RyoType} from "@/models/AppModels"
+import type {EditorDescriptor, RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import ErrorEditor from "@/components/editors/ErrorEditor.vue"
 import FieldEditor from "@/components/editors/FieldEditor.vue"
@@ -26,6 +26,7 @@ const props = defineProps({
   cardSurrounded: Boolean,
   notUseCard: Boolean,
   type: Object as PropType<RyoType>,
+  preferEditorId: String,
   preferEditor: Number,
   even: Boolean,
 })
@@ -42,9 +43,21 @@ const editorType = computed(() => {
     const editors = appState.getEditorsByRyoType(props.type)
     if (editors.length === 0) return getError("编辑器错误：没有可用的编辑器")
 
-    const chosen = editors[ensure(props.preferEditor) && props.preferEditor! < editors.length ? props.preferEditor! : 0]
-    isComplexEditor.value = chosen === FieldEditor
-    return chosen
+    let chosen: EditorDescriptor | undefined
+
+    if (ensure(props.preferEditorId)) {
+      chosen = editors.find(editor => editor.id === props.preferEditorId)
+    }
+
+    if (!chosen && ensure(props.preferEditor) && props.preferEditor! < editors.length) {
+      chosen = editors[props.preferEditor!]
+    }
+
+    if (!chosen) chosen = editors[0]
+    if (!chosen) return getError("编辑器错误：无法取得指定编辑器")
+
+    isComplexEditor.value = chosen.component === FieldEditor
+    return chosen.component
   } else return getError("更多错误：Ryo类型为空？")
 })
 

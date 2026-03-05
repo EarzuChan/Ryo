@@ -22,9 +22,17 @@ export interface RyoType {
     typeName: string
 }
 
+export interface EditorDescriptor {
+    id: string
+    title: string
+    component: any
+    priority?: number
+}
+
 export interface FileModel {
     id: number
     itemKey?: string
+    preferredRootEditorId?: string
     fromFile?: string
     name?: string
     unsaved?: boolean

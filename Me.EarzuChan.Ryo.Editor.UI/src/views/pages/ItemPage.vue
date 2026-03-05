@@ -12,17 +12,17 @@
         <div class="info ryo-typography-body-large">{{
             t('parseStatus', {status: boolToText(itemData.parseSuccess)})
           }}<br>{{
-            t('editors', {editors: arrayToText(supportedEditors)})
+            t('editors', {editors: arrayToText(supportedEditorTitles)})
           }}<br>{{ t('importExport', {methods: arrayToText(inOutMethods)}) }}
         </div>
       </div>
     </div>
     <EditorHolder ref="holder" card-surrounded :type="itemData.ryoType" v-model="itemData.tempData"
-                  :prefer-editor="preferEditor">
+                  :prefer-editor-id="preferEditorId">
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
-        <Select id="action-bar-text" :items="supportedEditors" v-model:selected="preferEditor"/>
+        <Select id="action-bar-text" :items="supportedEditorTitles" v-model:selected="selectedEditorIndex"/>
         <TextButton button-style="filled" id="save-button" @click="save">{{ t('save') }}</TextButton>
       </div>
     </EditorHolder>
@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import {computed, getCurrentInstance, onActivated, onDeactivated, ref, watch} from "vue"
-import {arrayToText, boolToText, ensure, getSfcName, TODO} from "@/utils/UsefulUtils"
+import {arrayToText, boolToText, ensure, TODO} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
 import TextButton from "@/components/TextButton.vue"
@@ -72,10 +72,15 @@ const itemData = computed<FileModel>(() => {
 const supportedEditors = computed(() => {
   const type = itemData.value.ryoType
   if (type) {
-    return appState.getEditorsByRyoType(type).map(et => getSfcName(et))
+    return appState.getEditorsByRyoType(type)
   }
 
-  return ["未知类型 无可用编辑器"]
+  return []
+})
+const supportedEditorTitles = computed(() => {
+  const editors = supportedEditors.value
+  if (editors.length === 0) return ["未知类型 无可用编辑器"]
+  return editors.map(editor => editor.title)
 })
 const inOutMethods = computed(() => {
   const typeName = itemData.value.ryoType
@@ -84,21 +89,39 @@ const inOutMethods = computed(() => {
 })
 
 const holder = ref<any>(null)
-const preferEditor = ref(0)
+const preferEditorId = computed({
+  get() {
+    if (!itemData.value.preferredRootEditorId) itemData.value.preferredRootEditorId = supportedEditors.value[0]?.id
+    return itemData.value.preferredRootEditorId ?? ""
+  },
+  set(value: string) {
+    itemData.value.preferredRootEditorId = value
+  }
+})
+
+const selectedEditorIndex = computed({
+  get() {
+    if (supportedEditors.value.length === 0) return -1
+    const index = supportedEditors.value.findIndex(editor => editor.id === preferEditorId.value)
+    return index === -1 ? 0 : index
+  },
+  set(value: number) {
+    const selected = supportedEditors.value[value]
+    if (selected) preferEditorId.value = selected.id
+  }
+})
 
 watch(() => {
-  const item = itemData.value
-  if (!ensure(item.tempData)) return undefined
-  return JSON.stringify(item.tempData)
-}, (newJson, oldJson) => {
-  if (!ensure(newJson) || !ensure(oldJson) || newJson === oldJson || !itemKey.value) return
+  return itemData.value.tempData
+}, (newValue) => {
+  if (!ensure(newValue) || !itemKey.value) return
 
   try {
-    workspaceState.recordItemSessionChange(itemKey.value, JSON.parse(oldJson!), JSON.parse(newJson!))
+    workspaceState.recordItemSessionChange(itemKey.value, newValue)
   } catch (err) {
     console.error(TAG, "记录编辑会话变更失败", err)
   }
-})
+}, {deep: true})
 
 function save(onSaved?: () => void) {
   console.log(TAG, "保存", itemData.value.tempData, itemData.value.data)

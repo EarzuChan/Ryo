@@ -1,7 +1,7 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
-import {type RyoType, type TypeSchema} from "@/models/AppModels"
+import {type EditorDescriptor, type RyoType, type TypeSchema} from "@/models/AppModels"
 import NumberEditor from "@/components/editors/NumberEditor.vue"
 import TextEditor from "@/components/editors/TextEditor.vue"
 import BooleanEditor from "@/components/editors/BooleanEditor.vue"
@@ -10,6 +10,16 @@ import FieldEditor from "@/components/editors/FieldEditor.vue"
 import {setLanguage, sysLang} from "@/misc/I18n"
 
 const TAG = "AppState"
+
+export interface ValidationIssue {
+    path: string
+    message: string
+}
+
+export interface ValidationResult {
+    valid: boolean
+    issues: ValidationIssue[]
+}
 
 export const useAppStateStore = defineStore('app-state', () => {
         const available = ref(false)
@@ -29,7 +39,44 @@ export const useAppStateStore = defineStore('app-state', () => {
 
         // 为提高性能的缓存
         const ryoTypeCache = new Map<string, RyoType>()
-        const editorsCache = new Map<string, any[]>()
+        const editorsCache = new Map<string, EditorDescriptor[]>()
+
+        function createEditorsByRyoType(ryoType: RyoType): EditorDescriptor[] {
+            const editors: EditorDescriptor[] = []
+
+            if (ryoType.isArray) {
+                editors.push({id: "generic.array", title: "数组编辑器", component: ArrayEditor, priority: 10})
+                return editors
+            }
+
+            if (!ryoType.baseType) return editors
+
+            switch (ryoType.baseType.type) {
+                case "java.lang.String":
+                case "java.lang.Character":
+                    editors.push({id: "generic.text", title: "文本编辑器", component: TextEditor, priority: 10})
+                    break
+                case "java.lang.Integer":
+                case "java.lang.Long":
+                case "java.lang.Float":
+                case "java.lang.Double":
+                case "java.lang.Short":
+                case "java.lang.Byte":
+                    editors.push({id: "generic.number", title: "数字编辑器", component: NumberEditor, priority: 10})
+                    break
+                case "java.lang.Void":
+                    break
+                case "java.lang.Boolean":
+                    editors.push({id: "generic.boolean", title: "布尔编辑器", component: BooleanEditor, priority: 10})
+                    break
+                default:
+                    editors.push({id: "generic.field", title: "对象编辑器", component: FieldEditor, priority: 10})
+                    break
+            }
+
+            editors.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
+            return editors
+        }
 
         function getEditorsByRyoType(ryoType: RyoType) {
             // 生成唯一键：类型名 + 是否数组
@@ -40,31 +87,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                 return editorsCache.get(cacheKey)!
             }
 
-            const editors = []
-
-            if (ryoType.isArray) {
-                editors.push(ArrayEditor)
-            } else if (ryoType.baseType) switch (ryoType.baseType.type) {
-                case "java.lang.String":
-                    editors.push(TextEditor)
-                    break
-                case "java.lang.Character":
-                case "java.lang.Integer":
-                case "java.lang.Long":
-                case "java.lang.Float":
-                case "java.lang.Double":
-                case "java.lang.Short":
-                case "java.lang.Byte":
-                    editors.push(NumberEditor)
-                    break
-                case "java.lang.Void":
-                    break
-                case "java.lang.Boolean":
-                    editors.push(BooleanEditor)
-                    break
-                default:
-                    editors.push(FieldEditor)
-            }
+            const editors = createEditorsByRyoType(ryoType)
 
             // 写入缓存
             editorsCache.set(cacheKey, editors)
@@ -138,7 +161,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                 case "java.lang.Boolean":
                     return false
                 default:
-                    // TODO：初始化各字段，是否始终可靠？
+                    // CHECK：初始化各字段，是否始终可靠？
                     const obj: { [key: string]: any } = {}
                     type.baseType.members?.forEach(field => {
                         obj[field.name] = getInitValue(getRyoTypeByDataTypeName(field.type))
@@ -167,8 +190,68 @@ export const useAppStateStore = defineStore('app-state', () => {
                 case "java.lang.Boolean":
                     return typeof data === "boolean"
                 default:
-                    // TODO：是否需要检测字段
+                    // CHECK：是否需要检测字段
                     return typeof data === "object" && !Array.isArray(data)
+            }
+        }
+
+        function validateDataByRyoType(type: RyoType, data: any): ValidationResult {
+            const issues: ValidationIssue[] = []
+
+            const walk = (t: RyoType, val: any, path: string) => {
+                if (val === null || val === undefined) return
+
+                if (t.isArray) {
+                    if (!Array.isArray(val)) {
+                        issues.push({path, message: `期望数组，实际为 ${typeof val}`})
+                        return
+                    }
+
+                    const sub = getRyoTypeByDataTypeName(t.typeName)
+                    val.forEach((it: any, index: number) => walk(sub, it, `${path}[${index}]`))
+                    return
+                }
+
+                const baseType = t.baseType
+                if (!baseType) return
+
+                switch (baseType.type) {
+                    case "java.lang.String":
+                    case "java.lang.Character":
+                        if (typeof val !== "string") issues.push({path, message: `期望字符串，实际为 ${typeof val}`})
+                        return
+                    case "java.lang.Integer":
+                    case "java.lang.Long":
+                    case "java.lang.Float":
+                    case "java.lang.Double":
+                    case "java.lang.Short":
+                    case "java.lang.Byte":
+                        if (typeof val !== "number" || Number.isNaN(val)) issues.push({path, message: `期望数字，实际为 ${typeof val}`})
+                        return
+                    case "java.lang.Boolean":
+                        if (typeof val !== "boolean") issues.push({path, message: `期望布尔值，实际为 ${typeof val}`})
+                        return
+                    case "java.lang.Void":
+                        return
+                    default:
+                        if (typeof val !== "object" || Array.isArray(val)) {
+                            issues.push({path, message: `期望对象，实际为 ${typeof val}`})
+                            return
+                        }
+
+                        baseType.members?.forEach(member => {
+                            const nextType = getRyoTypeByDataTypeName(member.type)
+                            walk(nextType, val[member.name], `${path}.${member.name}`)
+                        })
+                        return
+                }
+            }
+
+            walk(type, data, "$")
+
+            return {
+                valid: issues.length === 0,
+                issues,
             }
         }
 
@@ -218,6 +301,7 @@ export const useAppStateStore = defineStore('app-state', () => {
             getDataTypeNameByRyoType,
             getRyoTypeByDataTypeName,
             typeSchemaToRyoType,
+            validateDataByRyoType,
             sidePanelExpanded
         }
     }
