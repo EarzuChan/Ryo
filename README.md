@@ -1,21 +1,3 @@
-## 📢 Maintenance Status and Seeking Maintainers
-
-**Note: This project is looking for new maintainers.**
-
-Due to shifts in my personal career and life focus, I am no longer able to continue providing the active maintenance this ecosystem deserves. For the past three years, I have poured all my passion into these projects—despite no financial return, I have experienced tremendous growth and felt the joy brought by the community.
-
-The vision remains ambitious, and the foundation remains solid:
-*   [RyoCore](Me.EarzuChan.Ryo.Core): Featuring powerful performance and a rational architecture, built with C# with a focus on excellence.
-*   [RyoEditor](Me.EarzuChan.Ryo.Editor): Dedicated to beautiful UI, powerful features, high performance, and high stability, although there is still a distance from fully achieving its goals.
-*   Teio: An unexploited multiplatform Simulacra series game launcher with community potential.
-*   [Sakiko](https://github.com/earzuchan/sakiko): A brand new and unified Kotlin multiplatform Hook framework, awaiting its first major application.
-
-After three years of dedicated development, due to changes in my personal career, I am transitioning this project into a passive maintenance state. Although I can no longer be on the front lines, the roadmap for this ecosystem remains grand and feasible.
-
-I am fading away (sadly), but the "flame" should not go out. I am looking for a visionary—not just someone who can "fix bugs," but a **torchbearer** who can carry these blueprints toward their final form.
-
-To the next person in charge: You are inheriting a legacy that consolidates three years of effort and architectural evolution. You are the messenger of this great vision. If you have the drive to turn these possibilities into reality, please contact me or submit an Issue to discuss the transfer of maintenance/management rights.
-
 # Ryo (Me.EarzuChan.Ryo)
 
 [中文](README_CN.md)

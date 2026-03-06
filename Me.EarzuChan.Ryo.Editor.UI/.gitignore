@@ -30,3 +30,4 @@ package-lock.json
 
 *.tsbuildinfo
 /pnpm-lock.yaml
+/.vite/
