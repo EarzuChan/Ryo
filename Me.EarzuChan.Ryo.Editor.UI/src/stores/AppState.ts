@@ -1,14 +1,25 @@
 import {computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {emitWebEvent, makeWebLetter, sendWebCallAndTakeItsReturnValues} from "@/utils/KurisuUtils"
-import {type EditorDescriptor, type RyoType, type TypeSchema} from "@/models/AppModels"
+import {
+    type EditorContext,
+    type EditorDescriptor,
+    type EditorOverrideRule,
+    type OverrideRuleSet,
+    type ResolvedEditorSelection,
+    type RyoType,
+    type TypeSchema
+} from "@/models/AppModels"
 import NumberEditor from "@/components/editors/NumberEditor.vue"
 import TextEditor from "@/components/editors/TextEditor.vue"
 import BooleanEditor from "@/components/editors/BooleanEditor.vue"
 import ArrayEditor from "@/components/editors/ArrayEditor.vue"
 import FieldEditor from "@/components/editors/FieldEditor.vue"
+import StringListEditor from "@/components/editors/StringListEditor.vue"
 import {setLanguage, sysLang} from "@/misc/I18n"
 import {i18n} from "@/misc/I18n"
+import {dataTypeNameFromRyoType, ruleMatchesContext} from "@/utils/EditorOverrideUtils"
+import {generateId} from "@/utils/UsefulUtils"
 
 const TAG = "AppState"
 
@@ -29,7 +40,10 @@ export const useAppStateStore = defineStore('app-state', () => {
 
         const dataTypeSchemas = ref<TypeSchema[]>([])
         const sidePanelExpanded = ref(true)
+        const editorOverrideRules = ref<OverrideRuleSet>({pathRules: [], typeRules: []})
+        const editorOverrideVersion = ref(0)
         const reffedAppLanguage = ref(sysLang)
+
         function applyLanguage(value: string, persist: boolean) {
             if (reffedAppLanguage.value === value && i18n.global.locale.value === value) return
             if (setLanguage(value)) {
@@ -49,58 +63,264 @@ export const useAppStateStore = defineStore('app-state', () => {
         // 为提高性能的缓存
         const ryoTypeCache = new Map<string, RyoType>()
         const editorsCache = new Map<string, EditorDescriptor[]>()
-
-        function createEditorsByRyoType(ryoType: RyoType): EditorDescriptor[] {
-            const editors: EditorDescriptor[] = []
-
-            if (ryoType.isArray) {
-                editors.push({id: "generic.array", titleKey: "editorGenericArray", component: ArrayEditor, priority: 10})
-                return editors
+        const editorRegistry: EditorDescriptor[] = [
+            {
+                id: "generic.array",
+                titleKey: "editorGenericArray",
+                surface: "inline",
+                component: ArrayEditor,
+                priority: 10,
+                supports: context => context.ryoType.isArray
+            },
+            {
+                id: "special.string-list",
+                titleKey: "editorSpecialStringList",
+                surface: "inline",
+                component: StringListEditor,
+                priority: 5,
+                supports: context => context.ryoType.isArray && context.ryoType.typeName === "java.lang.String"
+            },
+            {
+                id: "generic.text",
+                titleKey: "editorGenericText",
+                surface: "inline",
+                component: TextEditor,
+                priority: 10,
+                supports: context => !context.ryoType.isArray && ["java.lang.String", "java.lang.Character"].includes(context.ryoType.typeName)
+            },
+            {
+                id: "generic.number",
+                titleKey: "editorGenericNumber",
+                surface: "inline",
+                component: NumberEditor,
+                priority: 10,
+                supports: context => !context.ryoType.isArray && [
+                    "java.lang.Integer", "java.lang.Long", "java.lang.Float",
+                    "java.lang.Double", "java.lang.Short", "java.lang.Byte"
+                ].includes(context.ryoType.typeName)
+            },
+            {
+                id: "generic.boolean",
+                titleKey: "editorGenericBoolean",
+                surface: "inline",
+                component: BooleanEditor,
+                priority: 10,
+                supports: context => !context.ryoType.isArray && context.ryoType.typeName === "java.lang.Boolean"
+            },
+            {
+                id: "generic.field",
+                titleKey: "editorGenericField",
+                surface: "inline",
+                component: FieldEditor,
+                priority: 10,
+                supports: context => !context.ryoType.isArray && !!context.ryoType.baseType && ![
+                    "java.lang.String", "java.lang.Character", "java.lang.Integer", "java.lang.Long",
+                    "java.lang.Float", "java.lang.Double", "java.lang.Short", "java.lang.Byte",
+                    "java.lang.Boolean", "java.lang.Void"
+                ].includes(context.ryoType.typeName)
             }
+        ]
 
-            if (!ryoType.baseType) return editors
-
-            switch (ryoType.baseType.type) {
-                case "java.lang.String":
-                case "java.lang.Character":
-                    editors.push({id: "generic.text", titleKey: "editorGenericText", component: TextEditor, priority: 10})
-                    break
-                case "java.lang.Integer":
-                case "java.lang.Long":
-                case "java.lang.Float":
-                case "java.lang.Double":
-                case "java.lang.Short":
-                case "java.lang.Byte":
-                    editors.push({id: "generic.number", titleKey: "editorGenericNumber", component: NumberEditor, priority: 10})
-                    break
-                case "java.lang.Void":
-                    break
-                case "java.lang.Boolean":
-                    editors.push({id: "generic.boolean", titleKey: "editorGenericBoolean", component: BooleanEditor, priority: 10})
-                    break
-                default:
-                    editors.push({id: "generic.field", titleKey: "editorGenericField", component: FieldEditor, priority: 10})
-                    break
+        function createEditorContext(ryoType: RyoType, options?: Partial<EditorContext>): EditorContext {
+            return {
+                itemKey: options?.itemKey,
+                dataTypeName: options?.dataTypeName ?? dataTypeNameFromRyoType(ryoType),
+                ryoType,
+                path: options?.path ?? "$",
+                isRoot: options?.isRoot ?? true,
             }
-
-            editors.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
-            return editors
         }
 
-        function getEditorsByRyoType(ryoType: RyoType) {
-            // 生成唯一键：类型名 + 是否数组
-            const cacheKey = `${ryoType.typeName}|${ryoType.isArray}`
+        function getEditorsByContext(context: EditorContext): EditorDescriptor[] {
+            const cacheKey = `${context.dataTypeName}|${context.isRoot}|${context.path}`
 
             if (editorsCache.has(cacheKey)) {
                 console.log(TAG, "[Editors 缓存命中]", cacheKey)
                 return editorsCache.get(cacheKey)!
             }
 
-            const editors = createEditorsByRyoType(ryoType)
+            const editors = editorRegistry.filter((editor: EditorDescriptor) => editor.supports ? editor.supports(context) : true)
+                .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
 
-            // 写入缓存
             editorsCache.set(cacheKey, editors)
             return editors
+        }
+
+        function getEditorsByRyoType(ryoType: RyoType) {
+            return getEditorsByContext(createEditorContext(ryoType))
+        }
+
+        function getEditorDescriptorById(editorId?: string): EditorDescriptor | undefined {
+            if (!editorId) return undefined
+            return editorRegistry.find((editor: EditorDescriptor) => editor.id === editorId)
+        }
+
+        function getEditorsForOverrideRule(scope: "path" | "type", pattern: string, typeConstraint?: string): EditorDescriptor[] {
+            const targetTypeName = (scope === "path" ? typeConstraint : undefined)
+                ?? (pattern.includes("*") ? typeConstraint : pattern)
+
+            if (!targetTypeName) return []
+
+            return getEditorsByContext(createEditorContext(getRyoTypeByDataTypeName(targetTypeName), {
+                dataTypeName: targetTypeName,
+                path: scope === "path" ? pattern || "$" : "$",
+                isRoot: false,
+            }))
+        }
+
+        function getOverrideRules(scope: "path" | "type") {
+            return scope === "path" ? editorOverrideRules.value.pathRules : editorOverrideRules.value.typeRules
+        }
+
+        function isSameOverrideTarget(a: Pick<EditorOverrideRule, "scope" | "pattern" | "typeConstraint">, b: Pick<EditorOverrideRule, "scope" | "pattern" | "typeConstraint">) {
+            return a.scope === b.scope
+                && a.pattern === b.pattern
+                && (a.typeConstraint ?? "") === (b.typeConstraint ?? "")
+        }
+
+        function setEditorOverrideRules(ruleSet: OverrideRuleSet, persist: boolean) {
+            editorOverrideRules.value = {
+                pathRules: [...(ruleSet?.pathRules ?? [])],
+                typeRules: [...(ruleSet?.typeRules ?? [])],
+            }
+            editorOverrideVersion.value++
+            
+            if (persist) emitWebEvent(makeWebLetter("Preference:EditorOverrides", editorOverrideRules.value))
+        }
+
+        function upsertEditorOverrideRule(rule: Omit<EditorOverrideRule, "id" | "updatedAt"> & { id?: string }) {
+            const draftRule: EditorOverrideRule = {
+                ...rule,
+                id: rule.id ?? generateId(Date.now()).toString(),
+                updatedAt: Date.now(),
+            }
+
+            const currentRules = getOverrideRules(rule.scope)
+            const byIdIndex = draftRule.id
+                ? currentRules.findIndex((it: EditorOverrideRule) => it.id === draftRule.id)
+                : -1
+            const duplicateIndex = currentRules.findIndex((it: EditorOverrideRule, index: number) =>
+                index !== byIdIndex && isSameOverrideTarget(it, draftRule)
+            )
+
+            let replaced = [...currentRules]
+
+            if (byIdIndex !== -1) {
+                replaced[byIdIndex] = draftRule
+            } else if (duplicateIndex !== -1) {
+                const duplicateRule = replaced[duplicateIndex]
+                replaced[duplicateIndex] = {
+                    ...draftRule,
+                    id: duplicateRule.id,
+                }
+            } else {
+                replaced.push(draftRule)
+            }
+
+            // Keep a single rule for each target (scope + pattern + typeConstraint).
+            if (byIdIndex !== -1 && duplicateIndex !== -1) {
+                replaced = replaced.filter((_, index: number) => index !== duplicateIndex)
+            }
+
+            setEditorOverrideRules({
+                pathRules: rule.scope === "path" ? replaced : editorOverrideRules.value.pathRules,
+                typeRules: rule.scope === "type" ? replaced : editorOverrideRules.value.typeRules,
+            }, true)
+        }
+
+        function findDuplicateEditorOverrideRule(
+            scope: "path" | "type",
+            pattern: string,
+            typeConstraint?: string,
+            excludeId?: string
+        ): EditorOverrideRule | undefined {
+            return getOverrideRules(scope).find((it: EditorOverrideRule) =>
+                it.id !== excludeId
+                && it.scope === scope
+                && it.pattern === pattern
+                && (it.typeConstraint ?? "") === (typeConstraint ?? "")
+            )
+        }
+
+        function removeEditorOverrideRule(scope: "path" | "type", ruleId: string) {
+            const currentRules = getOverrideRules(scope)
+            const filtered = currentRules.filter((it: EditorOverrideRule) => it.id !== ruleId)
+
+            setEditorOverrideRules({
+                pathRules: scope === "path" ? filtered : editorOverrideRules.value.pathRules,
+                typeRules: scope === "type" ? filtered : editorOverrideRules.value.typeRules,
+            }, true)
+        }
+
+        function resolveEditorForContext(context: EditorContext, onceOverrides?: Record<string, string>, requestedEditorId?: string): ResolvedEditorSelection {
+            const availableEditors = getEditorsByContext(context)
+            if (availableEditors.length === 0) return {source: "none"}
+
+            const findEditor = (editorId?: string): EditorDescriptor | undefined =>
+                editorId ? availableEditors.find((editor: EditorDescriptor) => editor.id === editorId) : undefined
+
+            const requested = findEditor(requestedEditorId)
+            if (requested) return {editor: requested, source: "requested"}
+
+            const onceEditor = findEditor(onceOverrides?.[context.path])
+            if (onceEditor) return {editor: onceEditor, source: "once"}
+
+            const pathMatch = editorOverrideRules.value.pathRules
+                .map(rule => ({rule, match: ruleMatchesContext(rule, context)}))
+                .filter(candidate => candidate.match.matched && !!findEditor(candidate.rule.editorId))
+                .sort((a, b) => {
+                    if (b.match.score !== a.match.score) return b.match.score - a.match.score
+                    return b.rule.updatedAt - a.rule.updatedAt
+                })[0]
+
+            if (pathMatch) {
+                const matchedEditor = findEditor(pathMatch.rule.editorId)
+                if (matchedEditor) return {
+                    editor: matchedEditor,
+                    source: "path",
+                    matchedRule: pathMatch.rule,
+                }
+            }
+
+            const typeMatch = editorOverrideRules.value.typeRules
+                .map(rule => ({rule, match: ruleMatchesContext(rule, context)}))
+                .filter(candidate => candidate.match.matched && !!findEditor(candidate.rule.editorId))
+                .sort((a, b) => {
+                    if (b.match.score !== a.match.score) return b.match.score - a.match.score
+                    return b.rule.updatedAt - a.rule.updatedAt
+                })[0]
+
+            if (typeMatch) {
+                const matchedEditor = findEditor(typeMatch.rule.editorId)
+                if (matchedEditor) return {
+                    editor: matchedEditor,
+                    source: "type",
+                    matchedRule: typeMatch.rule,
+                }
+            }
+
+            return {
+                editor: availableEditors[0],
+                source: "default",
+            }
+        }
+
+        function getMatchedEditorOverrideRulesForContext(context: EditorContext): EditorOverrideRule[] {
+            const availableEditors = getEditorsByContext(context)
+            if (availableEditors.length === 0) return []
+
+            const canUseEditor = (editorId?: string) =>
+                !!editorId && availableEditors.some((editor: EditorDescriptor) => editor.id === editorId)
+
+            return [...editorOverrideRules.value.pathRules, ...editorOverrideRules.value.typeRules]
+                .map(rule => ({rule, match: ruleMatchesContext(rule, context)}))
+                .filter(candidate => candidate.match.matched && canUseEditor(candidate.rule.editorId))
+                .sort((a, b) => {
+                    if (a.rule.scope !== b.rule.scope) return a.rule.scope === "path" ? -1 : 1
+                    if (b.match.score !== a.match.score) return b.match.score - a.match.score
+                    return b.rule.updatedAt - a.rule.updatedAt
+                })
+                .map(candidate => candidate.rule)
         }
 
         function getRyoTypeByDataTypeName(dataTypeName: string): RyoType {
@@ -291,6 +511,11 @@ export const useAppStateStore = defineStore('app-state', () => {
                 console.log(TAG, "Testing fetched", fetchedTesting)
                 preferTesting.value = fetchedTesting
 
+                const fetchedEditorOverrides = (await sendWebCallAndTakeItsReturnValues(
+                    makeWebLetter("Preference:EditorOverrides", {pathRules: [], typeRules: []})
+                ))[0] as OverrideRuleSet
+                setEditorOverrideRules(fetchedEditorOverrides ?? {pathRules: [], typeRules: []}, false)
+
                 available.value = true
             } catch (err) {
                 console.error(TAG, "Init failed", err)
@@ -307,9 +532,20 @@ export const useAppStateStore = defineStore('app-state', () => {
             fetchDataSchemas,
             appLanguage,
             getInitValue,
+            createEditorContext,
+            getEditorsByContext,
             getEditorsByRyoType,
+            getEditorDescriptorById,
+            getEditorsForOverrideRule,
+            getMatchedEditorOverrideRulesForContext,
+            findDuplicateEditorOverrideRule,
             getDataTypeNameByRyoType,
             getRyoTypeByDataTypeName,
+            editorOverrideRules,
+            editorOverrideVersion,
+            upsertEditorOverrideRule,
+            removeEditorOverrideRule,
+            resolveEditorForContext,
             typeSchemaToRyoType,
             validateDataByRyoType,
             sidePanelExpanded

@@ -1,7 +1,7 @@
 <template>
   <div id="settings-page">
     <PreferenceLabel>{{ $t("settingsGroupUsage") }}</PreferenceLabel>
-    <PreferenceItem icon-key="apps" :title="$t('settingsPreferredEditors')" clickable/>
+    <PreferenceItem icon-key="apps" :title="$t('settingsPreferredEditors')" clickable @click="openEditorOverrideManager"/>
 
     <PreferenceLabel>{{ $t("settingsGroupInterface") }}</PreferenceLabel>
     <PreferenceItem icon-key="translate" :title="$t('settingsLanguage')" clickable @click="openLanguageDialog">
@@ -15,16 +15,15 @@
     </PreferenceItem>
 
     <PreferenceLabel>{{ $t("settingsGroupMore") }}</PreferenceLabel>
-    <PreferenceItem icon-key="about" :title="$t('settingsAboutRyo')" :desc="$t('settingsAboutDesc')" clickable
-                    @click="openAboutDialog"/>
-    <PreferenceItem icon-key="check_updates" :title="$t('settingsCheckUpdates')" :desc="$t('settingsCurrentVersion')">
+    <PreferenceItem icon-key="about" :title="$t('aboutRyo')" :desc="`by ` + appInfo.author" clickable @click="openAboutDialog"/>
+    <PreferenceItem icon-key="check_updates" :title="$t('settingsCheckUpdates')" :desc="appInfo.version">
       <template #tail>{{ $t("settingsLatest") }}</template>
     </PreferenceItem>
   </div>
 </template>
 
 <script setup lang="ts">
-import {computed} from "vue"
+import {computed, inject} from "vue"
 import PreferenceLabel from "@/components/PreferenceLabel.vue"
 import PreferenceItem from "@/components/PreferenceItem.vue"
 import {useAppStateStore} from "@/stores/AppState"
@@ -32,10 +31,12 @@ import {useI18n} from "vue-i18n"
 import {useDialogStateStore} from "@/stores/DialogState"
 import LanguageSettingDialog from "@/views/dialogs/LanguageSettingDialog.vue"
 import AboutDialog from "@/views/dialogs/AboutDialog.vue"
+import EditorOverrideManagerDialog from "@/views/dialogs/EditorOverrideManagerDialog.vue"
 
 const appState = useAppStateStore()
 const {t} = useI18n()
 const dialogState = useDialogStateStore()
+const appInfo: any = inject("app_info")
 
 const currentLanguageLabel = computed(() => {
   switch (appState.appLanguage) {
@@ -59,6 +60,10 @@ function openLanguageDialog() {
 
 function openAboutDialog() {
   dialogState.orderSpecial(AboutDialog)
+}
+
+function openEditorOverrideManager() {
+  dialogState.orderSpecial(EditorOverrideManagerDialog)
 }
 </script>
 

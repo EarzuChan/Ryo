@@ -25,9 +25,16 @@ export interface DialogModel {
 
 export interface MenuItem {
     name: string
+    kind?: "action" | "header" | "divider"
     disabled?: boolean
     action?: () => void
     children?: MenuItem[]
+}
+
+export interface ContextMenuContribution {
+    title: string
+    targetPath: string
+    items: MenuItem[]
 }
 
 export interface MenuModel {
@@ -39,6 +46,7 @@ export interface MenuModel {
     left?: number
     attachToId?: string
     attachMethod?: AttachMethod
+    anchorRightToAttach?: boolean
     closeOnClickOverlay?: boolean
     locateToIndex?: number
 }

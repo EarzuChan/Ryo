@@ -161,12 +161,18 @@ function closeTab(index: number) {
 }
 
 #content_container {
+  display: flex;
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .content_shell {
-  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .content_shell.page-padding {
@@ -174,6 +180,7 @@ function closeTab(index: number) {
 }
 
 .content {
-  min-height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 </style>

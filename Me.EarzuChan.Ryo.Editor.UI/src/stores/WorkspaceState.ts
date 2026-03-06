@@ -113,6 +113,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 sessionId: makeSessionId(item),
                 baselineData,
                 currentData: copyData(baselineData),
+                onceEditorOverrides: {},
+                editorOverrideVersion: 0,
                 undoStack: [],
                 redoStack: [],
                 applying: false,
@@ -233,6 +235,29 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             const itemIndex = resolveItemIndex(itemRef)
             const session = ensureItemSession(itemIndex)
             return !!session && hasRedo(session.redoStack)
+        }
+
+        function getItemSessionOnceEditorOverrides(itemRef: number | string): Record<string, string> {
+            return ensureItemSession(itemRef)?.onceEditorOverrides ?? {}
+        }
+
+        function setItemSessionOnceEditorOverride(itemRef: number | string, path: string, editorId: string) {
+            const session = ensureItemSession(itemRef)
+            if (!session) return
+            session.onceEditorOverrides[path] = editorId
+            session.editorOverrideVersion++
+        }
+
+        function removeItemSessionOnceEditorOverride(itemRef: number | string, path: string) {
+            const session = ensureItemSession(itemRef)
+            if (!session) return
+            if (!(path in session.onceEditorOverrides)) return
+            delete session.onceEditorOverrides[path]
+            session.editorOverrideVersion++
+        }
+
+        function getItemSessionEditorOverrideVersion(itemRef: number | string): number {
+            return ensureItemSession(itemRef)?.editorOverrideVersion ?? 0
         }
 
         function openVolume() {
@@ -850,6 +875,10 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             redoItemSession,
             canUndoItemSession,
             canRedoItemSession,
+            getItemSessionEditorOverrideVersion,
+            getItemSessionOnceEditorOverrides,
+            setItemSessionOnceEditorOverride,
+            removeItemSessionOnceEditorOverride,
             discardItemSessionChanges,
             commitItemSessionAsSaved,
             saveVolume,

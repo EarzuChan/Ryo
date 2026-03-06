@@ -4,9 +4,10 @@
        :class="{'even':!even}">
     <VueDraggable class="draggable-place" v-model="modelWithIds" @start="notice(true)"
                   :animation="200" @end="notice(false)">
-      <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second"
-           @contextmenu.prevent.stop="e=>showContextMenu(e,index)"> <!-- v-memo="item" 会搞死原子编辑器-->
-        <EditorHolder :even="even" not-use-card v-model="model![index]" :type="itemType"/>
+      <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second"> <!-- v-memo="item" 会搞死原子编辑器-->
+        <EditorHolder :even="even" not-use-card v-model="model![index]" :type="itemType"
+                      :item-key="itemKey" :editor-path="getItemPath(index)" :data-type-name="itemTypeName"
+                      :context-menu-contributions="getContextMenuContributions(index)"/>
       </div>
     </VueDraggable>
     <div id="add-item-button" class="base" @click="addItem">
@@ -24,17 +25,24 @@ import IconButton from "../IconButton.vue"
 import EditorHolder from "../EditorHolder.vue"
 import type {Pair, RyoType} from "@/models/AppModels"
 import {useDialogStateStore} from "@/stores/DialogState"
-import {showMenu} from "@/utils/MenuUtils"
+import {appendEditorPath, dataTypeNameFromRyoType} from "@/utils/EditorOverrideUtils"
+import type {ContextMenuContribution, MenuItem} from "@/models/UIModels"
+import {useI18n} from "vue-i18n"
+import {createContextMenuGroup} from "@/utils/ContextMenuUtils"
 
 const TAG = "ArrayEditor"
 
 // TODO：再加上文本编辑器的宽度自适应（作为atom时最小），子编辑器的父级传递错误，右键删除
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
+const {t} = useI18n()
 
 const props = defineProps({
   type: Object as PropType<RyoType>,
   even: Boolean,
+  itemKey: String,
+  editorPath: String,
+  contextMenuContributions: Array as PropType<ContextMenuContribution[]>,
 })
 const model = defineModel<any[]>()
 
@@ -60,6 +68,7 @@ const modelWithIds = computed<Pair<any, number>[]>({
   }
 })
 const ids = ref<number[]>([])
+const itemTypeName = computed(() => itemType.value ? dataTypeNameFromRyoType(itemType.value) : "")
 
 watchSyncEffect(() => {
   console.debug(TAG, "数量监测", model.value!.length, ids.value.length)
@@ -79,16 +88,6 @@ watchSyncEffect(() => {
 // TODO: 统一的右键菜单接口
 
 const isDragging = ref(false)
-
-function showContextMenu(e: MouseEvent, index: number) {
-  console.debug(TAG, "右键菜单", e, index)
-
-  showMenu({
-    top: e.clientY - 8, left: e.clientX, items: [
-      {name: "删除", action: () => model.value!.splice(index, 1)},
-    ],
-  })
-}
 
 function notice(state: boolean) {
   isDragging.value = state
@@ -110,6 +109,29 @@ function addItem() {
     })
     console.error(TAG, errText, model.value, itemType.value)
   }
+}
+
+function getItemPath(index: number) {
+  return appendEditorPath(props.editorPath ?? "$", index)
+}
+
+function getContextMenuContributions(index: number): ContextMenuContribution[] {
+  const path = getItemPath(index)
+  const inheritedContributions = props.contextMenuContributions ?? []
+
+  return [
+    createContextMenuGroup(
+        t("editorMenuParentArrayItemGroup", {path}),
+        path,
+        [
+          {
+            name: t("editorDeleteArrayElement"),
+            action: () => model.value!.splice(index, 1),
+          }
+        ]
+    ),
+    ...inheritedContributions,
+  ]
 }
 </script>
 
@@ -146,13 +168,19 @@ function addItem() {
 }
 
 #add-item-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 36px;
   min-height: 36px;
+  cursor: pointer;
 }
 
 #add-item-icon {
   --ryo-color-on-surface-variant: var(--ryo-color-on-surface);
   border-radius: 0;
+  width: 100% !important;
   height: 100% !important;
+  pointer-events: none;
 }
 </style>

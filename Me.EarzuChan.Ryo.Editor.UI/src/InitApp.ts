@@ -10,7 +10,7 @@ import {i18n} from "@/misc/I18n"
 
 const TAG = "InitApp"
 const APP_INFO = {
-    version: "2025.1.1",
+    version: "2026.1.1",
     name: "Ryo",
     author: "Earzu Chan",
     repoLink: "https://github.com/EarzuChan/Ryo",
@@ -19,6 +19,11 @@ const APP_INFO = {
 }
 
 console.log(TAG, "Start init")
+
+// 用以拦截浏览器默认右键
+window.addEventListener('contextmenu', (event) => {
+    event.preventDefault()
+})
 
 const app = createApp(App)
 const pinia = createPinia()

@@ -76,12 +76,24 @@ function afterLeave() {
   margin: 128px;
 }
 
-.overlay-enter-active, .dialog-enter-active {
-  transition: var(--ryo-motion-emphasized-decelerate);
+.overlay-enter-active {
+  transition: opacity 250ms cubic-bezier(0.05, 0.7, 0.1, 1);
 }
 
-.overlay-leave-active, .dialog-leave-active {
-  transition: var(--ryo-motion-emphasized-accelerate);
+.overlay-leave-active {
+  transition: opacity 200ms cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+.dialog-enter-active {
+  transition:
+      transform 250ms cubic-bezier(0.05, 0.7, 0.1, 1),
+      opacity 250ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+.dialog-leave-active {
+  transition:
+      transform 200ms cubic-bezier(0.3, 0, 0.8, 0.15),
+      opacity 200ms cubic-bezier(0.3, 0, 0.8, 0.15);
 }
 
 .overlay-enter-from,
@@ -91,7 +103,7 @@ function afterLeave() {
 
 .dialog-enter-from,
 .dialog-leave-to {
-  transform: translateY(12px) scale(0.96);
+  transform: translateY(8px) scale(0.98);
   opacity: 0;
 }
 

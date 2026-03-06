@@ -112,7 +112,7 @@ function closeDialog() {
   flex-direction: row;
   justify-content: flex-end;
   align-items: center;
-  padding: 24px 24px 24px 0;
+  padding: 24px;
   gap: 8px;
 }
 

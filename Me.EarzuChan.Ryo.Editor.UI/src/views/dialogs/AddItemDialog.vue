@@ -25,12 +25,8 @@
       <Divider/>
       <!--TODO：包装器选项-->
       <div class="dialog-contents">
-        <!--<div class="hori">
-          <div class="desc ryo-typography-body-medium">{{ t('makeArray') }}</div>
-          <CheckBox v-model:checked="makeArray" :container-size="20"/>
-        </div>-->
-        <Select :items="wrapperTypes" v-model:selected="preferredWrapperType"
-                :unselected-text="$t('selectWrapperType')"/>
+        <Select :items="wrapperTypeLabels" v-model:selected="wrapperSelectIndex"
+                :unselected-text="t('wrapperNoWrapperPrompt')"/>
       </div>
       <div id="dialog-actions">
         <TextButton @click="handleCancel">{{ t('cancel') }}</TextButton>
@@ -41,19 +37,16 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, computed, defineProps, type PropType} from 'vue'
+import {onMounted, ref, computed, defineProps} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
 import Divider from "@/components/Divider.vue"
 import TextButton from "@/components/TextButton.vue"
 import {useAppStateStore} from "@/stores/AppState"
 import {useVirtualScroll} from "@/composables/VirtualScroll"
 import OutlinedTextField from "@/components/OutlinedTextField.vue"
-import {useI18n} from "vue-i18n";
-import CheckBox from "@/components/CheckBox.vue";
-import type {DialogActionButtonModel} from "@/models/UIModels";
-import type {RyoType} from "@/models/AppModels";
-import {useWorkspaceStateStore} from "@/stores/WorkspaceState";
-import Select from "@/components/Select.vue";
+import {useI18n} from "vue-i18n"
+import type {RyoType} from "@/models/AppModels"
+import Select from "@/components/Select.vue"
 
 const {t} = useI18n()
 
@@ -69,9 +62,18 @@ const typeFilterErrorText = ref("")
 
 const itemNameErrorText = ref("")
 
-const wrapperTypes = ["noWrapper", "array", "array2d"]
+const wrapperTypeKeys = ["noWrapper", "array", "array2D"]
 
-const preferredWrapperType = ref(0)
+const wrapperTypeLabels = computed(() => wrapperTypeKeys.map(key => t(key)))
+
+const preferredWrapperType = ref(-1)
+const effectiveWrapperType = computed(() => preferredWrapperType.value === -1 ? 0 : preferredWrapperType.value)
+const wrapperSelectIndex = computed({
+  get: () => preferredWrapperType.value,
+  set: (value: number) => {
+    preferredWrapperType.value = value === 0 ? -1 : value
+  }
+})
 
 const props = defineProps<{
   confirm: (str: string, ryoType: RyoType) => void
@@ -138,9 +140,9 @@ function handleCancel() {
 // 确认
 function handleConfirm() {
   // 计算RyoType
-  console.log(TAG, "啊玉桂狗", preferredWrapperType.value)
-  let ryoType = appState.typeSchemaToRyoType(selectedSchema.value, preferredWrapperType.value != 0)
-  if (preferredWrapperType.value == 2) ryoType = appState.getRyoTypeByDataTypeName(appState.getDataTypeNameByRyoType(ryoType) + "[]")
+  console.log(TAG, "啊玉桂狗", effectiveWrapperType.value)
+  let ryoType = appState.typeSchemaToRyoType(selectedSchema.value, effectiveWrapperType.value !== 0)
+  if (effectiveWrapperType.value === 2) ryoType = appState.getRyoTypeByDataTypeName(appState.getDataTypeNameByRyoType(ryoType) + "[]")
 
   props.confirm(itemName.value, ryoType)
 

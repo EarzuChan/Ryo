@@ -22,11 +22,48 @@ export interface RyoType {
     typeName: string
 }
 
+export type EditorSurface = "inline" | "fullpage" | "dialog"
+
+export interface EditorContext {
+    itemKey?: string
+    dataTypeName: string
+    ryoType: RyoType
+    path: string
+    isRoot: boolean
+}
+
 export interface EditorDescriptor {
     id: string
     titleKey: string
+    surface: EditorSurface
     component: any
     priority?: number
+    supports?: (context: EditorContext) => boolean
+}
+
+export type EditorOverrideScope = "path" | "type"
+
+export interface EditorOverrideRule {
+    id: string
+    scope: EditorOverrideScope
+    pattern: string
+    editorId: string
+    enabled: boolean
+    typeConstraint?: string
+    updatedAt: number
+}
+
+export interface OverrideRuleSet {
+    pathRules: EditorOverrideRule[]
+    typeRules: EditorOverrideRule[]
+}
+
+export type EditorResolutionSource = "requested" | "once" | "path" | "type" | "default" | "none"
+
+export interface ResolvedEditorSelection {
+    editor?: EditorDescriptor
+    source: EditorResolutionSource
+    matchedRule?: EditorOverrideRule
 }
 
 export interface FileModel {
@@ -89,6 +126,8 @@ export interface EditorSession {
     sessionId: string
     baselineData: any
     currentData: any
+    onceEditorOverrides: Record<string, string>
+    editorOverrideVersion: number
     undoStack: SessionFrame[]
     redoStack: SessionFrame[]
     applying: boolean

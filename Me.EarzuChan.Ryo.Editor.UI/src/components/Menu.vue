@@ -1,15 +1,19 @@
 ﻿<template>
   <Teleport to="#ryo-viewport">
     <Transition :name="transName" @after-enter="afterEnter" @after-leave="afterLeave">
-      <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
-        <div id="menu-contents">
-          <div v-for="(item,index) in items"
-               :class="{hover: currentHover === index,marked: index === locateToIndex,disabled: item.disabled}"
-               :id="`${item.name}-${index}`"
-               class="menu-item ryo-typography-body-medium"
-               @click="invoke(item)" @mouseenter="hover(item,index)">
-            {{ item.name }}
-          </div>
+        <div id="menu-base" :style="menuItemStyle" v-show="ctrlShow" ref="menuBase">
+          <div id="menu-contents">
+            <div v-for="(item,index) in items"
+                 :class="{
+                   hover: isInteractive(item) && currentHover === index,
+                   marked: isInteractive(item) && index === locateToIndex,
+                   disabled: item.disabled
+                 }"
+                 :id="`${item.name}-${index}`"
+                 class="menu-item ryo-typography-body-medium"
+                 @click="invoke(item)" @mouseenter="hover(item,index)">
+              {{ item.name }}
+            </div>
         </div>
       </div>
     </Transition>
@@ -45,6 +49,15 @@ const props = defineProps({
   locateToIndex: {
     type: Number,
     default: -1
+  },
+  attachToId: String,
+  attachMethod: {
+    type: Number as PropType<AttachMethod | undefined>,
+    default: undefined
+  },
+  anchorRightToAttach: {
+    type: Boolean,
+    default: false
   }
 })
 const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-item'])
@@ -52,13 +65,14 @@ const emit = defineEmits(['open', 'opened', 'close', 'closed', 'close-on-menu-it
 const menuItemStyle = computed(() => {
   return {
     top: fix.value + 'px',
-    left: props.left + 'px'
+    left: leftPos.value + 'px'
   }
 })
 
 const menuBase = ref<HTMLElement | null>(null)
 const currentHover = ref(-1)
 const fix = ref(0)
+const leftPos = ref(0)
 const ctrlShow = ref(true)
 const currentMenu = ref<any>(null)
 const menuItemClicked = ref(false)
@@ -66,7 +80,13 @@ const delay = ref<any>(null)
 
 const transName = ref('menu')
 
+function isInteractive(item: MenuItem) {
+  return !item.disabled
+}
+
 function invoke(item: MenuItem) {
+  if (!isInteractive(item) || item.children) return
+
   if (item.action) item.action()
 
   menuItemClicked.value = true
@@ -74,6 +94,7 @@ function invoke(item: MenuItem) {
 }
 
 function hover(item: MenuItem, index: number) {
+  if (!isInteractive(item)) return
   if (index === currentHover.value) return
 
   // console.log(TAG, 'hover', index)
@@ -87,16 +108,23 @@ function hover(item: MenuItem, index: number) {
     let babe = item.children
 
     delay.value = delayExecution(100, () => {
+      const targetElement = document.getElementById(`${item.name}-${index}`)
+      const targetRect = targetElement?.getBoundingClientRect()
+      const submenuOpenThreshold = 220
+      const shouldOpenLeft = !!targetRect && window.innerWidth - targetRect.right < submenuOpenThreshold
+
       currentMenu.value = showMenu({
         items: babe,
-        attachToId: `${item.name}-${index}`, attachMethod: AttachMethod.UpRight,
+        attachToId: `${item.name}-${index}`,
+        attachMethod: shouldOpenLeft ? AttachMethod.UpLeft : AttachMethod.UpRight,
+        anchorRightToAttach: shouldOpenLeft,
         onClose() {
           currentMenu.value = null
         },
         onCloseOnMenuItem(imm) {
           closeMenu(imm)
         },
-        left: -8,
+        left: shouldOpenLeft ? 8 : -8,
         top: -8
       })
 
@@ -146,6 +174,7 @@ onMounted(() => {
 
   // In-place
   fix.value = props.top
+  leftPos.value = props.left
   if (props.locateToIndex !== -1 && props.locateToIndex < props.items.length) {
     console.log(TAG, 'locateToIndex', props.locateToIndex)
     if (isScrollbarVisible(menuBase.value!)) {
@@ -155,20 +184,25 @@ onMounted(() => {
         fix.value += 8 - item.getBoundingClientRect().top
         console.log(TAG, 'fix', item.getBoundingClientRect().top)
       }
-    } else {
-      fix.value -= props.locateToIndex * 28
-    }
+    } else fix.value -= props.locateToIndex * 28
   }
 
   // 预防菜单上下超出屏幕
   const rect = menuBase.value!.getBoundingClientRect()
-  console.log(TAG, 'rect', rect)
-  if (fix.value + rect.height + 12 > window.innerHeight) {
-    fix.value = window.innerHeight - rect.height - 12
-  } else if (fix.value < 12) {
-    fix.value = 12
+  if (props.attachToId && props.anchorRightToAttach) {
+    const targetElement = document.getElementById(props.attachToId)
+    const targetRect = targetElement?.getBoundingClientRect()
+    if (targetRect) {
+      leftPos.value = props.left - rect.width
+    }
   }
+  console.log(TAG, 'rect', rect)
+  if (fix.value + rect.height + 12 > window.innerHeight) fix.value = window.innerHeight - rect.height - 12
+  else if (fix.value < 12) fix.value = 12
 
+
+  if (leftPos.value + rect.width + 12 > window.innerWidth) leftPos.value = window.innerWidth - rect.width - 12
+  else if (leftPos.value < 12) leftPos.value = 12
 
   // HACK：我也不知道为什么要这样写，但是不这样写的话就会出现一些奇怪的问题
   setTimeout(() => document.addEventListener('mousedown', clickDocument))

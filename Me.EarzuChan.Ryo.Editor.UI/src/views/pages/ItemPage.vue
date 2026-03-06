@@ -18,7 +18,8 @@
       </div>
     </div>
     <EditorHolder ref="holder" card-surrounded :type="itemData.ryoType" v-model="itemData.tempData"
-                  :prefer-editor-id="preferEditorId">
+                  :prefer-editor-id="resolvedEditorId" :item-key="itemKey" editor-path="$"
+                  :data-type-name="itemData.dataTypeName" is-root-editor>
       <div id="editor-holder-action-bar">
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
@@ -39,8 +40,9 @@ import {useAppStateStore} from "@/stores/AppState"
 import Select from "@/components/Select.vue"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import {type FileModel} from "@/models/AppModels"
+import {type EditorDescriptor, type FileModel} from "@/models/AppModels"
 import {useI18n} from "vue-i18n"
+import {applyEditorSelectionWithStrategy} from "@/utils/EditorPreferenceUtils"
 
 const TAG = "ItemPage"
 
@@ -69,18 +71,22 @@ const itemData = computed<FileModel>(() => {
     return {id: -1, parseSuccess: false}
   }
 })
+const rootEditorContext = computed(() => {
+  if (!itemData.value.ryoType || !itemData.value.dataTypeName) return undefined
+  return appState.createEditorContext(itemData.value.ryoType, {
+    itemKey: itemKey.value,
+    dataTypeName: itemData.value.dataTypeName,
+    path: "$",
+    isRoot: true,
+  })
+})
 const supportedEditors = computed(() => {
-  const type = itemData.value.ryoType
-  if (type) {
-    return appState.getEditorsByRyoType(type)
-  }
-
-  return []
+  return rootEditorContext.value ? appState.getEditorsByContext(rootEditorContext.value) : []
 })
 const supportedEditorTitles = computed(() => {
   const editors = supportedEditors.value
   if (editors.length === 0) return [t("noAvailableEditorForUnknownType")]
-  return editors.map(editor => t(editor.titleKey))
+  return editors.map((editor: EditorDescriptor) => t(editor.titleKey))
 })
 const inOutMethods = computed(() => {
   const typeName = itemData.value.ryoType
@@ -89,20 +95,34 @@ const inOutMethods = computed(() => {
 })
 
 const holder = ref<any>(null)
+const currentEditorOverrideVersion = computed(() =>
+    `${appState.editorOverrideVersion}-${itemKey.value ? workspaceState.getItemSessionEditorOverrideVersion(itemKey.value) : 0}`
+)
+const resolvedEditorSelection = computed(() => {
+  currentEditorOverrideVersion.value
+  if (!rootEditorContext.value || !itemKey.value) return undefined
+  return appState.resolveEditorForContext(
+      rootEditorContext.value,
+      workspaceState.getItemSessionOnceEditorOverrides(itemKey.value)
+  )
+})
+const resolvedEditorId = computed(() => resolvedEditorSelection.value?.editor?.id ?? "")
 const preferEditorId = computed({
   get() {
-    if (!itemData.value.preferredRootEditorId) itemData.value.preferredRootEditorId = supportedEditors.value[0]?.id
-    return itemData.value.preferredRootEditorId ?? ""
+    return resolvedEditorId.value
   },
   set(value: string) {
-    itemData.value.preferredRootEditorId = value
+    if (!value || value === resolvedEditorId.value) return
+    const editor = supportedEditors.value.find((it: EditorDescriptor) => it.id === value)
+    if (!editor) return
+    chooseEditorApplyStrategy(editor)
   }
 })
 
 const selectedEditorIndex = computed({
   get() {
     if (supportedEditors.value.length === 0) return -1
-    const index = supportedEditors.value.findIndex(editor => editor.id === preferEditorId.value)
+    const index = supportedEditors.value.findIndex((editor: EditorDescriptor) => editor.id === preferEditorId.value)
     return index === -1 ? 0 : index
   },
   set(value: number) {
@@ -110,6 +130,20 @@ const selectedEditorIndex = computed({
     if (selected) preferEditorId.value = selected.id
   }
 })
+
+async function chooseEditorApplyStrategy(editor: EditorDescriptor) {
+  if (!itemKey.value || !rootEditorContext.value) return
+  const action = await applyEditorSelectionWithStrategy({
+    appState,
+    workspaceState,
+    dialogState,
+    t,
+    itemKey: itemKey.value,
+    context: rootEditorContext.value,
+    editor
+  })
+  if (action !== "cancel") holder.value?.reload?.()
+}
 
 watch(() => {
   return itemData.value.tempData

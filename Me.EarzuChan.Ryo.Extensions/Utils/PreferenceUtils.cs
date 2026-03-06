@@ -45,7 +45,20 @@ public static class PreferenceUtils
 
     public static T? GetPreference<T>(string key, T? defaultValue = default)
     {
-        if (_preferences.TryGetValue(key, out var value)) return (T?)value;
+        if (_preferences.TryGetValue(key, out var value))
+        {
+            if (value is T typedValue) return typedValue;
+
+            try
+            {
+                var json = JsonConvert.SerializeObject(value);
+                return JsonConvert.DeserializeObject<T>(json);
+            }
+            catch (Exception ex)
+            {
+                LogUtils.PrintError($"读取偏好项{key}时错误", ex);
+            }
+        }
 
         if (defaultValue != null) SetPreference(key, defaultValue);
 

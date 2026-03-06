@@ -16,19 +16,11 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, computed, defineProps, type PropType} from 'vue'
+import {onMounted, ref, computed, defineProps} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
-import Divider from "@/components/Divider.vue"
 import TextButton from "@/components/TextButton.vue"
-import {useAppStateStore} from "@/stores/AppState"
-import {useVirtualScroll} from "@/composables/VirtualScroll"
 import OutlinedTextField from "@/components/OutlinedTextField.vue"
-import {useI18n} from "vue-i18n";
-import CheckBox from "@/components/CheckBox.vue";
-import type {DialogActionButtonModel} from "@/models/UIModels";
-import type {RyoType} from "@/models/AppModels";
-import {useWorkspaceStateStore} from "@/stores/WorkspaceState";
-import Select from "@/components/Select.vue";
+import {useI18n} from "vue-i18n"
 
 const {t} = useI18n()
 

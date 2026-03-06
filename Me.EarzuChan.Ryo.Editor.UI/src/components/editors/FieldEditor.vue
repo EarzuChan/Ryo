@@ -2,12 +2,15 @@
   <div class="field-editor">
     <div class="field-holder">
       <div v-for="(item,index) in keys" class="field-list-item" :key="item.name"
-           :class="{ 'even': isEven(index) }">
+           :class="{ 'even': isEven(index) }"
+           @contextmenu.prevent.stop="showFieldContextMenu($event, item.name, item.type)">
         <div class="item-name">{{ item.name }}</div>
         <div class="item-value-holder" :class="{ 'even': isEven(index) }"> <!-- 左下 v-memo="item" 会搞死原子编辑器-->
           <EditorHolder with-margin :model-value="tryGetMember(item.name)"
                         @update:model-value="a=>trySetMember(item.name,a)"
-                        :type="appState.getRyoTypeByDataTypeName(item.type)" :even="isEven(index)"/>
+                        :type="appState.getRyoTypeByDataTypeName(item.type)" :data-type-name="getMemberTypeName(item.type)"
+                        :item-key="itemKey" :editor-path="getMemberPath(item.name)" :even="isEven(index)"
+                        :context-menu-contributions="contextMenuContributions"/>
         </div>
       </div>
     </div>
@@ -17,17 +20,32 @@
 <script lang="ts" setup>
 import EditorHolder from "../EditorHolder.vue"
 import {computed, type PropType} from "vue"
-import type {RyoType} from "@/models/AppModels"
+import type {EditorDescriptor, RyoType} from "@/models/AppModels"
 import {useAppStateStore} from "@/stores/AppState"
 import {ensure, ensureObject} from "@/utils/UsefulUtils"
+import {appendEditorPath} from "@/utils/EditorOverrideUtils"
+import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
+import {useDialogStateStore} from "@/stores/DialogState"
+import {useI18n} from "vue-i18n"
+import {applyEditorSelectionWithStrategy} from "@/utils/EditorPreferenceUtils"
+import {showMenu} from "@/utils/MenuUtils"
+import type {ContextMenuContribution, MenuItem} from "@/models/UIModels"
+import {composeContextMenuItems} from "@/utils/ContextMenuUtils"
+import EditorOverrideManagerDialog from "@/views/dialogs/EditorOverrideManagerDialog.vue"
 
 const TAG = "FieldEditor"
 
 const appState = useAppStateStore()
+const workspaceState = useWorkspaceStateStore()
+const dialogState = useDialogStateStore()
+const {t} = useI18n()
 
 const props = defineProps({
   type: Object as PropType<RyoType>,
   even: Boolean,
+  itemKey: String,
+  editorPath: String,
+  contextMenuContributions: Array as PropType<ContextMenuContribution[]>,
 })
 const emit = defineEmits(["err"])
 const model = defineModel<any>()
@@ -72,6 +90,91 @@ function isEven(index: number) {
   let res = (index % 2) !== 0
   if (props.even) res = !res
   return res
+}
+
+function getMemberPath(name: string) {
+  return appendEditorPath(props.editorPath ?? "$", name)
+}
+
+function getMemberTypeName(typeName: string) {
+  return typeName
+}
+
+function showFieldContextMenu(event: MouseEvent, name: string, typeName: string) {
+  const path = getMemberPath(name)
+  const dataTypeName = getMemberTypeName(typeName)
+  const ryoType = appState.getRyoTypeByDataTypeName(typeName)
+  const context = appState.createEditorContext(ryoType, {
+    itemKey: props.itemKey,
+    path,
+    dataTypeName,
+    isRoot: false,
+  })
+  const editors = appState.getEditorsByContext(context)
+  const resolved = appState.resolveEditorForContext(
+      context,
+      props.itemKey ? workspaceState.getItemSessionOnceEditorOverrides(props.itemKey) : undefined
+  )
+  const matchedRules = appState.getMatchedEditorOverrideRulesForContext(context)
+  const onceEditorId = props.itemKey
+      ? workspaceState.getItemSessionOnceEditorOverrides(props.itemKey)[path]
+      : undefined
+  const currentEditorId = resolved.editor?.id
+
+  const items: MenuItem[] = [
+    {
+      name: t("editorCurrentPathLabel", {path}),
+      disabled: true,
+    },
+  ]
+
+  if (props.itemKey && editors.length > 1) {
+    items.push({
+      name: t("switchEditor"),
+      children: editors.map((editor: EditorDescriptor) => ({
+        name: editor.id === currentEditorId
+            ? `${t(editor.titleKey)} (${t("current")})`
+            : t(editor.titleKey),
+        disabled: editor.id === currentEditorId,
+        action: async () => {
+          await applyEditorSelectionWithStrategy({
+            appState,
+            workspaceState,
+            dialogState,
+            t,
+            itemKey: props.itemKey!,
+            context,
+            editor,
+          })
+        },
+      })),
+    })
+  }
+
+  if (matchedRules.length > 0 || !!onceEditorId) {
+    items.push({
+      name: t("editorAppliedRules"),
+      action: () => {
+        dialogState.orderSpecial(EditorOverrideManagerDialog, {
+          matchedRuleIds: matchedRules.map(rule => rule.id),
+          headline: t("editorAppliedRules"),
+          description: t("editorAppliedRulesDesc", {path}),
+          onceOverride: props.itemKey && onceEditorId
+              ? {itemKey: props.itemKey, path, editorId: onceEditorId}
+              : undefined,
+        })
+      },
+    })
+  }
+
+  showMenu({
+    top: event.clientY - 8,
+    left: event.clientX,
+    items: composeContextMenuItems(
+        items,
+        props.contextMenuContributions ?? []
+    ),
+  })
 }
 </script>
 
