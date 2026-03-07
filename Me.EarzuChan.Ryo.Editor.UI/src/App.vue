@@ -19,11 +19,13 @@ import {useAppStateStore} from "@/stores/AppState"
 import TopAppBar from "@/views/TopAppBar.vue"
 import SidePanel from "@/views/SidePanel.vue"
 import TabPanel from "@/views/TabPanel.vue"
-import {computed, ref, watch} from "vue"
+import {computed} from "vue"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
 import EmptyPage from "@/views/pages/EmptyPage.vue"
 import TestingView from "@/testing/TestingView.vue"
+
+// TODO、CHECK：文件管理的逻辑优化，打开文件与`已打开文件的再次打开要不要diff刷新`什么的
 
 const appState = useAppStateStore()
 const kurisuState = useKurisuStateStore()
@@ -43,7 +45,6 @@ const justTesting = computed(() => appState.preferTesting && allAvailable.value)
 }
 
 #ryo-viewport.border {
-  margin: 1px;
   border: 1px solid var(--ryo-color-outline-varient);
   border-radius: 16px;
 }

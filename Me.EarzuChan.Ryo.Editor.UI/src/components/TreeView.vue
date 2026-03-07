@@ -27,6 +27,8 @@ import {useVirtualScroll} from "@/composables/VirtualScroll"
 
 const TAG = "TreeView"
 
+// TODO、FIXME：窗口大小改变，会导致虚拟滚动的个数没刷新
+
 const props = defineProps({
   nodes: Array as PropType<TreeNodeModel[]>,
   filterText: String,

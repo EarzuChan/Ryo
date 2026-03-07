@@ -24,7 +24,7 @@
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
         <Select id="action-bar-text" :items="supportedEditorTitles" v-model:selected="selectedEditorIndex"/>
-        <TextButton button-style="filled" id="save-button" @click="save">{{ t('save') }}</TextButton>
+        <TextButton button-style="filled" id="save-button" @click="save(null)">{{ t('save') }}</TextButton>
       </div>
     </EditorHolder>
   </div>
@@ -51,8 +51,9 @@ const {t} = useI18n()
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const workspaceState = useWorkspaceStateStore()
-/* TODO: 默认编辑器选择的提示该如何？
-重做编辑器容器底部栏 弄成插槽？*/
+
+// TODO，CHECK：当关闭卷时，卷的items会被一并关闭，从外表看是没问题的，一干二净，也没有行为Bug。但控制台会有点报错，无伤大雅，但想修可以修修？
+// TODO、FIXME：当EditorHolder有滚动条时，滚动条的宽度会导致ItemPage需要水平滚动。为了滚动条就让页面水平滚动，又不是页面太窄，没必要，应该修掉
 
 const props = defineProps({
   data: String
@@ -157,7 +158,7 @@ watch(() => {
   }
 }, {deep: true})
 
-function save(onSaved?: () => void) {
+function save(onSaved: (() => void) | null) {
   console.log(TAG, "保存", itemData.value.tempData, itemData.value.data)
 
   dialogState.order({

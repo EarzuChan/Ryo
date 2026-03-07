@@ -30,6 +30,8 @@ import {openLink} from "@/utils/UsefulUtils"
 
 const appInfo: any = inject('app_info')
 
+// TODO：把`怎么你不 关注 吗`，换成`速速加入 我们的Discord`：https://discord.gg/HP66Jg3Uz
+
 const props = defineProps({
   closeOnOverlayClick: {
     type: Boolean,

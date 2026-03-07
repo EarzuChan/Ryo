@@ -1,14 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
-		<TargetFramework>net10.0-windows</TargetFramework>
+		<TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
 		<Nullable>enable</Nullable>
-		<UseWPF>true</UseWPF>
 		<LangVersion>latestmajor</LangVersion>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+		<UseWindowsForms>true</UseWindowsForms>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3079-prerelease" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
+		<Compile Remove="WindowManagers\WindowManagers.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

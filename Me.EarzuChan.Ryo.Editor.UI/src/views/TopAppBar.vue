@@ -10,7 +10,7 @@
                     @click="clickMenuButton(item)" :id="item.id">{{ item.name }}
         </TextButton>
       </div>
-      <div id="app-bar-window-controls">
+      <div v-if="kurisuState.hostCapabilities.supportsWindowControls" id="app-bar-window-controls">
         <IconButton :size="48" icon="minimize" @click="minimizeWindow"/>
         <IconButton :size="48" :icon="kurisuState.isAppWindowMaximized?'restore':'fullscreen'"
                     @click="switchWindowState"/>

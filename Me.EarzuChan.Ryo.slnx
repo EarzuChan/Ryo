@@ -37,7 +37,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Me.EarzuChan.Ryo.Editor\Me.EarzuChan.Ryo.Editor.csproj" Type="Classic C#">
+  <Project Path="Me.EarzuChan.Ryo.Editor\Me.EarzuChan.Ryo.Editor.csproj" Type="C#">
     <BuildDependency Project="Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
     <BuildDependency Project="Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
     <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
@@ -55,7 +55,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Me.EarzuChan.Ryo.Kurisu\Me.EarzuChan.Ryo.Kurisu.csproj" Type="Classic C#">
+  <Project Path="Me.EarzuChan.Ryo.Kurisu\Me.EarzuChan.Ryo.Kurisu.csproj" Type="C#">
     <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />

@@ -1,15 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0-windows</TargetFramework>
+        <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+        <OutputType>Exe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <UseWPF>true</UseWPF>
-        <ApplicationIcon>AppResources\icon_ryo_app.ico</ApplicationIcon>
         <LangVersion>latestmajor</LangVersion>
         <IsPackable>false</IsPackable>
         <RootNamespace>Me.EarzuChan.Ryo.Editor</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+        <OutputType>WinExe</OutputType>
+        <UseWPF>true</UseWPF>
+        <ApplicationIcon>AppResources\icon_ryo_app.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -51,5 +54,11 @@
         <MakeDir Directories="$(OutputPath)WebResources" />
         <!-- 拷贝新的文件到目标文件夹 -->
         <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(OutputPath)WebResources\%(DistFiles.RecursiveDir)" />
+    </Target>
+
+    <Target Name="PostPublish" AfterTargets="Publish">
+        <RemoveDir Directories="$(PublishDir)WebResources" />
+        <MakeDir Directories="$(PublishDir)WebResources" />
+        <Copy SourceFiles="@(DistFiles)" DestinationFolder="$(PublishDir)WebResources\%(DistFiles.RecursiveDir)" />
     </Target>
 </Project>

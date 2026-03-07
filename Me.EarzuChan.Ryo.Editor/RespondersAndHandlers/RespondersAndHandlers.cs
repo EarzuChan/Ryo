@@ -166,8 +166,8 @@ public class SaveItemResponder(string volumeName, int itemId, string itemName, o
         Trace.WriteLine($"Saved, new id: {newId}, revision: {volumeRevision}");
 
         return newId == -1 || volumeRevision == -1
-            ? new WebResponse(WebResponseState.Failure)
-            : new WebResponse(WebResponseState.Success, newId, volumeRevision);
+            ? WebResponse.Failure("save_item_failed", "SaveItem 未获得有效的新 id 或 revision")
+            : WebResponse.Success(newId, volumeRevision);
     }
 }
 
@@ -246,8 +246,8 @@ public class GetFullFileModelResponder(string volumeName, int fileId) : IWebCall
         var volumeManager = context.Inject<LocalVolumeManager>()!;
         var volume = volumeManager.GetVolumeByName(volumeName);
 
-        if (volume is null) return new(WebResponseState.Failure, "LocalVolume not found");
+        if (volume is null) return WebResponse.Failure("volume_not_found", "LocalVolume not found", volumeName);
 
-        return new(WebResponseState.Success, volume[fileId]);
+        return WebResponse.Success(volume[fileId]);
     }
 }

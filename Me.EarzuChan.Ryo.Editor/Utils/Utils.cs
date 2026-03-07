@@ -3,7 +3,9 @@ using System.Diagnostics;
 using Me.EarzuChan.Ryo.Core.Masses;
 using Me.EarzuChan.Ryo.Extensions.MassExtensions;
 using Me.EarzuChan.Ryo.Kurisu;
+#if WINDOWS
 using Microsoft.Win32;
+#endif
 
 namespace Me.EarzuChan.Ryo.Editor.Utils;
 
@@ -11,6 +13,7 @@ public static class MiscUtils
 {
     public static string? OpenFileByDialog(string fileDescription, string fileExtension)
     {
+#if WINDOWS
         var openFileDialog = new OpenFileDialog
         {
             Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}",
@@ -18,10 +21,15 @@ public static class MiscUtils
         };
 
         return openFileDialog.ShowDialog() == true ? openFileDialog.FileName : null;
+#else
+        Trace.WriteLine($"OpenFileDialog is not supported on this platform. desc={fileDescription}, ext={fileExtension}");
+        return null;
+#endif
     }
 
     public static string? SaveFileByDialog(string fileDescription, string fileExtension)
     {
+#if WINDOWS
         var saveFileDialog = new SaveFileDialog
         {
             Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}",
@@ -29,6 +37,10 @@ public static class MiscUtils
         };
 
         return saveFileDialog.ShowDialog() == true ? saveFileDialog.FileName : null;
+#else
+        Trace.WriteLine($"SaveFileDialog is not supported on this platform. desc={fileDescription}, ext={fileExtension}");
+        return null;
+#endif
     }
 
     public static void EmitOpenedVolumes(KurisuAppContext context, Dictionary<LocalVolume, LocalVolumeMetaData> dic)

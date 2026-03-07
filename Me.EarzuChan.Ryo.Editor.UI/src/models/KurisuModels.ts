@@ -1,8 +1,12 @@
-﻿const TAG = "KurisuModels"
+const TAG = "KurisuModels"
 
 export interface WebLetter {
     name: string
     args: any[]
+}
+
+export interface KurisuHostCapabilities {
+    supportsWindowControls: boolean
 }
 
 export enum KurisuWindowState {
@@ -19,4 +23,18 @@ export enum WebResponseState {
 export interface WebResponse {
     state: WebResponseState
     returnValues: any[]
+    error?: {
+        code: string
+        message: string
+        details?: any
+    }
+}
+
+export type KurisuBridgeMessageKind = "webEvent" | "webCallRequest" | "webCallResponse"
+
+export interface KurisuBridgeMessage {
+    kind: KurisuBridgeMessageKind
+    requestId?: string
+    letter?: WebLetter
+    response?: WebResponse
 }

@@ -184,7 +184,7 @@ export const useAppStateStore = defineStore('app-state', () => {
                 typeRules: [...(ruleSet?.typeRules ?? [])],
             }
             editorOverrideVersion.value++
-            
+
             if (persist) emitWebEvent(makeWebLetter("Preference:EditorOverrides", editorOverrideRules.value))
         }
 
@@ -507,14 +507,14 @@ export const useAppStateStore = defineStore('app-state', () => {
                 console.log(TAG, "Language fetched", fetchedLanguage)
                 applyLanguage(fetchedLanguage, false)
 
-                const fetchedTesting = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:5")))[0]
+                const fetchedTesting = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppProperty:IsDebug")))[0]
                 console.log(TAG, "Testing fetched", fetchedTesting)
                 preferTesting.value = fetchedTesting
 
-                const fetchedEditorOverrides = (await sendWebCallAndTakeItsReturnValues(
-                    makeWebLetter("Preference:EditorOverrides", {pathRules: [], typeRules: []})
-                ))[0] as OverrideRuleSet
-                setEditorOverrideRules(fetchedEditorOverrides ?? {pathRules: [], typeRules: []}, false)
+                const fetchedEditorOverrides = (await sendWebCallAndTakeItsReturnValues(makeWebLetter("Preference:EditorOverrides", {pathRules: [], typeRules: []})))[0] as OverrideRuleSet
+                const realEditorOverrides = fetchedEditorOverrides ?? {pathRules: [], typeRules: []}
+                console.log(TAG, "Editor Overrides fetched", realEditorOverrides)
+                setEditorOverrideRules(realEditorOverrides, false)
 
                 available.value = true
             } catch (err) {
