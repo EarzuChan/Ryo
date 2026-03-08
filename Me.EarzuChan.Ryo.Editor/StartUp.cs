@@ -4,11 +4,9 @@ using Me.EarzuChan.Ryo.Kurisu;
 
 namespace Me.EarzuChan.Ryo.Editor;
 
-public static class StartUp
-{
+public static class StartUp {
     [STAThread]
-    private static void Main(string[] args)
-    {
+    private static void Main(string[] args) {
         KurisuApp
             .CreateBuilder(new(
                 Icon: "AppResources/icon_ryo_app.ico",
@@ -18,10 +16,10 @@ public static class StartUp
                 DebugStartUpWithDebugUrl: true,
                 VirtualHostName: "ryo_web_frontend"
 #if DEBUG
-                ,IsDebug: true
+                , IsDebug: true
 #endif
             ))
-            .UseDefaultWindowBackend()
+            .UseDefaultHostBackend()
             .ProvideDependency<LocalVolumeManager>()
             .ProvideDependency<NewMassRepository>()
             .Build()

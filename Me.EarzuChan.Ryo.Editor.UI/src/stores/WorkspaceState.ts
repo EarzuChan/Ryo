@@ -277,6 +277,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             if (tab.nonResident) tab.nonResident = false
         }
 
+        // TODO：有时编辑了，这个点也没有立刻刷新为已编辑
         function getIsTabUnsaved(index: number) {
             const tab = openedTabs.value[index]
             if (!tab) return false
@@ -285,6 +286,9 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             if (typeof man === 'string') return getItemByKey(man)?.unsaved === true
             else return false
         }
+        
+        // TODO：打开设置页，不应该是非常驻，这个要在设置页的打开方那里改
+        // TODO：文件一旦被编辑，即使保存了，也是常驻，而不是回退到非常驻
 
         function closeTab(index: number) {
             const tab = openedTabs.value[index]

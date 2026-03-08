@@ -1,11 +1,7 @@
 <template>
-  <div class="icon-button"
-       :style="{height : size + 'px' , width : size + 'px'}"
-       :class="[buttonStyle, {'disabled' : disabled}]"
-       ref="button"
-       tabindex="0">
-    <div class="icon"
-         :style="{height : iconSize + 'px' , width : iconSize + 'px','-webkit-mask-image': `url(/assets/icons/icon_${icon}${(filledIcon?'_filled':'')}.svg)`}"/>
+  <div class="icon-button" :style="{height : size + 'px' , width : size + 'px'}" 
+       :class="[buttonStyle, {'disabled' : disabled}]" ref="button" data-kurisu-no-drag tabindex="0">
+    <div class="icon" :style="{height : iconSize + 'px' , width : iconSize + 'px','-webkit-mask-image': `url(/assets/icons/icon_${icon}${(filledIcon?'_filled':'')}.svg)`}"/>
   </div>
 </template>
 

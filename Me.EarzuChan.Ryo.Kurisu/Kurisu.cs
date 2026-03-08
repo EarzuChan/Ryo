@@ -12,7 +12,7 @@ using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
-using Me.EarzuChan.Ryo.Kurisu.WindowManagers;
+using Me.EarzuChan.Ryo.Kurisu.HostBackends;
 using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Kurisu;
@@ -34,7 +34,7 @@ public class KurisuApp {
     internal readonly IReadOnlyDictionary<string, RegisteredWebEventHandler> WebEventHandlers;
     internal readonly IReadOnlyDictionary<AppEventType, RegisteredAppEventHandler> AppEventHandlers;
     internal readonly IReadOnlyDictionary<string, RegisteredWebCallResponder> WebCallResponders;
-    internal readonly IKurisuWindowManager WindowManager;
+    internal readonly IHostBackend HostBackend;
 
     private readonly KurisuAppContext Context;
 
@@ -45,7 +45,7 @@ public class KurisuApp {
     internal KurisuApp(KurisuAppProfile profile, ArrayList dependencies,
         IReadOnlyDictionary<string, RegisteredWebEventHandler> webEventHandlers,
         IReadOnlyDictionary<AppEventType, RegisteredAppEventHandler> appEventHandlers,
-        IReadOnlyDictionary<string, RegisteredWebCallResponder> webCallResponders, IKurisuWindowManager window) {
+        IReadOnlyDictionary<string, RegisteredWebCallResponder> webCallResponders, IHostBackend hostBackend) {
         Profile = profile;
         Dependencies = dependencies;
         WebEventHandlers = webEventHandlers;
@@ -54,19 +54,19 @@ public class KurisuApp {
 
         Context = new KurisuAppContext(this);
 
-        window.AppReady += OnWindowReady;
-        window.AppClosed += OnWindowClosed;
-        window.Init(this);
-        WindowManager = window;
+        hostBackend.AppReady += OnWindowReady;
+        hostBackend.AppClosed += OnWindowClosed;
+        hostBackend.Init(this);
+        HostBackend = hostBackend;
     }
 
-    public void Run() => WindowManager.Show();
+    public void Run() => HostBackend.Show();
 
     public void Stop() {
         if (_stopping) return;
         _stopping = true;
 
-        WindowManager.Close();
+        HostBackend.Close();
         EnsureAppStopped();
     }
 
@@ -126,7 +126,7 @@ public class KurisuApp {
 
             var noSuchBuiltInApi = $"没有内置Api：{apiName}";
             Trace.WriteLine(noSuchBuiltInApi);
-            return WebResponse.Failure("builtin_api_not_found", noSuchBuiltInApi, new { apiName, commandName });
+            return WebResponse.Failure(KurisuErrorCode.BuiltinApiNotFound, noSuchBuiltInApi, new { apiName, commandName });
         }
 
         Trace.WriteLine("该WebCall为普通WebCall");
@@ -134,28 +134,30 @@ public class KurisuApp {
         if (!WebCallResponders.TryGetValue(model.Name, out var registration)) {
             var noSuchResponder = $"找不到WebCall {model.Name} 可用的Responder";
             Trace.WriteLine(noSuchResponder);
-            return WebResponse.Failure("web_call_not_found", noSuchResponder, new { model.Name });
+            return WebResponse.Failure(KurisuErrorCode.WebCallNotFound, noSuchResponder, new { model.Name });
         }
 
         if (!InvocationBindingUtils.TryCreateInstance<IWebCallResponder>(registration.ResponderType, model.Args, out var responder, out var bindingError)) {
             var wrongArgs = $"WebCall {model.Name} 的参数不对：{bindingError}";
             Trace.WriteLine(wrongArgs);
-            return WebResponse.Failure("web_call_invalid_arguments", wrongArgs, new { model.Name, model.Args });
+            return WebResponse.Failure(KurisuErrorCode.WebCallInvalidArguments, wrongArgs, new { model.Name, model.Args });
         }
 
         if (responder == null)
-            return WebResponse.Failure("web_call_invalid_responder", $"WebCall {model.Name} 绑定出的Responder为null");
+            return WebResponse.Failure(KurisuErrorCode.WebCallInvalidResponder, $"WebCall {model.Name} 绑定出的Responder为null");
 
         try {
-            return responder.Respond(Context) ?? WebResponse.Failure("web_call_null_response", $"WebCall {model.Name} 返回了 null");
+            return responder.Respond(Context) ?? WebResponse.Failure(KurisuErrorCode.WebCallNullResponse, $"WebCall {model.Name} 返回了 null");
+        } catch (KurisuKnownException e) {
+            return WebResponse.Failure(e.ErrorCode, e.Message, e.Details);
         } catch (Exception e) {
             var eText = TextUtils.MakeErrorMsgText($"执行WebCall {model.Name} 失败", e, true);
             Trace.WriteLine(eText);
-            return WebResponse.Failure("web_call_execution_error", eText, e.Message);
+            return WebResponse.Failure(KurisuErrorCode.WebCallExecutionError, eText, e.Message);
         }
     }
 
-    internal void EmitWebEvent(WebLetter model) => WindowManager.EmitWebEvent(model);
+    internal void EmitWebEvent(WebLetter model) => HostBackend.EmitWebEvent(model);
 
     internal void TriggerAppEvent(AppEvent appEvent) {
         Trace.WriteLine($"AppEvent类型：{appEvent.EventType} 参数数：{appEvent.Args.Length}");
@@ -196,6 +198,8 @@ public class KurisuApp {
 
                 try {
                     Context.SetAppProperty(property, args);
+                } catch (KurisuKnownException e) {
+                    error = $"[{e.ErrorCode}] {e.Message}";
                 } catch (Exception e) {
                     error = TextUtils.MakeErrorMsgText($"设置属性 {property} 失败", e, true);
                 }
@@ -219,6 +223,8 @@ public class KurisuApp {
 
                 try {
                     Context.ExecuteAppCommand(command, args);
+                } catch (KurisuKnownException e) {
+                    error = $"[{e.ErrorCode}] {e.Message}";
                 } catch (Exception e) {
                     error = TextUtils.MakeErrorMsgText($"执行命令 {command} 失败", e, true);
                 }
@@ -230,32 +236,40 @@ public class KurisuApp {
     }
 
     private bool TryHandleBuiltInWebCall(string apiName, string commandName, object[] args, out WebResponse response) {
-        response = WebResponse.Failure("builtin_api_not_found", $"没有内置Api：{apiName}");
+        response = WebResponse.Failure(KurisuErrorCode.BuiltinApiNotFound, $"没有内置Api：{apiName}");
 
         switch (apiName) {
             case "AppProperty":
                 if (!TryParseEnum<KurisuAppProperty>(commandName, out var property, out var parseError)) {
-                    response = WebResponse.Failure("builtin_property_parse_failed", parseError, commandName);
+                    response = WebResponse.Failure(KurisuErrorCode.BuiltinPropertyParseFailed, parseError, commandName);
                     return true;
                 }
 
-                var propertyValue = Context.GetAppProperty<object>(property);
-                response = propertyValue == null
-                    ? WebResponse.Failure("builtin_property_not_found", $"找不到该属性{property}")
-                    : WebResponse.Success(propertyValue);
+                try {
+                    var propertyValue = Context.GetAppProperty<object>(property);
+                    response = propertyValue == null
+                        ? WebResponse.Failure(KurisuErrorCode.BuiltinPropertyNotFound, $"找不到该属性{property}")
+                        : WebResponse.Success(propertyValue);
+                } catch (KurisuKnownException e) {
+                    response = WebResponse.Failure(e.ErrorCode, e.Message, e.Details);
+                } catch (Exception e) {
+                    response = WebResponse.Failure(KurisuErrorCode.BuiltinPropertyReadFailed,
+                        TextUtils.MakeErrorMsgText($"读取属性{property}失败", e, true));
+                }
+
                 return true;
 
             case "Preference":
                 var defaultValue = args.Length == 1 ? args[0] : null;
                 var preferenceValue = defaultValue == null ? Context.GetPreference<object>(commandName) : Context.GetPreference(commandName, defaultValue);
                 response = preferenceValue == null
-                    ? WebResponse.Failure("builtin_preference_not_found", $"找不到该偏好项{commandName}")
+                    ? WebResponse.Failure(KurisuErrorCode.BuiltinPreferenceNotFound, $"找不到该偏好项{commandName}")
                     : WebResponse.Success(preferenceValue);
                 return true;
 
             case "AppCommand":
                 if (!TryParseEnum<KurisuAppCommand>(commandName, out var command, out parseError)) {
-                    response = WebResponse.Failure("builtin_command_parse_failed", parseError, commandName);
+                    response = WebResponse.Failure(KurisuErrorCode.BuiltinCommandParseFailed, parseError, commandName);
                     return true;
                 }
 
@@ -264,8 +278,10 @@ public class KurisuApp {
                     response = returnValue == null
                         ? WebResponse.Success()
                         : WebResponse.Success(returnValue);
+                } catch (KurisuKnownException e) {
+                    response = WebResponse.Failure(e.ErrorCode, e.Message, e.Details);
                 } catch (Exception e) {
-                    response = WebResponse.Failure("builtin_command_failed",
+                    response = WebResponse.Failure(KurisuErrorCode.BuiltinCommandFailed,
                         TextUtils.MakeErrorMsgText($"执行命令{command}失败", e, true));
                 }
 
@@ -314,14 +330,14 @@ public class KurisuAppBuilder {
     private readonly Dictionary<AppEventType, RegisteredAppEventHandler> AppEventHandlers = new();
     private readonly Dictionary<string, RegisteredWebCallResponder> WebCallResponders = new(StringComparer.Ordinal);
     private readonly Dictionary<string, object?> Stuffs = new();
-    private IKurisuWindowManager? AppWindowBackend;
+    private IHostBackend? AppHostBackend;
     private bool IsBuilt;
 
     internal KurisuAppBuilder(KurisuAppProfile profile) => Profile = profile;
 
     public KurisuApp Build() {
         if (IsBuilt) throw new InvalidOperationException("Builder instance has already built a product");
-        if (AppWindowBackend == null) throw new KurisuAppBuildingException("没有可使用的窗口后端");
+        if (AppHostBackend == null) throw new KurisuAppBuildingException("没有可使用的宿主后端");
 
         if (Profile.WebEventHandlerRegistrationStrategy == RegistrationStrategy.ScanAndRegisterAutomatically)
             ScanWebEventHandlers();
@@ -336,23 +352,23 @@ public class KurisuAppBuilder {
             new Dictionary<string, RegisteredWebEventHandler>(WebEventHandlers, StringComparer.Ordinal),
             new Dictionary<AppEventType, RegisteredAppEventHandler>(AppEventHandlers),
             new Dictionary<string, RegisteredWebCallResponder>(WebCallResponders, StringComparer.Ordinal),
-            AppWindowBackend);
+            AppHostBackend);
 
         IsBuilt = true;
         return application;
     }
 
-    public KurisuAppBuilder UseDefaultWindowBackend() {
+    public KurisuAppBuilder UseDefaultHostBackend() {
 #if WINDOWS
-        return UseWindowBackend(new Win32KurisuWindowManager());
+        return UseHostBackend(new Win32HostBackend());
 #else
-        return UseWindowBackend(new BrowserKurisuWindowManager());
+        return UseHostBackend(new PhotinoHostBackend());
 #endif
     }
 
-    public KurisuAppBuilder UseWindowBackend(IKurisuWindowManager windowManager) => this.Also(_ => {
-        if (AppWindowBackend != null) throw new InvalidOperationException("不允许重复使用窗口后端");
-        AppWindowBackend = windowManager;
+    public KurisuAppBuilder UseHostBackend(IHostBackend hostBackend) => this.Also(_ => {
+        if (AppHostBackend != null) throw new InvalidOperationException("不允许重复设置宿主后端");
+        AppHostBackend = hostBackend;
     });
 
     private void ScanWebEventHandlers() {
@@ -470,8 +486,7 @@ public class KurisuAppContext {
 
     internal KurisuAppContext(KurisuApp app) => App = app;
 
-    public T? Inject<T>() where T : class =>
-        LangExt.WrappedTry("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
+    public T? Inject<T>() where T : class => LangExt.WrappedTry("Cannot inject dependency", () => App.Dependencies.OfType<T>().First(), new Dictionary<Type, string> { { typeof(InvalidOperationException), "No such a dependency" } });
 
     public void EmitWebEvent(WebLetter model) => App.EmitWebEvent(model);
 
@@ -479,20 +494,16 @@ public class KurisuAppContext {
         switch (property) {
             case KurisuAppProperty.WindowState:
                 if (value.Length < 1)
-                    throw new ArgumentException("WindowState 属性要求至少一个参数");
+                    throw new KurisuKnownException(KurisuErrorCode.InvalidArgument, "WindowState 属性要求至少一个参数");
 
                 if (!InvocationBindingUtils.TryConvertArgument(value[0], typeof(KurisuWindowState),
                         out var stateValue, out var error))
-                    throw new ArgumentException($"WindowState 参数类型不对：{error}");
+                    throw new KurisuKnownException(KurisuErrorCode.InvalidArgument, $"WindowState 参数类型不对：{error}");
 
-                App.WindowManager.SetWindowState((KurisuWindowState)stateValue!);
+                EnsureCapability(App.HostBackend.GetHostCapabilities().SupportsWindowStateWrite, "window_state_write");
+                if (!App.HostBackend.TrySetWindowState((KurisuWindowState)stateValue!))
+                    throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝设置窗口状态");
                 break;
-
-            case KurisuAppProperty.WindowWidth:
-            case KurisuAppProperty.WindowHeight:
-            case KurisuAppProperty.WindowTitle:
-            case KurisuAppProperty.WindowUrl:
-                throw new NotImplementedException();
 
             default: throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性");
         }
@@ -504,10 +515,9 @@ public class KurisuAppContext {
 
     public T? GetAppProperty<T>(KurisuAppProperty property) {
         object returnValue = property switch {
-            KurisuAppProperty.WindowState => App.WindowManager.GetWindowState(),
-            KurisuAppProperty.HostCapabilities => App.WindowManager.GetHostCapabilities(),
+            KurisuAppProperty.WindowState => GetWindowStateOrThrow(),
+            KurisuAppProperty.HostCapabilities => App.HostBackend.GetHostCapabilities(),
             KurisuAppProperty.IsDebug => App.Profile.IsDebug,
-            KurisuAppProperty.WindowWidth or KurisuAppProperty.WindowHeight or KurisuAppProperty.WindowTitle or KurisuAppProperty.WindowUrl => throw new NotImplementedException(),
             _ => throw new ArgumentOutOfRangeException(nameof(property), property, "没有合乎的属性")
         };
 
@@ -521,6 +531,14 @@ public class KurisuAppContext {
             case KurisuAppCommand.StopApp:
                 App.Stop();
                 break;
+            
+            case KurisuAppCommand.OpenFileDialog:
+                returnValue = OpenFileByDialogOrThrow(modelArgs);
+                break;
+            
+            case KurisuAppCommand.SaveFileDialog:
+                returnValue = SaveFileByDialogOrThrow(modelArgs);
+                break;
 
             default: throw new ArgumentOutOfRangeException(nameof(command), command, "没有合乎的命令");
         }
@@ -529,18 +547,52 @@ public class KurisuAppContext {
     }
 
     public void ExecuteAppCommand(KurisuAppCommand command, params object[] modelArgs) => ExecuteAppCommand<object>(command, modelArgs);
+
+    private KurisuWindowState GetWindowStateOrThrow() {
+        EnsureCapability(App.HostBackend.GetHostCapabilities().SupportsWindowStateRead, "window_state_read");
+        
+        if (!App.HostBackend.TryGetWindowState(out var state)) throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝读取窗口状态");
+
+        return state;
+    }
+
+    private string? OpenFileByDialogOrThrow(object[] modelArgs) {
+        EnsureCapability(App.HostBackend.GetHostCapabilities().SupportsOpenFileDialog, "open_file_dialog");
+        var fileDescription = ReadRequiredStringArg(modelArgs, 0, "fileDescription");
+        var fileExtension = ReadRequiredStringArg(modelArgs, 1, "fileExtension");
+
+        return !App.HostBackend.TryOpenFileByDialog(fileDescription, fileExtension, out var filePath) ? throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝执行打开文件对话框") : filePath;
+    }
+
+    private string? SaveFileByDialogOrThrow(object[] modelArgs) {
+        EnsureCapability(App.HostBackend.GetHostCapabilities().SupportsSaveFileDialog, "save_file_dialog");
+        var fileDescription = ReadRequiredStringArg(modelArgs, 0, "fileDescription");
+        var fileExtension = ReadRequiredStringArg(modelArgs, 1, "fileExtension");
+
+        return !App.HostBackend.TrySaveFileByDialog(fileDescription, fileExtension, out var filePath) ? throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝执行保存文件对话框") : filePath;
+    }
+
+    private static void EnsureCapability(bool supported, string capabilityName) {
+        if (!supported) throw new KurisuKnownException(KurisuErrorCode.CapabilityNotSupported, $"当前宿主后端不支持能力：{capabilityName}", new { capability = capabilityName });
+    }
+
+    private static string ReadRequiredStringArg(object[] args, int index, string name) {
+        if (args.Length <= index) throw new KurisuKnownException(KurisuErrorCode.InvalidArgument, $"缺少参数 `{name}`");
+
+        var value = args[index];
+        if (value is string text && !string.IsNullOrWhiteSpace(text)) return text;
+        throw new KurisuKnownException(KurisuErrorCode.InvalidArgument, $"参数 `{name}` 需为非空字符串");
+    }
 }
 
 public enum KurisuAppProperty {
     WindowState,
-    WindowWidth,
-    WindowHeight,
-    WindowTitle,
-    WindowUrl,
     HostCapabilities,
     IsDebug
 }
 
 public enum KurisuAppCommand {
-    StopApp
+    StopApp,
+    OpenFileDialog,
+    SaveFileDialog
 }

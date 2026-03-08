@@ -3,7 +3,6 @@ import {WebResponseState} from "@/models/KurisuModels"
 
 const TAG = "KurisuUtils"
 const DEFAULT_CALL_TIMEOUT = 10000
-const BRIDGE_WS_ROUTE = "/__kurisu_bridge"
 
 type WebEventListener = (args: any[]) => void
 type PendingWebCall = {
@@ -20,6 +19,10 @@ type WebViewBridgeHost = {
     postMessage: (message: unknown) => void
     addEventListener: (name: string, listener: (arg: any) => void) => void
 }
+type PhotinoBridgeHost = {
+    sendMessage: (message: string) => void
+    receiveMessage: (listener: (message: string) => void) => void
+}
 
 const webEventListeners = new Map<string, Set<WebEventListener>>()
 const pendingWebCalls = new Map<string, PendingWebCall>()
@@ -28,6 +31,8 @@ const outboundQueue: KurisuBridgeMessage[] = []
 let requestCounter = 0
 let transport: BridgeTransport | null = null
 let transportReady = false
+let usingPhotinoTransport = false
+let photinoWindowGestureInstalled = false
 
 function nextRequestId(): string {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()
@@ -116,21 +121,20 @@ function handleIncomingBridgeMessage(message: KurisuBridgeMessage) {
     }
 }
 
-function getBridgeWebSocketUrl(): string {
-    const searchParams = new URLSearchParams(window.location.search)
-    const explicit = searchParams.get("kurisuBridgeWs")
-    if (explicit) return explicit
-
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    return `${protocol}//${window.location.host}${BRIDGE_WS_ROUTE}`
-}
-
 function getWebViewBridgeHost(): WebViewBridgeHost | null {
     const candidate = (globalThis as any)?.chrome?.webview
     if (!candidate) return null
-    if (typeof candidate.postMessage !== "function") return null
-    if (typeof candidate.addEventListener !== "function") return null
-    return candidate as WebViewBridgeHost
+    else if (typeof candidate.postMessage !== "function") return null
+    else if (typeof candidate.addEventListener !== "function") return null
+    else return candidate as WebViewBridgeHost
+}
+
+function getPhotinoBridgeHost(): PhotinoBridgeHost | null {
+    const candidate = (globalThis as any)?.external
+    if (!candidate) return null
+    else if (typeof candidate.sendMessage !== "function") return null
+    else if (typeof candidate.receiveMessage !== "function") return null
+    else return candidate as PhotinoBridgeHost
 }
 
 function createWebViewTransport(host: WebViewBridgeHost): BridgeTransport {
@@ -146,49 +150,122 @@ function createWebViewTransport(host: WebViewBridgeHost): BridgeTransport {
     }
 }
 
-function createWebSocketTransport(): BridgeTransport {
-    const wsUrl = getBridgeWebSocketUrl()
-    const ws = new WebSocket(wsUrl)
-    const listeners = new Set<BridgeMessageHandler>()
-
-    ws.addEventListener("open", () => {
-        transportReady = true
-        flushOutboundQueue()
-        console.log(TAG, "WebSocket bridge connected", wsUrl)
-    })
-
-    ws.addEventListener("close", () => {
-        transportReady = false
-        rejectAllPendingWebCalls(new Error("Bridge连接已关闭"))
-        console.warn(TAG, "WebSocket bridge closed")
-    })
-
-    ws.addEventListener("error", (error) => {
-        console.error(TAG, "WebSocket bridge error", error)
-    })
-
-    ws.addEventListener("message", (event: MessageEvent<string>) => {
-        try {
-            const parsed = JSON.parse(event.data) as KurisuBridgeMessage
-            listeners.forEach(listener => listener(parsed))
-        } catch (error) {
-            console.error(TAG, "解析WebSocket bridge消息失败", error)
-        }
-    })
-
+function createPhotinoTransport(host: PhotinoBridgeHost): BridgeTransport {
     return {
         postMessage: (message: KurisuBridgeMessage) => {
-            if (ws.readyState !== WebSocket.OPEN) {
-                outboundQueue.push(message)
-                return
-            }
-
-            ws.send(JSON.stringify(message))
+            host.sendMessage(JSON.stringify(message))
         },
         addListener: (handler: BridgeMessageHandler) => {
-            listeners.add(handler)
+            host.receiveMessage((raw: string) => {
+                try {
+                    const parsed = JSON.parse(raw) as KurisuBridgeMessage
+                    handler(parsed)
+                } catch (error) {
+                    console.error(TAG, "解析Photino bridge消息失败", error, raw)
+                }
+            })
         },
     }
+}
+
+function installPhotinoWindowGestures() {
+    if (photinoWindowGestureInstalled) return
+    photinoWindowGestureInstalled = true
+
+    let dragging = false
+    let activePointerId: number | null = null
+    let pendingDragPoint: { x: number; y: number } | null = null
+    let lastSentDragPoint: { x: number; y: number } | null = null
+    let dragMoveFrameId: number | null = null
+
+    const readTarget = (event: Event) => event.target as HTMLElement | null
+    const tryCapturePointer = (target: HTMLElement, pointerId: number) => {
+        if (typeof target.setPointerCapture !== "function") return
+        try {
+            target.setPointerCapture(pointerId)
+        } catch (error) {
+            console.warn(TAG, "设置 pointer capture 失败", error)
+        }
+    }
+    const toScreenPoint = (event: PointerEvent) => {
+        const fallbackX = window.screenX + event.clientX
+        const fallbackY = window.screenY + event.clientY
+        const x = Number.isFinite(event.screenX) ? event.screenX : fallbackX
+        const y = Number.isFinite(event.screenY) ? event.screenY : fallbackY
+        return {
+            x: Math.round(x),
+            y: Math.round(y),
+        }
+    }
+    const flushDragMove = () => {
+        dragMoveFrameId = null
+        if (!dragging || !pendingDragPoint) return
+
+        const nextPoint = pendingDragPoint
+        pendingDragPoint = null
+        if (lastSentDragPoint?.x === nextPoint.x && lastSentDragPoint.y === nextPoint.y) return
+
+        lastSentDragPoint = nextPoint
+        emitWebEvent(makeWebLetter("HostWindow:DragMove", nextPoint.x, nextPoint.y))
+    }
+    const scheduleDragMove = () => {
+        if (dragMoveFrameId !== null) return
+        dragMoveFrameId = window.requestAnimationFrame(flushDragMove)
+    }
+    const clearDragState = () => {
+        if (dragMoveFrameId !== null) {
+            window.cancelAnimationFrame(dragMoveFrameId)
+            dragMoveFrameId = null
+        }
+        pendingDragPoint = null
+        lastSentDragPoint = null
+        activePointerId = null
+        dragging = false
+    }
+    const stopDrag = () => {
+        if (dragging) emitWebEvent(makeWebLetter("HostWindow:DragEnd"))
+        clearDragState()
+    }
+    const stopDragByPointer = (event: PointerEvent) => {
+        if (activePointerId !== null && event.pointerId !== activePointerId) return
+        stopDrag()
+    }
+
+    window.addEventListener("pointerdown", (event: PointerEvent) => {
+        if (event.button !== 0) return
+
+        const target = readTarget(event)
+        if (!target) return
+
+        if (!target.closest("[data-kurisu-drag]")) return
+        if (target.closest("[data-kurisu-no-drag]")) return
+
+        event.preventDefault()
+        event.stopPropagation()
+        dragging = true
+        activePointerId = event.pointerId
+        tryCapturePointer(target, event.pointerId)
+
+        const screen = toScreenPoint(event)
+        lastSentDragPoint = screen
+        pendingDragPoint = null
+        emitWebEvent(makeWebLetter("HostWindow:DragBegin", screen.x, screen.y))
+    })
+
+    window.addEventListener("pointermove", (event: PointerEvent) => {
+        if (!dragging) return
+        if (activePointerId !== null && event.pointerId !== activePointerId) return
+        pendingDragPoint = toScreenPoint(event)
+        scheduleDragMove()
+    })
+
+    window.addEventListener("pointerup", stopDragByPointer)
+    window.addEventListener("pointercancel", stopDragByPointer)
+    window.addEventListener("blur", stopDrag)
+}
+
+export function isPhotinoTransportActive() {
+    return usingPhotinoTransport
 }
 
 export function emitWebEvent(webEvent: WebLetter) {
@@ -251,6 +328,7 @@ export async function sendWebCallAndTakeItsReturnValues(call: WebLetter) {
     if (response.state == WebResponseState.Success) return response.returnValues
     throw new Error(response.error?.message ?? "WebCall failed without error message")
 }
+
 export function makeWebLetter(name: string, ...args: any[]): WebLetter {
     return {name, args}
 }
@@ -258,14 +336,21 @@ export function makeWebLetter(name: string, ...args: any[]): WebLetter {
 try {
     console.log(TAG, "Start init")
 
-    const webViewBridgeHost = getWebViewBridgeHost()
-    if (webViewBridgeHost) {
+    const photinoHost = getPhotinoBridgeHost()
+    if (photinoHost) {
+        transport = createPhotinoTransport(photinoHost)
+        transportReady = true
+        usingPhotinoTransport = true
+        installPhotinoWindowGestures()
+        console.log(TAG, "Using Photino bridge transport")
+    } else {
+        const webViewBridgeHost = getWebViewBridgeHost()
+        if (!webViewBridgeHost) throw new Error("未找到可用Bridge宿主（Photino/WebView2）")
+
         transport = createWebViewTransport(webViewBridgeHost)
         transportReady = true
+        usingPhotinoTransport = false
         console.log(TAG, "Using WebView2 bridge transport")
-    } else {
-        transport = createWebSocketTransport()
-        console.log(TAG, "Using WebSocket bridge transport")
     }
 
     transport.addListener((message: KurisuBridgeMessage) => {

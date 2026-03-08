@@ -14,7 +14,15 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
-		<Compile Remove="WindowManagers\WindowManagers.cs" />
+		<Compile Remove="HostBackends\HostBackends.cs" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+		<Compile Remove="HostBackends\PhotinoHostBackend.cs" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+		<PackageReference Include="Photino.NET" Version="4.0.16" />
 	</ItemGroup>
 
 	<ItemGroup>

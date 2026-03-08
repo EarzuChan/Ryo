@@ -7,6 +7,10 @@ export interface WebLetter {
 
 export interface KurisuHostCapabilities {
     supportsWindowControls: boolean
+    supportsWindowStateRead: boolean
+    supportsWindowStateWrite: boolean
+    supportsOpenFileDialog: boolean
+    supportsSaveFileDialog: boolean
 }
 
 export enum KurisuWindowState {

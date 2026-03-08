@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Me.EarzuChan.Ryo.Extensions.Utils;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents;
+using Me.EarzuChan.Ryo.Kurisu.Exceptions;
 using Me.EarzuChan.Ryo.Kurisu.Misc;
 using Me.EarzuChan.Ryo.Kurisu.Utils;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls;
@@ -17,9 +18,9 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using DrawingColor = System.Drawing.Color;
 
-namespace Me.EarzuChan.Ryo.Kurisu.WindowManagers;
+namespace Me.EarzuChan.Ryo.Kurisu.HostBackends;
 
-internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
+internal sealed class Win32HostBackend : IHostBackend {
     private KurisuApp? App;
     private bool _webAppReadyRaised;
     private KurisuWindowState? _lastReportedWindowState;
@@ -59,7 +60,7 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
         ConfigureWindowFrame(app.Profile.WindowBorderless);
         Window.AttachWebView(WebView);
 
-        SetWindowState(app.Profile.StartUpWindowState);
+        TrySetWindowState(app.Profile.StartUpWindowState);
         _lastReportedWindowState = ToKurisuWindowState(Window.WindowState);
 
         Window.Load += OnWindowLoaded;
@@ -79,21 +80,63 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
         if (!Window.IsDisposed) Window.Close();
     }
 
-    public void SetWindowState(KurisuWindowState state) {
-        if (Window == null) return;
+    public bool TrySetWindowState(KurisuWindowState state) {
+        if (Window == null) return false;
 
         Window.WindowState = state switch {
             KurisuWindowState.Maximized => FormWindowState.Maximized,
             KurisuWindowState.Minimized => FormWindowState.Minimized,
             _ => FormWindowState.Normal
         };
+
+        return true;
     }
 
-    public KurisuWindowState GetWindowState() => Window == null
-        ? KurisuWindowState.Normal
-        : ToKurisuWindowState(Window.WindowState);
+    public bool TryGetWindowState(out KurisuWindowState state) {
+        if (Window == null) {
+            state = KurisuWindowState.Normal;
+            return false;
+        }
 
-    public KurisuHostCapabilities GetHostCapabilities() => new(true);
+        state = ToKurisuWindowState(Window.WindowState);
+        return true;
+    }
+
+    public KurisuHostCapabilities GetHostCapabilities() => new(
+        SupportsWindowControls: true,
+        SupportsWindowStateRead: true,
+        SupportsWindowStateWrite: true,
+        SupportsOpenFileDialog: true,
+        SupportsSaveFileDialog: true
+    );
+
+    public bool TryOpenFileByDialog(string fileDescription, string fileExtension, out string? filePath) {
+        using var dialog = new OpenFileDialog();
+        dialog.Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}";
+        dialog.Title = $"打开{fileDescription}";
+
+        if (dialog.ShowDialog(Window) == DialogResult.OK) {
+            filePath = dialog.FileName;
+            return true;
+        }
+
+        filePath = null;
+        return true;
+    }
+
+    public bool TrySaveFileByDialog(string fileDescription, string fileExtension, out string? filePath) {
+        using var dialog = new SaveFileDialog();
+        dialog.Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}";
+        dialog.Title = $"保存{fileDescription}";
+
+        if (dialog.ShowDialog(Window) == DialogResult.OK) {
+            filePath = dialog.FileName;
+            return true;
+        }
+
+        filePath = null;
+        return true;
+    }
 
     public void EmitWebEvent(WebLetter model) {
         var message = new KurisuBridgeMessage {
@@ -117,9 +160,7 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
 
     private void OnWindowLoaded(object? _, EventArgs __) {
         var initTask = InitWebViewAsync();
-        initTask.ContinueWith(task => {
-            Trace.WriteLine(TextUtils.MakeErrorMsgText("初始化WebView2失败", task.Exception!, true));
-        }, TaskContinuationOptions.OnlyOnFaulted);
+        initTask.ContinueWith(task => { Trace.WriteLine(TextUtils.MakeErrorMsgText("初始化WebView2失败", task.Exception!, true)); }, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private void OnWindowClosed(object? _, FormClosedEventArgs __) => AppClosed?.Invoke();
@@ -127,10 +168,9 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
     private async Task InitWebViewAsync() {
         if (WebView == null) throw new InvalidOperationException("WebView 未初始化");
 
-        var webView2Environment = await CoreWebView2Environment.CreateAsync(null, null,
-            new CoreWebView2EnvironmentOptions {
-                AdditionalBrowserArguments = "--enable-features=msWebView2EnableDraggableRegions"
-            });
+        var webView2Environment = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions {
+            AdditionalBrowserArguments = "--enable-features=msWebView2EnableDraggableRegions"
+        });
 
         await WebView.EnsureCoreWebView2Async(webView2Environment);
         InitWebApp();
@@ -146,20 +186,19 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
     }
 
     private void InitWebApp() => App.EnsureNotNull(app => {
-        if (WebView == null || WebView.CoreWebView2 == null) throw new InvalidOperationException("WebView2 Core 未初始化");
+        if (WebView?.CoreWebView2 == null) throw new InvalidOperationException("WebView2 Core 未初始化");
         var webResourcePath = PathResolutionUtils.ResolveWebResourcePath(app.Profile.WebResourcePath);
 
         WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             app.Profile.VirtualHostName,
             webResourcePath,
-            CoreWebView2HostResourceAccessKind.Deny);
+            CoreWebView2HostResourceAccessKind.Deny
+        );
 
         WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
         WebView.CoreWebView2.NavigationCompleted += (_, _) => RaiseAppReadyOnce();
 
-        if (app.Profile is { IsDebug: true, DebugAutomaticOpenDevTool: true }) {
-            WebView.CoreWebView2.OpenDevToolsWindow();
-        }
+        if (app.Profile is { IsDebug: true, DebugAutomaticOpenDevTool: true }) WebView.CoreWebView2.OpenDevToolsWindow();
     });
 
     private void OnWebMessageReceived(object? _, CoreWebView2WebMessageReceivedEventArgs e) {
@@ -194,7 +233,7 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
 
             default:
                 Trace.WriteLine($"未知Bridge消息类型：{message.Kind}");
-                if (!string.IsNullOrWhiteSpace(message.RequestId)) SendWebCallResponse(message.RequestId, WebResponse.Failure("bridge_unknown_kind", $"未知消息类型：{message.Kind}"));
+                if (!string.IsNullOrWhiteSpace(message.RequestId)) SendWebCallResponse(message.RequestId, WebResponse.Failure(KurisuErrorCode.BridgeUnknownKind, $"未知消息类型：{message.Kind}"));
 
                 return;
         }
@@ -209,7 +248,7 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
         }
 
         if (message.Letter == null) {
-            SendWebCallResponse(message.RequestId, WebResponse.Failure("bridge_invalid_request", "WebCallRequest 的 letter 为空"));
+            SendWebCallResponse(message.RequestId, WebResponse.Failure(KurisuErrorCode.BridgeInvalidRequest, "WebCallRequest 的 letter 为空"));
             return;
         }
 
@@ -218,7 +257,7 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
             response = App.RespondWebCall(message.Letter);
         } catch (Exception ex) {
             Trace.WriteLine(TextUtils.MakeErrorMsgText($"处理WebCall失败：{message.Letter.Name}", ex, true));
-            response = WebResponse.Failure("bridge_web_call_exception", ex.Message);
+            response = WebResponse.Failure(KurisuErrorCode.BridgeWebCallException, ex.Message);
         }
 
         SendWebCallResponse(message.RequestId, response);
@@ -256,7 +295,6 @@ internal sealed class Win32KurisuWindowManager : IKurisuWindowManager {
             WebView.DefaultBackgroundColor = DrawingColor.White;
         }
 
-        Window.RefreshWindowRegion();
         Window.SyncResizeHandles();
     }
 
@@ -365,17 +403,6 @@ internal sealed class KurisuHostWindow : Form {
         SetHandleBounds(HtBottomRight, Math.Max(0, width - t), Math.Max(0, height - t), t, t);
     }
 
-    public void RefreshWindowRegion() {
-        if (!Borderless || WindowState != FormWindowState.Normal || Width <= 0 || Height <= 0) {
-            Region = null;
-            return;
-        }
-
-        Region?.Dispose();
-        using var path = CreateRoundedRectPath(ClientRectangle, RoundedCornerRadius);
-        Region = new Region(path);
-    }
-
     protected override void WndProc(ref Message m) {
         if (m.Msg == WmEnterSizeMove) _isUserSizing = true;
         if (m.Msg == WmExitSizeMove) _isUserSizing = false;
@@ -383,7 +410,7 @@ internal sealed class KurisuHostWindow : Form {
         if (Borderless && m.Msg == WmNcHitTest && WindowState == FormWindowState.Normal && !_isUserSizing) {
             var hitTest = HitTestResizeBorder(m.LParam);
             if (hitTest != HtClient) {
-                m.Result = (IntPtr)hitTest;
+                m.Result = hitTest;
                 return;
             }
         }
@@ -394,7 +421,6 @@ internal sealed class KurisuHostWindow : Form {
     protected override void OnResize(EventArgs e) {
         base.OnResize(e);
         SyncResizeHandles();
-        RefreshWindowRegion();
         ApplyBackdropTransparency();
     }
 
@@ -444,9 +470,7 @@ internal sealed class KurisuHostWindow : Form {
     private void ApplyBackdropTransparency() {
         if (!IsHandleCreated) return;
 
-        var margins = _backdropTransparencyEnabled && Borderless
-            ? new NativeMethods.Margins(-1)
-            : new NativeMethods.Margins(0);
+        var margins = _backdropTransparencyEnabled && Borderless ? new NativeMethods.Margins(-1) : new NativeMethods.Margins(0);
 
         _ = NativeMethods.DwmExtendFrameIntoClientArea(Handle, ref margins);
     }
@@ -465,17 +489,15 @@ internal sealed class KurisuHostWindow : Form {
         var onBottom = clientPoint.Y <= height && clientPoint.Y > height - borderThickness;
 
         switch (onTop) {
-            case true when onLeft:
-                return HtTopLeft;
-            case true when onRight:
-                return HtTopRight;
+            case true when onLeft: return HtTopLeft;
+            
+            case true when onRight: return HtTopRight;
         }
 
         switch (onBottom) {
-            case true when onLeft:
-                return HtBottomLeft;
-            case true when onRight:
-                return HtBottomRight;
+            case true when onLeft: return HtBottomLeft;
+            
+            case true when onRight: return HtBottomRight;
         }
 
         if (onLeft) return HtLeft;

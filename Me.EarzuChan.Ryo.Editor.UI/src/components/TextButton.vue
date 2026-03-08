@@ -1,9 +1,6 @@
 <template>
-  <div class="text-button"
-       :class="[buttonStyle, {'disabled' : disabled}]"
-       ref="button"
-       :style="'padding: '+paddingVertical+'px '+paddingHorizontal+'px'"
-       tabindex="0">
+  <div class="text-button" :class="[buttonStyle, {'disabled' : disabled}]" ref="button"
+       data-kurisu-no-drag :style="'padding: '+paddingVertical+'px '+paddingHorizontal+'px'" tabindex="0">
     <div class="text ryo-typography-label-large" :style="'font-size: '+textSize+'px'">
       <slot/>
     </div>

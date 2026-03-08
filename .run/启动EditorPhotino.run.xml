@@ -1,5 +1,5 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="启动Editor" type="com.intellij.execution.configurations.multilaunch" factoryName="MultiLaunchConfiguration">
+  <configuration default="false" name="启动EditorPhotino" type="com.intellij.execution.configurations.multilaunch" factoryName="MultiLaunchConfiguration">
     <rows>
       <ExecutableRowSnapshot>
         <option name="condition">
@@ -22,7 +22,7 @@
         </option>
         <option name="executable">
           <ExecutableSnapshot>
-            <option name="id" value="runConfig:.NET 项目.Me.EarzuChan.Ryo.Editor" />
+            <option name="id" value="runConfig:.NET 项目.EditorPhotino" />
           </ExecutableSnapshot>
         </option>
       </ExecutableRowSnapshot>

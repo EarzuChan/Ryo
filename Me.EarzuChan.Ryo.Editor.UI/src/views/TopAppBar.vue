@@ -1,5 +1,5 @@
 <template>
-  <div id="top-app-bar">
+  <div id="top-app-bar" data-kurisu-drag>
     <div id="app-logo-container">
       <Icon icon="ryo" id="app-logo"/>
     </div>
@@ -86,15 +86,18 @@ function showMenuOf(menuType: MenuBarItem) {
   const pageNotOk = workspaceState.activeTabExposed === null
   const canUndo = !pageNotOk && workspaceState.activeTabExposed?.canUndo?.() === true
   const canRedo = !pageNotOk && workspaceState.activeTabExposed?.canRedo?.() === true
+  const canOpenVolume = kurisuState.hostCapabilities.supportsOpenFileDialog
+  const canSaveVolume = kurisuState.hostCapabilities.supportsSaveFileDialog
 
   switch (menuType.id) {
     case 'file':
       const items: MenuItem[] = [
         {name: t('new'), action: () => workspaceState.newVolume()},
-        {name: t('open'), action: () => workspaceState.openVolume()}]
+        {name: t('open'), disabled: !canOpenVolume, action: () => workspaceState.openVolume()}]
       if (ensure(workspaceState.activeVolume)) {
         items.push({
               name: t('saveFile', {file: workspaceState.activeVolume!}),
+              disabled: !canSaveVolume,
               action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
             }, {
               name: t('closeFile', {file: workspaceState.activeVolume!}),
@@ -106,6 +109,7 @@ function showMenuOf(menuType: MenuBarItem) {
             },
             {
               name: t('saveFileAs', {file: workspaceState.activeVolume!}),
+              disabled: !canSaveVolume,
               action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
             })
       }
