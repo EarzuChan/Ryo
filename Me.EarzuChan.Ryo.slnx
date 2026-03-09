@@ -5,6 +5,10 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="Me.EarzuChan.Ryo.AIEE/Me.EarzuChan.Ryo.AIEE.csproj">
+    <BuildDependency Project="Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
+    <BuildDependency Project="Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
+  </Project>
   <Project Path="Me.EarzuChan.Ryo.ConsoleFrontEnd\Me.EarzuChan.Ryo.ConsoleFrontEnd.csproj">
     <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
@@ -37,16 +41,6 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Me.EarzuChan.Ryo.Editor\Me.EarzuChan.Ryo.Editor.csproj" Type="C#">
-    <BuildDependency Project="Me.EarzuChan.Ryo.Core\Me.EarzuChan.Ryo.Core.csproj" />
-    <BuildDependency Project="Me.EarzuChan.Ryo\Me.EarzuChan.Ryo.csproj" />
-    <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
-    <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
-    <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
-    <Configuration Solution="Release|ARM64" Project="Release|Any CPU" />
-    <Configuration Solution="Release|x64" Project="Release|Any CPU" />
-    <Configuration Solution="Release|x86" Project="Release|Any CPU" />
-  </Project>
   <Project Path="Me.EarzuChan.Ryo.Extensions\Me.EarzuChan.Ryo.Extensions.csproj">
     <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
@@ -55,7 +49,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
-  <Project Path="Me.EarzuChan.Ryo.Kurisu\Me.EarzuChan.Ryo.Kurisu.csproj" Type="C#">
+  <Project Path="Me.EarzuChan.Ryo.Kurisu\Me.EarzuChan.Ryo.Kurisu.csproj">
     <Configuration Solution="Debug|ARM64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />

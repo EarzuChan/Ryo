@@ -5,8 +5,7 @@ using Me.EarzuChan.Ryo.Utils;
 
 namespace Me.EarzuChan.Ryo.Extensions.MassExtensions;
 
-public class LocalVolumeManager
-{
+public class LocalVolumeManager {
     private const string Tag = "LocalVolumeManager";
 
     public readonly Dictionary<LocalVolume, LocalVolumeMetaData> Volumes = [];
@@ -19,8 +18,7 @@ public class LocalVolumeManager
 
     public event Action<string, int[]>? VolumeIdsRemapped;
 
-    public LocalVolume CreateNewVolume(string fileName)
-    {
+    public LocalVolume CreateNewVolume(string fileName) {
         var massFile = new MassFile();
 
         var volume = new LocalVolume(massFile, fileName, this);
@@ -31,15 +29,12 @@ public class LocalVolumeManager
         return volume;
     }
 
-    public LocalVolume? GetVolumeByName(string fileName) =>
-        Volumes.Keys.FirstOrDefault(vol => vol.VolumeName == fileName);
+    public LocalVolume? GetVolumeByName(string fileName) => Volumes.Keys.FirstOrDefault(vol => vol.VolumeName == fileName);
 
-    public LocalVolume OpenLocalVolume(string localPath, string? fileName = null)
-    {
+    public LocalVolume OpenLocalVolume(string localPath, string? fileName = null) {
         // 先检查是否已经打开，抛出
-        if (Volumes.Values.Any(meta => meta.LocalPath == localPath))
-        {
-            var err = new FileLoadException("文件已经打开");
+        if (Volumes.Values.Any(meta => meta.LocalPath == localPath)) {
+            var err = new InvalidOperationException("文件已经打开");
             LogUtils.PrintError(Tag, err);
             throw err;
         }
@@ -56,15 +51,13 @@ public class LocalVolumeManager
         return volume;
     }
 
-    public bool Save(LocalVolume localVolume, Func<string?>? pathProvider = null, bool mustUsePathProvider = false)
-    {
+    public bool Save(LocalVolume localVolume, Func<string?>? pathProvider = null, bool mustUsePathProvider = false) {
         LogUtils.PrintInfo(Tag, "正在保存文件：" + localVolume.VolumeName);
 
         var meta = Volumes[localVolume];
 
         if (meta.LocalPath != null && !mustUsePathProvider) pathProvider = () => meta.LocalPath;
-        else if (pathProvider == null)
-        {
+        else if (pathProvider == null) {
             LogUtils.PrintWarning(Tag, "欲保存失败！既无LocalPath，又无PathProvider");
             return false;
         }
@@ -72,23 +65,18 @@ public class LocalVolumeManager
         return InternalSave(localVolume, pathProvider);
     }
 
-    private bool InternalSave(LocalVolume localVolume, Func<string?> localPathProvider)
-    {
+    private bool InternalSave(LocalVolume localVolume, Func<string?> localPathProvider) {
         var actualPath = localPathProvider();
 
-        if (actualPath is null)
-        {
+        if (actualPath is null) {
             LogUtils.PrintWarning("保存失败！没有提供路径！");
             return false;
         }
 
-        try
-        {
+        try {
             using var fileStream = FileUtils.OpenFile(actualPath, true, true);
             localVolume.Save(fileStream);
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             LogUtils.PrintError("另存为失败！", ex);
             return false;
         }
@@ -98,8 +86,7 @@ public class LocalVolumeManager
         return true;
     }
 
-    public void Close(LocalVolume localVolume)
-    {
+    public void Close(LocalVolume localVolume) {
         Volumes.Remove(localVolume);
 
         NotifyVolumesChanged();
@@ -108,36 +95,34 @@ public class LocalVolumeManager
     // 虽然通知卷更改，但是前端的标签页唯一可信源这一块导致不同步
     internal void NotifyVolumesChanged() => VolumesChanged?.Invoke(Volumes);
 
-    internal void NotifyVolumeItemRenamed(string volumeName, string oldName, string newName) =>
-        VolumeItemRenamed?.Invoke(volumeName, oldName, newName);
+    internal void NotifyVolumeItemRenamed(string volumeName, string oldName, string newName) => VolumeItemRenamed?.Invoke(volumeName, oldName, newName);
 
-    internal void NotifyVolumeItemDeleted(string volumeName, int id) =>
-        VolumeItemDeleted?.Invoke(volumeName, id);
+    internal void NotifyVolumeItemDeleted(string volumeName, int id) => VolumeItemDeleted?.Invoke(volumeName, id);
 
-    internal void NotifyVolumeIdsRemapped(string volumeName, int[] idMap) =>
-        VolumeIdsRemapped?.Invoke(volumeName, idMap);
+    internal void NotifyVolumeIdsRemapped(string volumeName, int[] idMap) => VolumeIdsRemapped?.Invoke(volumeName, idMap);
 }
 
 public record LocalVolumeMetaData(string? LocalPath);
 
-public class LocalVolume
-{
+public class LocalVolume {
     private readonly MassFile _massFile;
     private readonly LocalVolumeManager _manager;
+    private readonly HashSet<int> _dirtyItemIds = [];
 
-    public enum AddType
-    {
+    public enum AddType {
         Add,
         AbandonOld
     }
 
-    internal LocalVolume(MassFile massFile, string fileName, LocalVolumeManager manager)
-    {
+    internal LocalVolume(MassFile massFile, string fileName, LocalVolumeManager manager) {
         _massFile = massFile;
         _manager = manager;
         VolumeName = fileName;
 
-        massFile.OnItemIdsRemap += idMap => _manager.NotifyVolumeIdsRemapped(VolumeName, idMap);
+        massFile.OnItemIdsRemap += idMap => {
+            RemapDirtyItemIds(idMap);
+            _manager.NotifyVolumeIdsRemapped(VolumeName, idMap);
+        };
     }
 
     public int Count => _massFile.IdStrPairs.Count;
@@ -150,32 +135,51 @@ public class LocalVolume
 
     public int Revision { get; private set; }
 
-    private void Touch()
-    {
+    public bool IsItemUnsaved(int id) => _dirtyItemIds.Contains(id);
+
+    private void MarkItemDirty(int id) {
+        if (id >= 0) _dirtyItemIds.Add(id);
+    }
+
+    private void RemapDirtyItemIds(int[] idMap) {
+        if (_dirtyItemIds.Count == 0) return;
+
+        var remapped = new HashSet<int>();
+        foreach (var oldId in _dirtyItemIds) {
+            if (oldId < 0 || oldId >= idMap.Length) continue;
+            var newId = idMap[oldId];
+            if (newId >= 0) remapped.Add(newId);
+        }
+
+        _dirtyItemIds.Clear();
+        foreach (var id in remapped) _dirtyItemIds.Add(id);
+    }
+
+    private void Touch() {
         Unsaved = true;
         Revision++;
     }
 
-    public int Add(object value)
-    {
+    public int Add(object value) {
         var ret = _massFile.Add(value);
+        MarkItemDirty(ret);
         Touch();
 
         _manager.NotifyVolumesChanged();
         return ret;
     }
 
-    public void GiveName(int id, string name)
-    {
+    public void GiveName(int id, string name) {
         _massFile.GiveName(id, name);
+        MarkItemDirty(id);
         Touch();
 
         _manager.NotifyVolumesChanged();
     }
 
-    public void Set(int id, object value, bool gc = false)
-    {
+    public void Set(int id, object value, bool gc = false) {
         _massFile.Set(id, value);
+        MarkItemDirty(id);
         Touch();
 
         if (gc) _massFile.CollectGarbage();
@@ -183,9 +187,12 @@ public class LocalVolume
         _manager.NotifyVolumesChanged();
     }
 
-    public AddType Add(string name, object value, bool gc = false)
-    {
+    public AddType Add(string name, object value, bool gc = false) {
+        var idBefore = IdStrPairs.GetValueOrDefault(name, -1);
         var val = _massFile.Add(name, value) == MassFile.AddType.Add ? AddType.Add : AddType.AbandonOld;
+        var idAfter = IdStrPairs.GetValueOrDefault(name, idBefore);
+        if (idAfter >= 0) MarkItemDirty(idAfter);
+        else if (idBefore >= 0) MarkItemDirty(idBefore);
         Touch();
 
         if (gc) _massFile.CollectGarbage();
@@ -196,8 +203,7 @@ public class LocalVolume
 
 
     // 感觉这是没必要的，你要清空你大可以新建一个卷
-    public void Clear()
-    {
+    public void Clear() {
         throw new NotImplementedException();
 
         // Perform
@@ -207,22 +213,23 @@ public class LocalVolume
         _manager.NotifyVolumesChanged();
     }
 
-    public void CollectGarbage()
-    {
+    public void CollectGarbage() {
         _massFile.CollectGarbage();
+        
+        // GC或会带来改动，标记卷脏
         Touch();
 
         _manager.NotifyVolumesChanged();
     }
 
-    public bool Remove(string name, bool gc = false)
-    {
+    public bool Remove(string name, bool gc = false) {
         var id = IdStrPairs.GetValueOrDefault(name, -1);
 
         if (id == -1) return false;
 
         var state = _massFile.Remove(id);
         if (state) Touch();
+        if (state) _dirtyItemIds.Remove(id);
 
         if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
@@ -232,10 +239,10 @@ public class LocalVolume
         return state;
     }
 
-    public bool Remove(int id, bool gc = false)
-    {
+    public bool Remove(int id, bool gc = false) {
         var state = _massFile.Remove(id);
         if (state) Touch();
+        if (state) _dirtyItemIds.Remove(id);
 
         if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
 
@@ -245,38 +252,36 @@ public class LocalVolume
         return state;
     }
 
-    public LocalVolumeItemModel GetWrappedItem(int id, string? name = null)
-    {
+    public LocalVolumeItemModel GetWrappedItem(int id, string? name = null) {
         var result = _massFile.Get<object>(id);
 
         var jwc = _massFile.CodecBindings[_massFile.ItemBlobs[id].CodecBindingId].DataJavaClz;
 
-        return new LocalVolumeItemModel(id, VolumeName,
-            name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
-            jwc.JavaClassToRyoType()
-                .ResolveDataTypeName()
-            , result.Data, result.ParseSuccess, Revision);
+        return new LocalVolumeItemModel(id, VolumeName, name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
+            jwc.JavaClassToRyoType().ResolveDataTypeName(), result.Data, result.ParseSuccess, Revision
+        );
     }
 
     public LocalVolumeItemModel this[string key] => GetWrappedItem(IdStrPairs[key], key);
 
     public LocalVolumeItemModel this[int key] => GetWrappedItem(key);
 
-    public void Save(FileStream fs, bool gc = true)
-    {
+    public void Save(FileStream fs, bool gc = true) {
         if (gc) _massFile.CollectGarbage();
         Unsaved = true;
 
         _massFile.Save(fs);
         Unsaved = false;
+        _dirtyItemIds.Clear();
 
         _manager.NotifyVolumesChanged();
     }
 
     // 重命名不需要GC
-    public void Rename(string oldName, string newName)
-    {
+    public void Rename(string oldName, string newName) {
+        var id = IdStrPairs.GetValueOrDefault(oldName, -1);
         _massFile.Rename(oldName, newName);
+        if (id >= 0) MarkItemDirty(id);
         Touch();
 
         _manager.NotifyVolumeItemRenamed(VolumeName, oldName, newName);
