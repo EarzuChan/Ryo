@@ -4,7 +4,7 @@
        :class="{'even':!even}">
     <VueDraggable class="draggable-place" v-model="modelWithIds" @start="notice(true)"
                   :animation="200" @end="notice(false)">
-      <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second"> <!-- v-memo="item" 会搞死原子编辑器-->
+      <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second">
         <EditorHolder :even="even" not-use-card v-model="model![index]" :type="itemType"
                       :item-key="itemKey" :editor-path="getItemPath(index)" :data-type-name="itemTypeName"
                       :context-menu-contributions="getContextMenuContributions(index)"/>
@@ -32,7 +32,6 @@ import {createContextMenuGroup} from "@/utils/ContextMenuUtils"
 
 const TAG = "ArrayEditor"
 
-// TODO：再加上文本编辑器的宽度自适应（作为atom时最小），子编辑器的父级传递错误，右键删除
 const appState = useAppStateStore()
 const dialogState = useDialogStateStore()
 const {t} = useI18n()
@@ -165,6 +164,7 @@ function getContextMenuContributions(index: number): ContextMenuContribution[] {
 .array-item {
   align-items: center;
   display: flex;
+  min-height: 36px;
 }
 
 #add-item-button {

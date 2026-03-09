@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Buffers.Binary;
+using System.Text;
 
 namespace Me.EarzuChan.Ryo.Core.IO;
 
@@ -24,23 +25,40 @@ public class RyoWriter : IDisposable
 
     public RyoWriter(Stream outputStream) => Writer = new(outputStream);
 
-    public void WriteInt(int intToWrite) => Writer.Write(BitConverter.GetBytes(intToWrite).Reverse().ToArray());
+    public void WriteInt(int intToWrite)
+    {
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(buffer, intToWrite);
+        Writer.Write(buffer); // Modern .NET BinaryWriter 支持 ReadOnlySpan<byte>
+    }
 
-    public void WriteShort(short shortToWrite) => Writer.Write(BitConverter.GetBytes(shortToWrite).Reverse().ToArray());
+    public void WriteShort(short shortToWrite) {
+        Span<byte> buffer = stackalloc byte[2];
+        BinaryPrimitives.WriteInt16BigEndian(buffer, shortToWrite);
+        Writer.Write(buffer);
+    }
 
     public void WriteUnsignedByte(byte bt) => Writer.Write(bt);
 
     public void PositionToZero() => Position = 0;
 
-    public void WriteAnotherWriter(RyoWriter anoWriter) => Writer.Write(new RyoReader(anoWriter.Writer.BaseStream).ReadAllBytes());
-
     public void WriteBytes(byte[] pixels) => Writer.Write(pixels);
 
-    public void WrintString(string? v)
+    public void WriteString(string? v)
     {
-        byte[] vytes = Encoding.UTF8.GetBytes(v);
-        WriteInt(vytes.Length);
-        WriteBytes(vytes);
+        if (v == null) {
+            WriteInt(-1);
+            return;
+        }
+        
+        if (v.Length == 0) {
+            WriteInt(0);
+            return;
+        }
+
+        byte[] bytes = Encoding.UTF8.GetBytes(v);
+        WriteInt(bytes.Length);
+        WriteBytes(bytes);
     }
 
     public static implicit operator Stream(RyoWriter writer) => writer.Writer.BaseStream;
@@ -49,7 +67,35 @@ public class RyoWriter : IDisposable
 
     public void WriteSignedByte(sbyte i) => Writer.Write(i);
 
-    public void WriteFloat(float ob) => Writer.Write(BitConverter.GetBytes(ob).Reverse().ToArray());
+    public void WriteFloat(float f) {
+        Span<byte> buffer = stackalloc byte[4];
+        BinaryPrimitives.WriteSingleBigEndian(buffer, f);
+        Writer.Write(buffer);
+    }
 
     public void WriteBoolean(bool ob) => WriteSignedByte((sbyte)(ob ? 1 : 0));
+    
+    // 新增：WriteLong
+    public void WriteLong(long longToWrite)
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        BinaryPrimitives.WriteInt64BigEndian(buffer, longToWrite);
+        Writer.Write(buffer);
+    }
+
+    // 新增：WriteDouble
+    public void WriteDouble(double doubleToWrite)
+    {
+        Span<byte> buffer = stackalloc byte[8];
+        BinaryPrimitives.WriteDoubleBigEndian(buffer, doubleToWrite);
+        Writer.Write(buffer);
+    }
+
+    // 新增：WriteChar (Java char 是 2 字节无符号整数)
+    public void WriteChar(char charToWrite)
+    {
+        Span<byte> buffer = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16BigEndian(buffer, charToWrite);
+        Writer.Write(buffer);
+    }
 }

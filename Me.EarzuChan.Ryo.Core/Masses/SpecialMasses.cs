@@ -161,7 +161,7 @@ public class MassFile : Mass
         writer.WriteInt(IdStrPairs.Count);
         foreach (var i in IdStrPairs)
         {
-            writer.WrintString(i.Key);
+            writer.WriteString(i.Key);
             writer.WriteInt(i.Value);
         }
     }

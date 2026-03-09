@@ -66,26 +66,19 @@ public class CustomFormatCodecFactory : ICodecFactory {
                             throw new NullReferenceException($"该类型{obj.GetType()}暂不能构建适配列表");
 
             int matchedCtorIndex;
-            for (matchedCtorIndex = 0;
-                 matchedCtorIndex < _ctors.Count && _ctorParams[matchedCtorIndex].Count != args.Length;
-                 matchedCtorIndex++) ;
+            for (matchedCtorIndex = 0; matchedCtorIndex < _ctors.Count && _ctorParams[matchedCtorIndex].Count != args.Length; matchedCtorIndex++) ;
 
             if (matchedCtorIndex == _ctors.Count) throw new InvalidCastException("适配列表的参数不符合任意构造器参数");
 
             if (_ctors.Count > 1) writer.WriteSignedByte((sbyte)matchedCtorIndex);
 
             var paramTypes = _ctorParams[matchedCtorIndex];
-
-            // LogUtils.PrintInfo("参数数：" + paramTypes.Count);
-            // foreach (Type tp in paramTypes) LogUtils.PrintInfo("参数类型：" + tp);
-            //mass.ItemBlobs[mass.SavedId].StickyId++;
+            
             for (int i = 0; i < args.Length; i++) {
                 Type itemType = paramTypes[i];
 
-                //LogUtil.INSTANCE.PrintDebugInfo($"参数{i + 1}：{item}");
                 object item = args[i];
                 try {
-                    //LogUtil.INSTANCE.PrintInfo($"写参数{i2 + 1}，预测类型：{item}，实际：{ob.GetType()}，值：{ob}");
                     ReadWriteTypesUtils.Write(itemType, item, writer, mass);
                 } catch (Exception ex) {
                     throw new InvalidCastException($"写入第{i + 1}号参数（{item.GetType}）时错误，是因为" + ex.Message, ex);
@@ -105,7 +98,6 @@ public class CustomFormatCodecFactory : ICodecFactory {
                 FieldInfo field = FieldInfos[i];
                 try {
                     object? value = ReadWriteTypesUtils.Read(field.FieldType, reader, mass, true);
-                    // LogUtils.PrintInfo($"读取第{i + 1}：{value.GetType()}");
                     field.SetValue(item, value);
                 } catch (Exception ex) {
                     throw new FieldAccessException($"读取第 {i + 1} 字段 [{field.Name}] 对象 {field.FieldType} 时出错", ex);
@@ -121,8 +113,7 @@ public class CustomFormatCodecFactory : ICodecFactory {
                 try {
                     ReadWriteTypesUtils.Write(field.FieldType, field.GetValue(obj)!, writer, mass, true);
                 } catch (Exception ex) {
-                    throw new FieldAccessException($"写入第 {i + 1} 个字段 [{field.Name}]：{field.FieldType} 时出错，对象：{obj}",
-                        ex);
+                    throw new FieldAccessException($"写入第 {i + 1} 个字段 [{field.Name}]：{field.FieldType} 时出错，对象：{obj}", ex);
                 }
             }
         }
@@ -222,7 +213,7 @@ public class NormalTypeCodecFactory : ICodecFactory {
                 JavaClassName = "sengine.mass.serializers.DefaultSerializers$EnumSerializer",
                 CsType = typeof(EnumCodec)
             }
-        },
+        }, // TODO：这里也还能有活，但我依旧发扬伟大偷懒精神
     };
 
     public class BooleanCodec : ICodec {
@@ -240,7 +231,7 @@ public class NormalTypeCodecFactory : ICodecFactory {
     public class StringCodec : ICodec {
         public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadString();
 
-        public void To(object obj, Mass mass, RyoWriter writer) => writer.WrintString((string)obj);
+        public void To(object obj, Mass mass, RyoWriter writer) => writer.WriteString((string)obj);
     }
 
     public class EnumCodec : ICodec {
@@ -306,158 +297,226 @@ public class BaseArrayTypeCodecFactory : ICodecFactory {
                 CsType = typeof(ByteArrayCodec)
             }
         }, {
+            typeof(bool),
+            new() {
+                JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$BooleanArraySerializer",
+                CsType = typeof(BooleanArrayCodec)
+            }
+        }, {
             typeof(string),
             new() {
                 JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$StringArraySerializer",
                 CsType = typeof(StringArrayCodec)
             }
-        },
+        },{ // 新增：Long
+            typeof(long),
+            new() {
+                JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$LongArraySerializer",
+                CsType = typeof(LongArrayCodec)
+            }
+        }, { // 新增：Double
+            typeof(double),
+            new() {
+                JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$DoubleArraySerializer",
+                CsType = typeof(DoubleArrayCodec)
+            }
+        }, { // 新增：Char
+            typeof(char),
+            new() {
+                JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$CharArraySerializer",
+                CsType = typeof(CharArrayCodec)
+            }
+        }
     };
 
     public class IntArrayCodec : ICodec {
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
-            int i = reader.ReadInt();
-            int[] iArr = new int[i];
-            for (int i2 = 0; i2 < i; i2++) {
-                iArr[i2] = reader.ReadInt();
-            }
-
-            return iArr;
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            int[] array = new int[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadInt();
+            return array;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            int[] intArr = (int[])obj;
-            writer.WriteInt(intArr.Length);
-            foreach (var item in intArr) writer.WriteInt(item);
+            int[] array = (int[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteInt(item);
         }
     }
 
-    // Untested
     public class ShortArrayCodec : ICodec {
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
-            int i = reader.ReadInt();
-            short[] sArr = new short[i];
-            for (int i2 = 0; i2 < i; i2++) {
-                sArr[i2] = reader.ReadShort();
-            }
-
-            return sArr;
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            short[] array = new short[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadShort();
+            return array;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            short[] shortArr = (short[])obj;
-            writer.WriteInt(shortArr.Length);
-            foreach (var item in shortArr) {
-                writer.WriteShort(item);
-            }
+            short[] array = (short[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteShort(item);
         }
     }
 
-    // Untested
     public class FloatArrayCodec : ICodec {
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
-            int i = reader.ReadInt();
-            float[] fArr = new float[i];
-            for (int i2 = 0; i2 < i; i2++) {
-                fArr[i2] = reader.ReadFloat();
-            }
-
-            return fArr;
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            float[] array = new float[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadFloat();
+            return array;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            float[] fArr = (float[])obj;
-            writer.WriteInt(fArr.Length);
-            foreach (var item in fArr) {
-                writer.WriteFloat(item);
-            }
+            float[] array = (float[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteFloat(item);
         }
     }
 
-    public class ObjectArrayCodec : ICodec {
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
-            // TODO：优化类型判断过程，和RyoType的GetSubitemRyoType有关
-
-            var oriItemType = ryoType.ToCsType()?.GetElementType();
-            var itemType = oriItemType ?? typeof(object);
-
-            // 读个数
-            var objArr = Array.CreateInstance(itemType, reader.ReadInt());
-
-            // 读子项
-            for (var i = 0; i < objArr.Length; i++) objArr.SetValue(mass.Read<object>(), i);
-
-            // 额外匹配类型
-            if (oriItemType == null) {
-                if (objArr.Length > 0 && objArr.GetValue(0) != null) itemType = objArr.GetValue(0)!.GetType();
-                // LogUtils.INSTANCE.PrintInfo("额外重写匹配 类型为" + itemType);
-                if (itemType == typeof(object)) return objArr;
-                var newArray = Array.CreateInstance(itemType, objArr.Length);
-
-                for (var i = 0; i < objArr.Length; i++) {
-                    var obj = objArr.GetValue(i)!; // 获取objArr中的当前项
-                    var convertedObj = Convert.ChangeType(obj, itemType); // 将当前项转换为type类型
-                    newArray.SetValue(convertedObj, i); // 将转换后的值赋值给新数组中的对应位置
-                }
-
-                return newArray;
-            }
-
-            return objArr;
+    // 新增：LongArrayCodec
+    public class LongArrayCodec : ICodec {
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            long[] array = new long[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadLong();
+            return array;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            var objType = obj.GetType();
-            if (!objType.IsArray) throw new InvalidDataException("什么！这不是数组，这是" + objType);
-            //Type eleType = objType.GetElementType()!;
-            Array objArr = (Array)obj;
-            writer.WriteInt(objArr.Length);
+            long[] array = (long[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteLong(item);
+        }
+    }
 
-            // mass.ItemBlobs[mass.SavedId].StickyId++;
-            foreach (var item in objArr) mass.Write(item);
+    // 新增：DoubleArrayCodec
+    public class DoubleArrayCodec : ICodec {
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            double[] array = new double[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadDouble();
+            return array;
+        }
+
+        public void To(object obj, Mass mass, RyoWriter writer) {
+            double[] array = (double[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteDouble(item);
+        }
+    }
+
+    // 新增：CharArrayCodec
+    public class CharArrayCodec : ICodec {
+        public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            char[] array = new char[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadChar();
+            return array;
+        }
+
+        public void To(object obj, Mass mass, RyoWriter writer) {
+            char[] array = (char[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteChar(item);
         }
     }
 
     public class ByteArrayCodec : ICodec {
-        public object? From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) => reader.ReadBytes(reader.ReadInt());
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            byte[] objArr = (byte[])obj;
-            writer.WriteInt(objArr.Length);
-            writer.WriteBytes(objArr);
+            byte[] array = (byte[])obj;
+            writer.WriteInt(array.Length);
+            writer.WriteBytes(array);
+        }
+    }
+
+    public class BooleanArrayCodec : ICodec {
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            int length = reader.ReadInt();
+            bool[] array = new bool[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadBoolean();
+            return array;
+        }
+
+        public void To(object obj, Mass mass, RyoWriter writer) {
+            bool[] array = (bool[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteBoolean(item);
         }
     }
 
     public class StringArrayCodec : ICodec {
         public object? From(Mass mass, RyoReader reader, RyoType ryoType) {
-            int i = reader.ReadInt();
-            string?[] strArr = new string[i];
-            for (int i2 = 0; i2 < i; i2++) strArr[i2] = reader.ReadString();
-            return strArr;
+            int length = reader.ReadInt();
+            string?[] array = new string[length];
+            for (int index = 0; index < length; index++) array[index] = reader.ReadString();
+            return array;
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            string?[] strArr = (string?[])obj;
-            writer.WriteInt(strArr.Length);
-            foreach (var item in strArr) writer.WrintString(item);
+            string?[] array = (string?[])obj;
+            writer.WriteInt(array.Length);
+            foreach (var item in array) writer.WriteString(item); 
+        }
+    }
+
+    public class ObjectArrayCodec : ICodec {
+        public object From(Mass mass, RyoReader reader, RyoType ryoType) {
+            var oriItemType = ryoType.GetArrayElementRyoType().CsType; // OLD：ryoType.ToCsType()?.GetElementType();
+            var itemType = oriItemType ?? typeof(object);
+
+            int length = reader.ReadInt();
+            var objArray = Array.CreateInstance(itemType, length);
+
+            for (var index = 0; index < length; index++) objArray.SetValue(mass.Read<object>(), index);
+
+            // 额外匹配类型并重写数组
+            if (oriItemType == null) {
+                if (length > 0 && objArray.GetValue(0) != null) itemType = objArray.GetValue(0)!.GetType();
+                
+                if (itemType == typeof(object)) return objArray;
+                
+                var stronglyTypedArray = Array.CreateInstance(itemType, length);
+                for (var index = 0; index < length; index++) {
+                    var item = objArray.GetValue(index);
+                    // 增加对 null 的安全处理
+                    var convertedItem = item == null ? null : Convert.ChangeType(item, itemType);
+                    stronglyTypedArray.SetValue(convertedItem, index);
+                }
+
+                return stronglyTypedArray; // CHECK：如果是啥都能放的ArrayList不炸了？还是只有具类型的数组？
+            }
+
+            return objArray;
+        }
+
+        public void To(object obj, Mass mass, RyoWriter writer) {
+            var objType = obj.GetType();
+            if (!objType.IsArray) throw new InvalidDataException($"什么！这不是数组，这是：{objType}");
+            
+            Array objArray = (Array)obj;
+            writer.WriteInt(objArray.Length);
+
+            foreach (var item in objArray) mass.Write(item);
         }
     }
 
     public ICodec CreateCodecForDataRyoType(RyoType ryoType) {
-        if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
+        if (!ryoType.IsArray) throw new FormatException($"不是列表：{ryoType}");
 
-        foreach (var item in DataCodecRyoTypePairs)
-            if (ryoType.CsType == item.Key)
-                return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
+        // 优化：使用 TryGetValue 替代 foreach 遍历，时间复杂度从 O(N) 降到 O(1)
+        if (ryoType.CsType != null && DataCodecRyoTypePairs.TryGetValue(ryoType.CsType, out var codecData)) return (ICodec)Activator.CreateInstance(codecData.CsType!)!;
+        
         return new ObjectArrayCodec();
     }
 
     public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType) {
-        if (!ryoType.IsArray) throw new FormatException("不是列表：" + ryoType);
+        if (!ryoType.IsArray) throw new FormatException($"不是列表：{ryoType}");
 
-        foreach (var item in DataCodecRyoTypePairs)
-            if (ryoType.CsType == item.Key)
-                return item.Value;
+        // 优化：使用 TryGetValue 替代 foreach 遍历
+        if (ryoType.CsType != null && DataCodecRyoTypePairs.TryGetValue(ryoType.CsType, out var codecData)) return codecData;
 
         return new() {
             JavaClassName = "sengine.mass.serializers.DefaultArraySerializers$ObjectArraySerializer",
@@ -589,17 +648,13 @@ public class SpecialFormatCodecFactory : ICodecFactory {
     public ICodec CreateCodecForDataRyoType(RyoType type) {
         //if (!type.IsCustom) throw new FormatException(type + "非自定义类型");
 
-        foreach (var item in DataCodecRyoTypePairs)
-            if (type.CsType == item.Key)
-                return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
+        foreach (var item in DataCodecRyoTypePairs) if (type.CsType == item.Key) return (ICodec)Activator.CreateInstance(item.Value.CsType!)!;
 
         throw new FormatException(type + "没有合适的特殊类型适配器");
     }
 
     public RyoType FindCodecRyoTypeForDataRyoType(RyoType ryoType) {
-        foreach (var item in DataCodecRyoTypePairs)
-            if (ryoType.CsType == item.Key)
-                return item.Value;
+        foreach (var item in DataCodecRyoTypePairs) if (ryoType.CsType == item.Key) return item.Value;
 
         throw new FormatException(ryoType + "找不到合适的特殊类型适配器");
     }

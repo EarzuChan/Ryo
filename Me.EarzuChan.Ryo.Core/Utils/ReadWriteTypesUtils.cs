@@ -17,7 +17,7 @@ public static class ReadWriteTypesUtils
     public static void Write(Type itemType, object item, RyoWriter writer, Mass mass, bool isFieldMode = false)
     {
         if (itemType == typeof(int)) writer.WriteInt((int)item);
-        else if (itemType == typeof(string) && !isFieldMode) writer.WrintString((string)item);
+        else if (itemType == typeof(string) && !isFieldMode) writer.WriteString((string)item);
         else if (itemType == typeof(float)) writer.WriteFloat((float)item);
         else if (itemType == typeof(bool)) writer.WriteBoolean((bool)item);
         else mass.Write(item);

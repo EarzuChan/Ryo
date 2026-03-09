@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Buffers.Binary;
+using System.Text;
 
 namespace Me.EarzuChan.Ryo.Core.IO;
 
@@ -20,9 +21,17 @@ public class RyoReader : IDisposable
 
     public byte[] ReadBytes(int length) => Reader.ReadBytes(length);
 
-    public int ReadInt() => BitConverter.ToInt32(Reader.ReadBytes(4).Reverse().ToArray(), 0);
+    public int ReadInt() {
+        Span<byte> buffer = stackalloc byte[4];
+        Reader.Read(buffer); // 直接读入栈内存，零分配
+        return BinaryPrimitives.ReadInt32BigEndian(buffer);
+    }
 
-    public short ReadShort() => BitConverter.ToInt16(Reader.ReadBytes(2).Reverse().ToArray(), 0);
+    public short ReadShort() {
+        Span<byte> buffer = stackalloc byte[2];
+        Reader.Read(buffer);
+        return BinaryPrimitives.ReadInt16BigEndian(buffer);
+    }
 
     public string ReadBytesToHexString(int length)
     {
@@ -42,7 +51,14 @@ public class RyoReader : IDisposable
         return sb.ToString();
     }
 
-    public string ReadString() => ReadString(ReadInt());
+    public string? ReadString() {
+        int length = ReadInt();
+        return length switch {
+            < 0 => null,
+            0 => "",
+            _ => ReadString(length)
+        };
+    }
 
     private string ReadString(int length) => Encoding.UTF8.GetString(Reader.ReadBytes(length));
 
@@ -52,13 +68,35 @@ public class RyoReader : IDisposable
 
     public byte[] ReadAllBytes() => Reader.ReadBytes((int)RestLength);
 
-    public float ReadFloat() => BitConverter.ToSingle(ReadBytes(4).Reverse().ToArray(), 0);
+    public float ReadFloat() {
+        Span<byte> buffer = stackalloc byte[4];
+        Reader.Read(buffer);
+        return BinaryPrimitives.ReadSingleBigEndian(buffer);
+    }
 
     public byte ReadUnsignedByte() => Reader.ReadByte();
 
     public sbyte ReadSignedByte() => Reader.ReadSByte();
 
     public bool ReadBoolean() => ReadUnsignedByte() != 0;
+    
+    public long ReadLong() {
+        Span<byte> buffer = stackalloc byte[8];
+        Reader.Read(buffer);
+        return BinaryPrimitives.ReadInt64BigEndian(buffer);
+    }
 
-    public static implicit operator RyoReader(byte[] buffer) => new RyoReader(new MemoryStream(buffer));
+    public double ReadDouble() {
+        Span<byte> buffer = stackalloc byte[8];
+        Reader.Read(buffer);
+        return BinaryPrimitives.ReadDoubleBigEndian(buffer);
+    }
+
+    public char ReadChar() {
+        Span<byte> buffer = stackalloc byte[2];
+        Reader.Read(buffer);
+        return (char)BinaryPrimitives.ReadUInt16BigEndian(buffer);
+    }
+
+    public static implicit operator RyoReader(byte[] buffer) => new(new MemoryStream(buffer));
 }
