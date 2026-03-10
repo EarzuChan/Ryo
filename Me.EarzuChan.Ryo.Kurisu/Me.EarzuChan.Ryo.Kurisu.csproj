@@ -9,16 +9,13 @@
 		<UseWindowsForms>true</UseWindowsForms>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3079-prerelease" />
-	</ItemGroup>
-
 	<ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
 		<Compile Remove="HostBackends\HostBackends.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
 		<Compile Remove="HostBackends\PhotinoHostBackend.cs" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3800.47" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">

@@ -1,62 +1,58 @@
-# Ryo (Me.EarzuChan.Ryo)
+﻿# Ryo（Me.EarzuChan.Ryo）
 
-[中文](README_CN.md)
+[英文]版待创建；2026.03.11：文档已过时尚未更新！！
 
-## Overview
+## 概述
 
-Ryo is a comprehensive solution designed for browsing and editing game resources from the Simulacra series developed by
-SEngine. The solution supports various types of game data, including game stories, save files, models, configurations,
-and in-game audio-visual resources. The development stack consists mainly of .NET C# for the backend and TypeScript +
-Vue3 for the front-end user interface.
+涼 是一个综合解决方案，专为浏览和编辑由 SEngine 开发的 Simulacra
+系列游戏资源而设计。该解决方案支持各种游戏数据类型，包括游戏剧情、存档、模型、配置和游戏内的视听资源。开发栈主要由 .NET C#
+组成后端，前端用户界面部分由 TypeScript 和 Vue3 组成。
 
-The name "Ryo" is derived from the Japanese character "鿌" (Ryo), actually Ryo is a character from the
-anime [Bocchi the Rock!](https://en.wikipedia.org/wiki/Bocchi_the_Rock!).
+涼 的名字源于日文，涼实际上是动漫作品[孤独摇滚！](https://zh.wikipedia.org/wiki/%E5%AD%A4%E7%8D%A8%E6%90%96%E6%BB%BE%EF%BC%81_(%E5%8B%95%E7%95%AB))
+中的一个角色。
 
-## Features
+## 特性
 
-- **Manage Game Resource Files**: Create, open, manage, import, export, and dump specific resource file system formats
-  used in Simulacra games.
-- **Utility Classes**: Built-in utilities for quick packaging and unpackaging of game textures and other resources.
-- **Extensive API**: Provides a rich set of APIs for resource manipulation and conversion.
-- **User-Friendly Editor**: We have an official editor application for general users to easily edit game resources.
+- **管理游戏资源文件**：创建、打开、管理、导入、导出和转储 Simulacra 游戏中使用的特定资源文件系统格式。
+- **实用类**：内置实用程序，快速打包和解包游戏纹理及其他资源。
+- **广泛的 API**：提供丰富的 API 用于资源操作和转换。
+- **用户友好的编辑器**：我们有一个官方编辑器应用程序，普通用户可以很容易地编辑游戏资源。
 
-## Usage
+## 使用说明
 
-If you are a general user looking to immediately edit game resources, please
-download Ryo Editor at [Release Page](https://github.com/earzuchan/ryo/releases). For support and updates, join the
-official Discord
-community at [Hello Simulacra](https://discord.gg/KBhhVy2s).
+如果你是普通用户，想立即编辑游戏资源，请在 [发布页](https://github.com/earzuchan/ryo/releases) 下载 涼
+Editor。如需支持和更新，请加入官方
+Discord 社区 [Hello Simulacra](https://discord.gg/KBhhVy2s)。
 
-## Core Projects
+## 核心项目
 
 ### Me.EarzuChan.Ryo.Core
 
-Aka Ryo Library.
+也叫 涼 Library。
 
-This is the core library that offers the primary functionalities of the Ryo solution.
+这是提供 涼 解决方案主要功能的核心库。
 
-To get started of this library, you can check out our [Wiki](https://github.com/EarzuChan/Ryo/wiki) for detailed
-documentation.
+要开始使用此库，您可以查看我们的 [Wiki](https://github.com/EarzuChan/Ryo/wiki) 以获取详细文档。
 
-#### Key Capabilities:
+#### 主要功能：
 
-- **Resource File System Management**: Load, add, and manage resources in game data file systems (MassFile, ".fs").
-- **Texture Handling**: Read, modify, and package game image resources (".texture").
+- **资源文件系统管理**：加载、添加和管理游戏数据文件系统中的资源（MassFile，“.fs”）。
+- **纹理处理**：读取、修改和打包游戏图像资源（“.texture”）。
 
-#### Example Usage:
+#### 示例用法：
 
 ```csharp
-// Load and manage game data file system resource package (MassFile, ".fs")
+// 加载和管理游戏数据文件系统资源包（MassFile，“.fs”）
 var massManager = new MassManager();
 var mass = massManager.LoadMassFile("path/to/file.fs", "ResourcePackageName");
 var dialogueTree = mass.Get<DialogueTree>(mass.IdStrPairs["ResourceItemKey"]);
 mass.Add("ResourceItemKey2", dialogueTree);
 
-// Read game image resource (".texture")
+// 读取游戏图像资源（“.texture”）
 var stream = FileUtils.OpenFile("path/to/photo.texture");
 var textureFile = new TextureFile();
 textureFile.Load(stream);
-var fragmentalImage = textureFile.Get<FragmentalImage>(textureFile.ImageIDsArray.First().First()) ?? throw new FileNotFoundException("Default image not found");
+var fragmentalImage = textureFile.Get<FragmentalImage>(textureFile.ImageIDsArray.First().First()) ?? throw new FileNotFoundException("找不到默认图片");
 Image outputImage = fragmentalImage.ToImage();
 string savePath = FileName.Replace(".texture", "");
 if (fragmentalImage.RyoPixmaps.First().First().IsJPG) {
@@ -64,7 +60,7 @@ if (fragmentalImage.RyoPixmaps.First().First().IsJPG) {
 }
 outputImage.Save(savePath);
 
-// Package image into texture
+// 将图片打包成纹理
 FileStream fileStream = FileUtils.OpenFile(ImgPath);
 FragmentalImage image = Image.Load(fileStream).ToFragmentalImage(512);
 var txfile = new TextureFile();
@@ -75,62 +71,55 @@ txfile.Save(saveStream);
 
 ### Me.EarzuChan.Ryo.Editor
 
-Aka Ryo Editor.
+也叫 涼 Editor。
 
-An in-development GUI for Ryo built using the Me.EarzuChan.Ryo.Kurisu framework. It is a sleek and
-user-friendly editor application allowing users to open and edit multiple resource packages simultaneously using a
-visual editor view, akin to VSCode. This powerful editor app is designed to be easily used by general users.
+一个正在开发中的 涼 GUI，使用 Me.EarzuChan.Ryo.Kurisu 框架构建。它是一个优雅且用户友好的编辑器应用程序，允许用户同时打开和编辑多个资源包，使用类似
+VSCode 的可视化编辑器视图。这款强大的编辑器应用程序旨在为普通用户提供简便的使用体验。
 
-We have an official user guide for Ryo Editor, which you can find in the App's Help menu.
+我们有一个官方的 涼 Editor 用户指南，你可以在软件的帮助菜单中找到。
 
 ### Me.EarzuChan.Ryo.Editor.UI
 
-The front-end UI part of Me.EarzuChan.Ryo.Editor, built with Vue3 and TypeScript, and following
-the [Material 3](https://m3.material.io) design system.
+Me.EarzuChan.Ryo.Editor 的前端 UI 部分，使用 Vue3 和 TypeScript 构建，并且遵循 [Material 3](https://m3.material.io) 设计系统。
 
-## Additional Projects
+## 附加项目
 
 ### Me.EarzuChan.Ryo.ConsoleSystem
 
-A framework for quickly building command-line applications that can run anywhere.
+一个快速构建随处可运行的命令行应用程序的框架。
 
 ### Me.EarzuChan.Ryo.ConsoleFrontEnd
 
-Aka Ryo Console.
+也叫 涼 Console。
 
-A command-line frontend application built using the Me.EarzuChan.Ryo.ConsoleSystem framework. The User Handbook
-is [here](RYO_CONSOLE_USER_HANDBOOK.md).
+使用 Me.EarzuChan.Ryo.ConsoleSystem 框架构建的命令行前端应用程序。用户手书在 [这里](RYO_CONSOLE_USER_HANDBOOK.md)
+。（由于我们不计划积极更新此项目，因此我们暂不会为该文档撰写中文版）
 
 ### Me.EarzuChan.Ryo.ConsoleTest
 
-A test application for the Ryo system, also built using the Me.EarzuChan.Ryo.ConsoleSystem framework.
+一个用于测试 涼 系统的应用程序，同样使用 Me.EarzuChan.Ryo.ConsoleSystem 框架构建。
 
 ### Me.EarzuChan.Ryo.Extensions
 
-Provides additional capabilities such as generating schemas for game resource items, converting resource objects to
-JSON, and restoring them from JSON.
+提供额外功能，如生成游戏资源对象的 Schema，将资源对象转换为 JSON，并从 JSON 重建资源对象。
 
 ### Me.EarzuChan.Ryo.Kurisu
 
-A framework similar to Electron for building desktop web applications. It allows users to write backend code in C# and
-provides many APIs for front-end (Web) and backend (C#) interaction, such as WebCall (similar to RESTful requests) and
-WebEvent (bidirectional communication).
+类似于 Electron 的框架，用于构建桌面 Web 应用程序。允许用户使用 C# 编写后端代码，并提供许多前端（Web）和后端（C#）交互的 API，例如
+WebCall（类似于 RESTful 请求）和 WebEvent（双向通信）。
 
-The framework's name is from Makise Kurisu from Steins;Gate, she is my assistant ~~wife~~, no adding Tina Kora!
+这个框架的名称来源于命运石之门的牧濑红莉栖，她是我的助手~~老婆~~，不许加上蒂娜啊Kora！
 
-## Future Sister Solutions
+## 未来的姊妹解决方案
 
-- **Teio**: A launcher for Simulacra series games (using SEngine) across Windows and Android. It will support mods, use
-  any game resource package, and include various modded resources markets.
-- **TeioAPI**: A set of APIs for Teio Mod Developers to interact with the launcher and manipulate game and resources.
-- **~~Soyorin~~No Name Yet**: An IDE for Simulacra players interested in creating mods and derivative versions. It will facilitate
-  unpacking original game apps (users must provide their own copies), managing game resources, one-click packing of mod
-  resources, and integration with Ryo Editor.
-- **Sakiko**: Next-generation JvmHook framework, planned to support desktop and Android platforms, providing the ability
-  to register game lifecycle events and custom hooks for TeioAPI.
+- **Teio**：一个跨 Windows 和安卓平台的 Simulacra 系列游戏启动器（使用 SEngine），支持 Mod，可使用任意游戏资源包，并包含各种改版资源市场。
+- **TeioAPI**：一套提供给 Teio Mod 开发者的 API，用于与启动器进行交互，以及对游戏和资源进行操作。
+- **~~Soyorin~~没想好名字**：一个为 Simulacra 玩家制作的 IDE，旨在创作 Mod
+  和衍生版本。它将方便解包原版游戏应用（用户需自行提供原版包）、管理游戏资源、一键打包改版资源，并与
+  涼 Editor 联动。
+- **Sakiko**：次世代JvmHook框架，计划支持桌面和安卓平台，为TeioAPI提供游戏生命周期事件注册与自定义Hook的能力。
 
-## Contact
+## 联系方式
 
-For any questions or suggestions, please reach out via QQ: 2421565269,
-email: [huascq@gmail.com](mailto:huascq@gmail.com), or contact me on Discord through
-the [Hello Simulacra](https://discord.gg/KBhhVy2s) server (or @earzu).
+如有任何问题或建议，请通过以下方式联系我：QQ：2421565269，邮箱：[huascq@gmail.com](mailto:huascq@gmail.com)，或在 Discord
+上通过 [Hello Simulacra](https://discord.gg/KBhhVy2s) 服务器联系我（或 @earzu）。
