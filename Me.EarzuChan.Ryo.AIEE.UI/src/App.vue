@@ -45,6 +45,7 @@ const justTesting = computed(() => appState.preferTesting && allAvailable.value)
 }
 
 #ryo-viewport.border {
+  margin: 1px;
   border: 1px solid var(--ryo-color-outline-varient);
   border-radius: 16px;
 }

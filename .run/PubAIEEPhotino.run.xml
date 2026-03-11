@@ -1,0 +1,13 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PubAIEEPhotino" type="DotNetFolderPublish" factoryName="Publish to folder">
+    <riderPublish configuration="Release" platform="Any CPU" target_folder="$PROJECT_DIR$/Me.EarzuChan.Ryo.AIEE/bin/Release/net10.0/publish" target_framework="net10.0" uuid_high="-5240947642848409293" uuid_low="-8930155955238788888">
+      <runtimes>
+        <item value="osx-x64" />
+        <item value="osx-arm64" />
+        <item value="linux-x64" />
+        <item value="linux-arm64" />
+      </runtimes>
+    </riderPublish>
+    <method v="2" />
+  </configuration>
+</component>

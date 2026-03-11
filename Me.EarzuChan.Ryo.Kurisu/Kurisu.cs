@@ -422,9 +422,7 @@ public class KurisuAppBuilder {
     private void RegisterWebEventHandlerDirectly(WebEventHandlerAttribute handlerAttribute, Type handler) {
         if (handlerAttribute.IsDev && !Profile.IsDebug) return;
 
-        if (WebEventHandlers.ContainsKey(handlerAttribute.EventName))
-            throw new KurisuAppBuildingException(
-                $"WebEvent `{handlerAttribute.EventName}` 已注册，不允许重复注册。请保持一个事件只对应一个 Handler。");
+        if (WebEventHandlers.ContainsKey(handlerAttribute.EventName)) throw new KurisuAppBuildingException($"WebEvent `{handlerAttribute.EventName}` 已注册，不允许重复注册。请保持一个事件只对应一个 Handler。");
 
         WebEventHandlers.Add(handlerAttribute.EventName, new RegisteredWebEventHandler(handlerAttribute, handler));
     }
@@ -442,9 +440,7 @@ public class KurisuAppBuilder {
     private void RegisterWebCallResponderDirectly(WebCallResponderAttribute responderAttribute, Type handler) {
         if (responderAttribute.IsDev && !Profile.IsDebug) return;
 
-        if (WebCallResponders.ContainsKey(responderAttribute.EventName))
-            throw new KurisuAppBuildingException(
-                $"WebCall `{responderAttribute.EventName}` 已注册，不允许重复注册。一个方法只能有一个 Responder。");
+        if (WebCallResponders.ContainsKey(responderAttribute.EventName)) throw new KurisuAppBuildingException($"WebCall `{responderAttribute.EventName}` 已注册，不允许重复注册。一个方法只能有一个 Responder。");
 
         WebCallResponders.Add(responderAttribute.EventName, new RegisteredWebCallResponder(responderAttribute, handler));
     }
@@ -568,8 +564,9 @@ public class KurisuAppContext {
         EnsureCapability(App.HostBackend.GetHostCapabilities().SupportsSaveFileDialog, "save_file_dialog");
         var fileDescription = ReadRequiredStringArg(modelArgs, 0, "fileDescription");
         var fileExtension = ReadRequiredStringArg(modelArgs, 1, "fileExtension");
+        var suggestedFileName = ReadOptionalStringArg(modelArgs, 2);
 
-        return !App.HostBackend.TrySaveFileByDialog(fileDescription, fileExtension, out var filePath) ? throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝执行保存文件对话框") : filePath;
+        return !App.HostBackend.TrySaveFileByDialog(fileDescription, fileExtension, suggestedFileName, out var filePath) ? throw new KurisuKnownException(KurisuErrorCode.HostOperationFailed, "宿主后端拒绝执行保存文件对话框") : filePath;
     }
 
     private static void EnsureCapability(bool supported, string capabilityName) {
@@ -582,6 +579,11 @@ public class KurisuAppContext {
         var value = args[index];
         if (value is string text && !string.IsNullOrWhiteSpace(text)) return text;
         throw new KurisuKnownException(KurisuErrorCode.InvalidArgument, $"参数 `{name}` 需为非空字符串");
+    }
+
+    private static string? ReadOptionalStringArg(object[] args, int index) {
+        if (args.Length <= index) return null;
+        return args[index] as string;
     }
 }
 

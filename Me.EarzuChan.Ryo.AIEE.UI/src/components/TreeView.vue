@@ -99,6 +99,7 @@ const {
   visibleRange,
   topOffsetTransform,
   onScroll,
+  smoothScrollTo,
 } = useVirtualScroll({
   itemHeight: NODE_HEIGHT,
   viewportHeight: maxViewportHeight,
@@ -119,6 +120,28 @@ const getNodeStyle = (node: InternalTreeNode) => ({
 function clearLastClicked() {
   console.log(TAG, "清除最后点击节点项")
   pathOfLastClickedNode.value = []
+}
+
+function expandAncestors(path: number[]) {
+  if (path.length <= 1) return
+  for (let depth = 1; depth < path.length; depth++) {
+    const ancestorPath = path.slice(0, depth)
+    const collapsedIndex = nonExpandedNodePaths.value.findIndex(p => isEqual(p, ancestorPath))
+    if (collapsedIndex !== -1) nonExpandedNodePaths.value.splice(collapsedIndex, 1)
+  }
+}
+
+function locatePath(path: number[]) {
+  if (!path.length) return false
+
+  expandAncestors(path)
+  pathOfLastClickedNode.value = [...path]
+
+  const targetIndex = processedTree.value.findIndex(node => isEqual(node.indexPath, path))
+  if (targetIndex === -1) return false
+
+  smoothScrollTo(targetIndex * NODE_HEIGHT)
+  return true
 }
 
 const emit = defineEmits(['nodeClick', 'nodeRightClick'])
@@ -142,7 +165,7 @@ function handleRightClickNode(e: MouseEvent, node: InternalTreeNode) {
   emit('nodeRightClick', node.indexPath, e)
 }
 
-defineExpose({clearLastClicked})
+defineExpose({clearLastClicked, locatePath})
 </script>
 
 <style scoped>

@@ -9,7 +9,9 @@ public static class MiscUtils {
     public static void EmitOpenedVolumes(KurisuAppContext context, Dictionary<LocalVolume, LocalVolumeMetaData> dic) {
         var openedMasses =
             dic.Select(pair => new {
+                id = pair.Key.VolumeId,
                 name = pair.Key.VolumeName,
+                localPath = pair.Value.LocalPath,
                 revision = pair.Key.Revision,
                 unsaved = pair.Key.Unsaved,
                 items = pair.Key.IdStrPairs.Select(item => new {

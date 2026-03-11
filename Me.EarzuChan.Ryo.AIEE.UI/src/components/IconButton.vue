@@ -1,6 +1,7 @@
 <template>
   <div class="icon-button" :style="{height : size + 'px' , width : size + 'px'}" 
-       :class="[buttonStyle, {'disabled' : disabled}]" ref="button" data-kurisu-no-drag tabindex="0">
+       :class="[buttonStyle, {'disabled' : disabled}]" ref="button" data-kurisu-no-drag
+       :tabindex="disabled ? -1 : 0" :aria-disabled="disabled">
     <div class="icon" :style="{height : iconSize + 'px' , width : iconSize + 'px','-webkit-mask-image': `url(/assets/icons/icon_${icon}${(filledIcon?'_filled':'')}.svg)`}"/>
   </div>
 </template>
@@ -59,6 +60,7 @@ defineProps({
 
 .icon-button.disabled {
   cursor: unset;
+  pointer-events: none;
 }
 
 .icon-button::after {

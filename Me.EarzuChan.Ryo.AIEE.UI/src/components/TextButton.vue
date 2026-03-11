@@ -1,6 +1,7 @@
 <template>
   <div class="text-button" :class="[buttonStyle, {'disabled' : disabled}]" ref="button"
-       data-kurisu-no-drag :style="'padding: '+paddingVertical+'px '+paddingHorizontal+'px'" tabindex="0">
+       data-kurisu-no-drag :style="'padding: '+paddingVertical+'px '+paddingHorizontal+'px'"
+       :tabindex="disabled ? -1 : 0" :aria-disabled="disabled">
     <div class="text ryo-typography-label-large" :style="'font-size: '+textSize+'px'">
       <slot/>
     </div>
@@ -60,6 +61,7 @@ const paddingHorizontal = computed(() => {
 
 .text-button.disabled {
   cursor: unset;
+  pointer-events: none;
 }
 
 .text-button::after {

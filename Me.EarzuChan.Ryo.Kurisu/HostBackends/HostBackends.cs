@@ -124,10 +124,16 @@ internal sealed class Win32HostBackend : IHostBackend {
         return true;
     }
 
-    public bool TrySaveFileByDialog(string fileDescription, string fileExtension, out string? filePath) {
+    public bool TrySaveFileByDialog(string fileDescription, string fileExtension, string? suggestedFileName, out string? filePath) {
         using var dialog = new SaveFileDialog();
         dialog.Filter = $"{fileDescription} (*.{fileExtension})|*.{fileExtension}";
         dialog.Title = $"保存{fileDescription}";
+        if (!string.IsNullOrWhiteSpace(suggestedFileName)) {
+            var suggested = suggestedFileName.Trim();
+            if (!suggested.EndsWith($".{fileExtension}", StringComparison.OrdinalIgnoreCase))
+                suggested = $"{suggested}.{fileExtension}";
+            dialog.FileName = suggested;
+        }
 
         if (dialog.ShowDialog(Window) == DialogResult.OK) {
             filePath = dialog.FileName;

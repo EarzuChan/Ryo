@@ -136,6 +136,12 @@ function handleContainerClick() {
     inputRef.value?.focus()
   }
 }
+
+function focus() {
+  if (!props.disabled) inputRef.value?.focus()
+}
+
+defineExpose({focus})
 </script>
 
 <style scoped>

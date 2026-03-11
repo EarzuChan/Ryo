@@ -18,10 +18,23 @@ public class LocalVolumeManager {
 
     public event Action<string, int[]>? VolumeIdsRemapped;
 
+    private static string NormalizePath(string path) {
+        try {
+            return Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        } catch {
+            return path;
+        }
+    }
+
+    private static string NewVolumeId() => Guid.NewGuid().ToString("N");
+
+    private static bool IsSamePath(string a, string b) =>
+        string.Equals(NormalizePath(a), NormalizePath(b), StringComparison.OrdinalIgnoreCase);
+
     public LocalVolume CreateNewVolume(string fileName) {
         var massFile = new MassFile();
-
-        var volume = new LocalVolume(massFile, fileName, this);
+        var volume = new LocalVolume(massFile, fileName, NewVolumeId(), this);
 
         Volumes[volume] = new LocalVolumeMetaData(null);
         NotifyVolumesChanged();
@@ -29,23 +42,76 @@ public class LocalVolumeManager {
         return volume;
     }
 
+    public LocalVolume CloneVolume(LocalVolume sourceVolume, string fileName) {
+        var massFile = sourceVolume.CloneMassFile();
+        var volume = new LocalVolume(massFile, fileName, NewVolumeId(), this);
+
+        Volumes[volume] = new LocalVolumeMetaData(null);
+        NotifyVolumesChanged();
+
+        return volume;
+    }
+
+    public LocalVolume? GetVolumeById(string volumeId) => Volumes.Keys.FirstOrDefault(vol => vol.VolumeId == volumeId);
+
     public LocalVolume? GetVolumeByName(string fileName) => Volumes.Keys.FirstOrDefault(vol => vol.VolumeName == fileName);
 
+    public LocalVolume? GetVolumeByLocalPath(string localPath) {
+        var targetPath = NormalizePath(localPath);
+        return Volumes.FirstOrDefault(entry =>
+            entry.Value.LocalPath != null && IsSamePath(entry.Value.LocalPath, targetPath)
+        ).Key;
+    }
+
+    public void RenameVolume(string volumeId, string newName) {
+        var volume = GetVolumeById(volumeId);
+        if (volume is null) return;
+
+        // 卷改名后断开原路径绑定，后续保存必须走 SaveFileDialog。
+        Volumes[volume] = new LocalVolumeMetaData(null);
+        volume.VolumeName = newName;
+        volume.TouchForMetadataChange();
+        NotifyVolumesChanged();
+    }
+
     public LocalVolume OpenLocalVolume(string localPath, string? fileName = null) {
-        // 先检查是否已经打开，抛出
-        if (Volumes.Values.Any(meta => meta.LocalPath == localPath)) {
+        var normalizedPath = NormalizePath(localPath);
+        if (GetVolumeByLocalPath(normalizedPath) != null) {
             var err = new InvalidOperationException("文件已经打开");
             LogUtils.PrintError(Tag, err);
             throw err;
         }
 
         var massFile = new MassFile();
+        using (var fileStream = FileUtils.OpenFile(normalizedPath)) massFile.Load(fileStream);
 
-        using (var fileStream = FileUtils.OpenFile(localPath)) massFile.Load(fileStream);
+        var volume = new LocalVolume(
+            massFile,
+            fileName ?? Path.GetFileNameWithoutExtension(normalizedPath),
+            NewVolumeId(),
+            this
+        );
 
-        var volume = new LocalVolume(massFile, fileName ?? Path.GetFileNameWithoutExtension(localPath), this);
+        Volumes[volume] = new LocalVolumeMetaData(normalizedPath);
+        NotifyVolumesChanged();
 
-        Volumes[volume] = new LocalVolumeMetaData(localPath);
+        return volume;
+    }
+
+    public LocalVolume OpenLocalVolumeAsCopy(string localPath, string? fileName = null) {
+        var normalizedPath = NormalizePath(localPath);
+        var massFile = new MassFile();
+        using (var fileStream = FileUtils.OpenFile(normalizedPath)) massFile.Load(fileStream);
+
+        var volume = new LocalVolume(
+            massFile,
+            fileName ?? Path.GetFileNameWithoutExtension(normalizedPath),
+            NewVolumeId(),
+            this
+        );
+
+        // 副本脱离原始路径绑定，后续保存必须走 SaveFileDialog。
+        Volumes[volume] = new LocalVolumeMetaData(null);
         NotifyVolumesChanged();
 
         return volume;
@@ -81,7 +147,10 @@ public class LocalVolumeManager {
             return false;
         }
 
-        Volumes[localVolume] = new LocalVolumeMetaData(actualPath);
+        var normalizedPath = NormalizePath(actualPath);
+        Volumes[localVolume] = new LocalVolumeMetaData(normalizedPath);
+        localVolume.VolumeName = Path.GetFileNameWithoutExtension(normalizedPath);
+        NotifyVolumesChanged();
 
         return true;
     }
@@ -95,11 +164,11 @@ public class LocalVolumeManager {
     // 虽然通知卷更改，但是前端的标签页唯一可信源这一块导致不同步
     internal void NotifyVolumesChanged() => VolumesChanged?.Invoke(Volumes);
 
-    internal void NotifyVolumeItemRenamed(string volumeName, string oldName, string newName) => VolumeItemRenamed?.Invoke(volumeName, oldName, newName);
+    internal void NotifyVolumeItemRenamed(string volumeId, string oldName, string newName) => VolumeItemRenamed?.Invoke(volumeId, oldName, newName);
 
-    internal void NotifyVolumeItemDeleted(string volumeName, int id) => VolumeItemDeleted?.Invoke(volumeName, id);
+    internal void NotifyVolumeItemDeleted(string volumeId, int id) => VolumeItemDeleted?.Invoke(volumeId, id);
 
-    internal void NotifyVolumeIdsRemapped(string volumeName, int[] idMap) => VolumeIdsRemapped?.Invoke(volumeName, idMap);
+    internal void NotifyVolumeIdsRemapped(string volumeId, int[] idMap) => VolumeIdsRemapped?.Invoke(volumeId, idMap);
 }
 
 public record LocalVolumeMetaData(string? LocalPath);
@@ -114,20 +183,23 @@ public class LocalVolume {
         AbandonOld
     }
 
-    internal LocalVolume(MassFile massFile, string fileName, LocalVolumeManager manager) {
+    internal LocalVolume(MassFile massFile, string fileName, string volumeId, LocalVolumeManager manager) {
         _massFile = massFile;
         _manager = manager;
         VolumeName = fileName;
+        VolumeId = volumeId;
 
         massFile.OnItemIdsRemap += idMap => {
             RemapDirtyItemIds(idMap);
-            _manager.NotifyVolumeIdsRemapped(VolumeName, idMap);
+            _manager.NotifyVolumeIdsRemapped(VolumeId, idMap);
         };
     }
 
     public int Count => _massFile.IdStrPairs.Count;
 
     public Dictionary<string, int> IdStrPairs => _massFile.IdStrPairs;
+
+    public string VolumeId { get; }
 
     public string VolumeName { get; internal set; }
 
@@ -159,6 +231,8 @@ public class LocalVolume {
         Unsaved = true;
         Revision++;
     }
+
+    internal void TouchForMetadataChange() => Touch();
 
     public int Add(object value) {
         var ret = _massFile.Add(value);
@@ -231,7 +305,7 @@ public class LocalVolume {
         if (state) Touch();
         if (state) _dirtyItemIds.Remove(id);
 
-        if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
+        if (state) _manager.NotifyVolumeItemDeleted(VolumeId, id);
 
         if (gc) _massFile.CollectGarbage();
 
@@ -244,7 +318,7 @@ public class LocalVolume {
         if (state) Touch();
         if (state) _dirtyItemIds.Remove(id);
 
-        if (state) _manager.NotifyVolumeItemDeleted(VolumeName, id);
+        if (state) _manager.NotifyVolumeItemDeleted(VolumeId, id);
 
         if (gc) _massFile.CollectGarbage();
 
@@ -257,7 +331,7 @@ public class LocalVolume {
 
         var jwc = _massFile.CodecBindings[_massFile.ItemBlobs[id].CodecBindingId].DataJavaClz;
 
-        return new LocalVolumeItemModel(id, VolumeName, name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
+        return new LocalVolumeItemModel(id, VolumeId, VolumeName, name ?? _massFile.IdStrPairs.FirstOrDefault(pair => pair.Value == id).Key,
             jwc.JavaClassToRyoType().ResolveDataTypeName(), result.Data, result.ParseSuccess, Revision
         );
     }
@@ -273,24 +347,56 @@ public class LocalVolume {
         _massFile.Save(fs);
         Unsaved = false;
         _dirtyItemIds.Clear();
-
-        _manager.NotifyVolumesChanged();
     }
 
     // 重命名不需要GC
-    public void Rename(string oldName, string newName) {
+    public void Rename(string oldName, string newName, bool allowOverwrite = false) {
+        if (allowOverwrite && oldName != newName) {
+            var conflictId = IdStrPairs.GetValueOrDefault(newName, -1);
+            if (conflictId >= 0) Remove(conflictId);
+        }
+
         var id = IdStrPairs.GetValueOrDefault(oldName, -1);
         _massFile.Rename(oldName, newName);
         if (id >= 0) MarkItemDirty(id);
         Touch();
 
-        _manager.NotifyVolumeItemRenamed(VolumeName, oldName, newName);
+        _manager.NotifyVolumeItemRenamed(VolumeId, oldName, newName);
         _manager.NotifyVolumesChanged();
+    }
+
+    internal MassFile CloneMassFile() {
+        // Mass.Save 会关闭传入流，故需写入与读取使用不同流。
+        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.fs");
+        try {
+            using (var saveStream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read)) {
+                _massFile.Save(saveStream);
+            }
+
+            using var loadStream = new FileStream(
+                tempPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read | FileShare.Delete,
+                4096,
+                FileOptions.DeleteOnClose
+            );
+            var clone = new MassFile();
+            clone.Load(loadStream);
+            return clone;
+        } finally {
+            try {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+            } catch {
+                // temp cleanup is best-effort
+            }
+        }
     }
 }
 
 public record LocalVolumeItemModel(
     int Id,
+    string FromVolumeId,
     string FromFile,
     string? Name,
     string? DataTypeName,

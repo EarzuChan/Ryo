@@ -16,10 +16,11 @@ import {useAppStateStore} from "@/stores/AppState"
 import {deepCopy, ensure, generateId} from "@/utils/UsefulUtils"
 import AddItemDialog from "@/views/dialogs/AddItemDialog.vue"
 import {useI18n} from "vue-i18n"
-import RenameItemDialog from "@/views/dialogs/RenameItemDialog.vue"
+import NameEditDialog from "@/views/dialogs/NameEditDialog.vue"
 import {applyOperations, buildSessionFrame, hasRedo, hasUndo, pushUndoFrame} from "@/utils/SessionUtils"
 import {CommandErrorCode, type CommandError, type CommandResult} from "@/models/CommandModels"
 import {fail, normalizeCommandError, ok} from "@/utils/CommandUtils"
+import {useKurisuStateStore} from "@/stores/KurisuState"
 
 const TAG = "WorkspaceState"
 
@@ -40,33 +41,64 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const activeItemKey = computed(() =>
             typeof activeTab.value?.data === "string" ? activeTab.value.data : undefined)
         const activeItem = computed(() => openedItems.value.find(i => i.itemKey === activeItemKey.value))
-        const activeVolume = computed(() => {
-            const candidate = activeItem.value?.fromFile
+        const activeVolumeId = computed(() => {
+            const candidate = activeItem.value?.fromVolumeId
             if (!candidate) return undefined
-            return openedVolumes.value.some(v => v.name === candidate) ? candidate : undefined
+            return openedVolumes.value.some(v => v.id === candidate) ? candidate : undefined
+        })
+        const activeVolume = computed(() => {
+            const volumeId = activeVolumeId.value
+            if (!volumeId) return undefined
+            return openedVolumes.value.find(v => v.id === volumeId)
         })
 
         const dialogState = useDialogStateStore()
+        const kurisuState = useKurisuStateStore()
         const DEFAULT_MAX_UNDO = 200
         const closingVolumes = new Set<string>()
+        const explorerLocateTarget = ref<{volumeId: string, nonce: number} | null>(null)
 
         function copyData<T>(value: T): T {
             if (value === undefined) return value
             return deepCopy(value)
         }
 
-        function getVolumeRevision(volumeName?: string): number {
-            if (!volumeName) return -1
-            return openedVolumes.value.find(v => v.name === volumeName)?.revision ?? -1
+        function normalizeLocalPath(path: string): string {
+            return path.replace(/\//g, "\\").toLowerCase()
         }
 
-        function getOpenedVolume(volumeName?: string): VolumeModel | undefined {
-            if (!volumeName) return undefined
-            return openedVolumes.value.find(v => v.name === volumeName)
+        function getVolumeRevision(volumeId?: string): number {
+            if (!volumeId) return -1
+            return openedVolumes.value.find(v => v.id === volumeId)?.revision ?? -1
+        }
+
+        function getOpenedVolume(volumeId?: string): VolumeModel | undefined {
+            if (!volumeId) return undefined
+            return openedVolumes.value.find(v => v.id === volumeId)
+        }
+
+        function hasBoundVolumePath(volume?: VolumeModel): boolean {
+            return !!(volume?.localPath && volume.localPath.trim().length > 0)
+        }
+
+        function isVolumePendingSave(volume?: VolumeModel): boolean {
+            if (!volume) return false
+            return volume.unsaved === true || !hasBoundVolumePath(volume)
+        }
+
+        function makeVolumeNamePlaceholder(baseName: string): string {
+            const taken = new Set(
+                openedVolumes.value
+                    .map(v => v.name.trim().toLowerCase())
+                    .filter(name => !!name)
+            )
+            let index = 1
+            while (taken.has(`${baseName} (${index})`.toLowerCase())) index++
+            return `${baseName} (${index})`
         }
 
         function makeItemKey(item: FileModel) {
-            const volume = item.fromFile ?? "unknown-volume"
+            const volume = item.fromVolumeId ?? item.fromFile ?? "unknown-volume"
             const idPart = item.id >= 0 ? `id-${item.id}` : `draft-${generateId(Date.now())}`
             const name = item.name ?? "unnamed"
             return `${volume}:${idPart}:${name}:${generateId(Date.now())}`
@@ -88,7 +120,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function makeSessionId(item: FileModel) {
-            return `${item.fromFile ?? "unknown"}:${item.id}:${item.name ?? "unnamed"}:${generateId(Date.now())}`
+            const source = item.fromVolumeId ?? item.fromFile ?? "unknown"
+            return `${source}:${item.id}:${item.name ?? "unnamed"}:${generateId(Date.now())}`
         }
 
         function isItemUnsaved(item: FileModel): boolean {
@@ -277,12 +310,83 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             return ensureItemSession(itemRef)?.editorOverrideVersion ?? 0
         }
 
-        function openVolume() {
-            emitWebEvent(makeWebLetter('OpenVolume'))
+        function openVolumeByPath(filePath: string, openAsCopy: boolean, volumeName?: string) {
+            emitWebEvent(makeWebLetter("OpenVolumeByPath", filePath, openAsCopy, volumeName ?? null))
+        }
+
+        async function pickVolumeFilePath(): Promise<string | undefined> {
+            if (!kurisuState.hostCapabilities.supportsOpenFileDialog) return undefined
+            const result = await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppCommand:OpenFileDialog", "MassFile", "fs"))
+            const path = result[0] as string | null | undefined
+            return path ?? undefined
+        }
+
+        async function askDuplicateOpenAction(volumeName: string): Promise<"copy" | "locate" | "cancel"> {
+            return new Promise(resolve => {
+                let action: "copy" | "locate" | "cancel" = "cancel"
+                dialogState.order({
+                    headline: t("openVolumeConflictTitle", {volume: volumeName}),
+                    description: t("openVolumeConflictDescription"),
+                    actions: [
+                        {text: t("openVolumeConflictOpenAsCopy"), onClick: () => { action = "copy" }},
+                        {text: t("openVolumeConflictLocate"), onClick: () => { action = "locate" }},
+                        {text: t("cancel"), onClick: () => { action = "cancel" }},
+                    ],
+                    onClosed: () => resolve(action),
+                })
+            })
+        }
+
+        function locateVolumeInExplorer(volumeId: string) {
+            appState.sidePanelExpanded = true
+            explorerLocateTarget.value = {volumeId, nonce: Date.now()}
         }
 
         function newVolume() {
-            emitWebEvent(makeWebLetter('NewVolume', t("newMassPrefix")))
+            const base = t("newVolumeNamePlaceholderBase")
+            const placeholder = makeVolumeNamePlaceholder(base)
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("createVolume"),
+                description: t("createVolumeDesc"),
+                nameLabel: t("volumeName"),
+                placeholder,
+                allowPlaceholderSubmit: true,
+                confirm: (value: string) => {
+                    emitWebEvent(makeWebLetter("CreateVolume", value))
+                }
+            })
+        }
+
+        async function openVolume() {
+            const filePath = await pickVolumeFilePath()
+            if (!filePath) return
+
+            const normalized = normalizeLocalPath(filePath)
+            const existed = openedVolumes.value.find(v => v.localPath && normalizeLocalPath(v.localPath) === normalized)
+
+            if (!existed) {
+                openVolumeByPath(filePath, false)
+                return
+            }
+
+            const action = await askDuplicateOpenAction(existed.name)
+            if (action === "cancel") return
+            if (action === "locate") {
+                locateVolumeInExplorer(existed.id)
+                return
+            }
+
+            const base = existed.name || t("copySuffixBase")
+            const placeholder = makeVolumeNamePlaceholder(base)
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("openVolumeAsCopy"),
+                description: t("openVolumeAsCopyDesc"),
+                nameLabel: t("volumeName"),
+                placeholder,
+                confirm: (value: string) => {
+                    openVolumeByPath(filePath, true, value)
+                }
+            })
         }
 
         function clickTab(index: number) {
@@ -324,21 +428,21 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 let closeAction: "save" | "discard" | "cancel" = "cancel"
 
                 dialogState.order({
-                    headline: "是否要保存对 " + tab.name + " 的更改？",
-                    description: "如果不保存，你的更改将丢失。",
+                    headline: t("saveItemChangesPromptTitle", {item: tab.name}),
+                    description: t("saveItemChangesPromptDescription"),
                     actions: [
                         {
-                            text: "保存", onClick() {
+                            text: t("save"), onClick() {
                                 closeAction = "save"
                             }
                         },
                         {
-                            text: "不保存", onClick() {
+                            text: t("dontSave"), onClick() {
                                 closeAction = "discard"
                             }
                         },
                         {
-                            text: "取消", onClick() {
+                            text: t("cancel"), onClick() {
                                 closeAction = "cancel"
                             }
                         }
@@ -486,26 +590,93 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeTabExposed.value?.undo()
         }
 
-        function deleteItem(massName: string, itemName: string) {
-            emitWebEvent(makeWebLetter('DeleteItem', massName, itemName))
+        function deleteItem(volumeId: string, itemName: string) {
+            emitWebEvent(makeWebLetter('DeleteItem', volumeId, itemName))
         }
 
-        function renameItem(massName: string, oldItemName: string) {
-            dialogState.orderSpecial(RenameItemDialog, {
-                oldName: oldItemName,
-                confirm: (itemName: string) => {
-                    console.log(TAG, massName, "Rename", oldItemName, "To", itemName)
+        function renameItem(volumeId: string, oldItemName: string) {
+            const resolveRenameConflict = (newItemName: string) => {
+                const volume = getOpenedVolume(volumeId)
+                const backendConflict = !!volume?.items?.some(item =>
+                    item.name === newItemName && item.name !== oldItemName
+                )
+                const localConflict = openedItems.value.some(item =>
+                    item.fromVolumeId === volumeId &&
+                    item.id === -1 &&
+                    item.name === newItemName &&
+                    item.name !== oldItemName
+                )
+                const openedConflict = openedItems.value.some(item =>
+                    item.fromVolumeId === volumeId &&
+                    item.name === newItemName &&
+                    item.name !== oldItemName &&
+                    item.itemKey !== undefined &&
+                    openedTabs.value.some(tab => tab.data === item.itemKey)
+                )
 
-                    emitWebEvent(makeWebLetter('RenameItem', massName, oldItemName, itemName))
+                return {
+                    conflict: backendConflict || localConflict,
+                    openedConflict,
+                }
+            }
+
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("renameItem"),
+                nameLabel: t("itemName"),
+                oldName: oldItemName,
+                placeholder: oldItemName,
+                showOverwrite: true,
+                overwriteLabel: t("allowOverwriteSameName"),
+                overwriteDisabled: (itemName: string) => resolveRenameConflict(itemName).openedConflict,
+                overwriteDisabledReason: (itemName: string) =>
+                    resolveRenameConflict(itemName).openedConflict ? t("itemOverwriteBlockedByOpenedTarget") : undefined,
+                nameValidator: (itemName: string, allowOverwrite: boolean) => {
+                    const conflict = resolveRenameConflict(itemName)
+                    if (conflict.openedConflict) return t("itemOverwriteBlockedByOpenedTarget")
+                    if (conflict.conflict && !allowOverwrite) return t("itemRenameConflictHint")
+                    return undefined
+                },
+                confirm: (itemName: string, allowOverwrite?: boolean) => {
+                    console.log(TAG, volumeId, "Rename", oldItemName, "To", itemName)
+                    emitWebEvent(makeWebLetter('RenameItem', volumeId, oldItemName, itemName, !!allowOverwrite))
                 }
             })
         }
 
-        async function mentionItem(massName: string, itemId: number) {
-            console.log(TAG, "提及项目", massName, itemId)
+        function renameVolume(volumeId: string, oldVolumeName: string) {
+            const placeholder = oldVolumeName
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("renameVolume"),
+                nameLabel: t("volumeName"),
+                oldName: oldVolumeName,
+                placeholder,
+                confirm: (newName: string) => {
+                    emitWebEvent(makeWebLetter("RenameVolume", volumeId, newName))
+                }
+            })
+        }
+
+        function cloneVolume(volumeId: string) {
+            const target = getOpenedVolume(volumeId)
+            if (!target) return
+            const placeholder = makeVolumeNamePlaceholder(target.name || t("copySuffixBase"))
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("cloneVolume"),
+                description: t("cloneVolumeDesc"),
+                nameLabel: t("volumeName"),
+                placeholder,
+                allowPlaceholderSubmit: true,
+                confirm: (newName: string) => {
+                    emitWebEvent(makeWebLetter("CloneVolume", volumeId, newName))
+                }
+            })
+        }
+
+        async function mentionItem(volumeId: string, itemId: number) {
+            console.log(TAG, "提及项目", volumeId, itemId)
 
             let itemKey = openedItems.value.find(item =>
-                item.id === itemId && item.fromFile === massName)
+                item.id === itemId && item.fromVolumeId === volumeId)
             ?.itemKey
 
             if (itemKey) {
@@ -516,7 +687,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     return
                 }
             } else {
-                const fileModel = await getFullFileModel(massName, itemId)
+                const fileModel = await getFullFileModel(volumeId, itemId)
 
                 if (ensure(fileModel)) {
                     ensureItemKey(fileModel!)
@@ -528,28 +699,30 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             if (itemKey) openTab(TabType.Item, itemKey)
         }
 
-        async function getFullFileModel(massName: string, itemId: number) {
-            console.log(TAG, "获取项目", massName, itemId)
-            const fileModel = (await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetFullFileModel', massName, itemId)))[0] as FileModel
+        async function getFullFileModel(volumeId: string, itemId: number) {
+            console.log(TAG, "获取项目", volumeId, itemId)
+            const fileModel = (await sendWebCallAndTakeItsReturnValues(makeWebLetter('GetFullFileModel', volumeId, itemId)))[0] as FileModel
+            if (!fileModel.fromVolumeId) fileModel.fromVolumeId = volumeId
+            if (!fileModel.fromFile) fileModel.fromFile = getOpenedVolume(volumeId)?.name
             fileModel.ryoType = appState.getRyoTypeByDataTypeName(fileModel.dataTypeName!)
             fileModel.unsaved = false
-            if (fileModel.volumeRevision === undefined) fileModel.volumeRevision = getVolumeRevision(massName)
+            if (fileModel.volumeRevision === undefined) fileModel.volumeRevision = getVolumeRevision(volumeId)
             ensureItemKey(fileModel)
-            console.log(TAG, "获取到项目", massName, itemId, fileModel)
+            console.log(TAG, "获取到项目", volumeId, itemId, fileModel)
 
             return fileModel
         }
 
-        function saveVolume(massName: string) {
-            emitWebEvent(makeWebLetter('SaveVolume', massName, false))
+        function saveVolume(volumeId: string) {
+            emitWebEvent(makeWebLetter('SaveVolume', volumeId, false))
         }
 
-        function saveVolumeAs(massName: string) {
-            emitWebEvent(makeWebLetter('SaveVolume', massName, true))
+        function saveVolumeAs(volumeId: string) {
+            emitWebEvent(makeWebLetter('SaveVolume', volumeId, true))
         }
 
         async function saveItem(
-            massName: string,
+            volumeId: string,
             itemId: number,
             itemName: string,
             data: any,
@@ -557,7 +730,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             expectedVolumeRevision: number
         ) {
             const ret = await sendWebCallAndTakeItsReturnValues(
-                makeWebLetter('SaveItem', massName, itemId, itemName, data, tsRyoTypeName, expectedVolumeRevision)
+                makeWebLetter('SaveItem', volumeId, itemId, itemName, data, tsRyoTypeName, expectedVolumeRevision)
             )
             return {
                 itemId: ret[0] as number,
@@ -566,7 +739,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function buildValidationError(item: FileModel, payload: any): CommandError | null {
-            if (!item.fromFile || !item.name || !item.dataTypeName) return {
+            if (!item.fromVolumeId || !item.name || !item.dataTypeName) return {
                 code: CommandErrorCode.Validation,
                 message: t("saveErrorItemInfoIncomplete"),
                 recoverHint: t("saveErrorCheckItemMetaHint"),
@@ -605,7 +778,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
             try {
                 const saved = await saveItem(
-                    item.fromFile!,
+                    item.fromVolumeId!,
                     item.id,
                     item.name!,
                     payload,
@@ -708,17 +881,17 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             return new Promise(resolve => setTimeout(resolve, ms))
         }
 
-        async function waitForVolumeClean(volumeName: string, timeoutMs: number = 8000): Promise<boolean> {
+        async function waitForVolumeClean(volumeId: string, timeoutMs: number = 8000): Promise<boolean> {
             const started = Date.now()
             while (Date.now() - started <= timeoutMs) {
-                const volume = getOpenedVolume(volumeName)
+                const volume = getOpenedVolume(volumeId)
                 if (!volume) return true
-                if (volume.unsaved !== true) return true
+                if (!isVolumePendingSave(volume)) return true
                 await wait(120)
             }
 
-            const latest = getOpenedVolume(volumeName)
-            return latest?.unsaved !== true
+            const latest = getOpenedVolume(volumeId)
+            return !isVolumePendingSave(latest)
         }
 
         async function showVolumeSaveIncompleteDialog(volumeName: string): Promise<void> {
@@ -755,23 +928,29 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             }
         }
 
-        function removeOpenedItemsByVolume(massName: string) {
+        function removeOpenedItemsByVolume(volumeId: string) {
             const targets = openedItems.value
-                .filter(item => item.fromFile === massName)
+                .filter(item => item.fromVolumeId === volumeId)
                 .map(item => item.itemKey)
                 .filter((k): k is string => !!k)
 
             targets.forEach(removeOpenedItemByKey)
         }
 
-        async function closeVolume(massName: string) {
-            if (closingVolumes.has(massName)) return
-            closingVolumes.add(massName)
+        function removeOpenedItemsByKeys(itemKeys: string[]) {
+            const uniqueKeys = [...new Set(itemKeys)]
+            uniqueKeys.forEach(removeOpenedItemByKey)
+        }
+
+        async function closeVolume(volumeId: string) {
+            if (closingVolumes.has(volumeId)) return
+            closingVolumes.add(volumeId)
 
             try {
+                const volumeName = getOpenedVolume(volumeId)?.name ?? t("unknown")
                 let savedAnyItemInThisCloseFlow = false
                 const targets = openedItems.value
-                    .filter(item => item.fromFile === massName && item.itemKey)
+                    .filter(item => item.fromVolumeId === volumeId && item.itemKey)
                     .map(item => item.itemKey!)
 
                 for (const itemKey of targets) {
@@ -787,79 +966,80 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     }
                 }
 
-                const volume = getOpenedVolume(massName)
-                if (volume?.unsaved || savedAnyItemInThisCloseFlow) {
-                    const action = await askUnsavedVolumeAction(massName)
+                const volume = getOpenedVolume(volumeId)
+                if (isVolumePendingSave(volume) || savedAnyItemInThisCloseFlow) {
+                    const action = await askUnsavedVolumeAction(volumeName)
                     if (action === "cancel") return
 
                     if (action === "save") {
-                        saveVolume(massName)
-                        const clean = await waitForVolumeClean(massName)
+                        saveVolume(volumeId)
+                        const clean = await waitForVolumeClean(volumeId)
                         if (!clean) {
-                            await showVolumeSaveIncompleteDialog(massName)
+                            await showVolumeSaveIncompleteDialog(volumeName)
                             return
                         }
                     }
                 }
 
-                removeOpenedItemsByVolume(massName)
-                emitWebEvent(makeWebLetter('CloseVolume', massName))
+                removeOpenedItemsByVolume(volumeId)
+                emitWebEvent(makeWebLetter('CloseVolume', volumeId))
             } finally {
-                closingVolumes.delete(massName)
+                closingVolumes.delete(volumeId)
             }
         }
 
-        function gcVolume(massName: string) {
-            emitWebEvent(makeWebLetter('GcVolume', massName))
+        function gcVolume(volumeId: string) {
+            emitWebEvent(makeWebLetter('GcVolume', volumeId))
         }
 
-        function addItemInVolume(massName: string) {
+        function addItemInVolume(volumeId: string) {
+            const resolveAddConflict = (itemName: string) => {
+                const volume = openedVolumes.value.find(v => v.id === volumeId)
+                const backendExists = volume?.items?.find(item => item.name === itemName)
+                const localDraftExists = openedItems.value.some(item =>
+                    item.fromVolumeId === volumeId && item.id === -1 && item.name === itemName
+                )
+                const openedConflict = openedItems.value.some(item =>
+                    item.fromVolumeId === volumeId &&
+                    item.name === itemName &&
+                    item.itemKey !== undefined &&
+                    openedTabs.value.some(tab => tab.data === item.itemKey)
+                )
+
+                return {
+                    volume,
+                    backendExists,
+                    conflict: !!backendExists || localDraftExists,
+                    overwriteBlocked: localDraftExists || openedConflict,
+                }
+            }
+
             dialogState.orderSpecial(AddItemDialog, {
-                confirm: (itemName: string, ryoType: RyoType) => {
-                    console.log(massName, itemName, ryoType)
-
-                    const volume = openedVolumes.value.find(v => v.name === massName)
-                    if (volume) {
-                        const backendExists = volume.items?.find(item => item.name === itemName)
-
-                        // 如果后端没找到，再找本地草稿
-                        let localItem: FileModel | undefined
-                        if (!backendExists) localItem = openedItems.value.find(item =>
-                            item.fromFile === massName && item.name === itemName && item.id === -1
-                        )
-
-                        // 只要有任意一个存在
-                        if (backendExists || localItem) {
-                            dialogState.order({
-                                headline: `已存在"${itemName}"`,
-                                description: "不可重复创建同名项目，是否跳转到已有项目？",
-                                actions: [
-                                    {text: "取消"},
-                                    {
-                                        text: "跳转", onClick() {
-                                            if (backendExists) mentionItem(massName, backendExists.id!)
-                                            else {
-                                                const localKey = localItem?.itemKey
-                                                if (!localKey) return
-                                                const tabIndex = openedTabs.value.findIndex(tab => tab.data === localKey)
-                                                if (tabIndex !== -1) activeTabIndex.value = tabIndex
-                                                else openTab(TabType.Item, localKey)
-                                            }
-                                        }
-                                    }
-                                ]
-                            })
-                            return // 终止
-                        }
-                    }
+                showOverwrite: true,
+                overwriteLabel: t("allowOverwriteSameName"),
+                overwriteDisabled: (itemName: string) => resolveAddConflict(itemName).overwriteBlocked,
+                overwriteDisabledReason: (itemName: string) =>
+                    resolveAddConflict(itemName).overwriteBlocked ? t("itemOverwriteBlockedByOpenedTarget") : undefined,
+                nameValidator: (itemName: string, allowOverwrite: boolean) => {
+                    const conflict = resolveAddConflict(itemName)
+                    if (conflict.overwriteBlocked) return t("itemOverwriteBlockedByOpenedTarget")
+                    if (conflict.conflict && !allowOverwrite) return t("itemRenameConflictHint")
+                    return undefined
+                },
+                confirm: (itemName: string, ryoType: RyoType, allowOverwrite?: boolean) => {
+                    console.log(volumeId, itemName, ryoType)
+                    const conflict = resolveAddConflict(itemName)
+                    if (conflict.overwriteBlocked) return
+                    if (conflict.conflict && !allowOverwrite) return
 
                     const fileModel: FileModel = {
                         data: appState.getInitValue(ryoType),
-                        fromFile: massName,
-                        id: -1, // 未保存，则未分配（-1）
+                        fromVolumeId: volumeId,
+                        fromFile: conflict.volume?.name,
+                        id: conflict.backendExists && allowOverwrite ? conflict.backendExists.id : -1,
                         name: itemName,
                         parseSuccess: true,
-                        volumeRevision: getVolumeRevision(massName),
+                        volumeRevision: getVolumeRevision(volumeId),
                         ryoType: ryoType,
                         dataTypeName: appState.getDataTypeNameByRyoType(ryoType),
                         unsaved: true
@@ -882,21 +1062,48 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     console.log(TAG, "接收到Opened Volumes", args[0])
                     openedVolumes.value = args[0]
 
-                    const openedNames = new Set(openedVolumes.value.map(v => v.name))
-                    const staleVolumes = new Set(
-                        openedItems.value
-                            .map(item => item.fromFile)
-                            .filter((name): name is string => !!name && !openedNames.has(name))
-                    )
-                    staleVolumes.forEach(removeOpenedItemsByVolume)
+                    const openedById = new Map(openedVolumes.value.map(v => [v.id, v]))
+                    const openedByName = new Map<string, VolumeModel[]>()
+                    const staleItemKeys: string[] = []
+
+                    openedVolumes.value.forEach(volume => {
+                        const group = openedByName.get(volume.name) ?? []
+                        group.push(volume)
+                        openedByName.set(volume.name, group)
+                    })
+
+                    openedItems.value.forEach(item => {
+                        if (!item.fromVolumeId && item.fromFile) {
+                            const candidates = openedByName.get(item.fromFile) ?? []
+                            if (candidates.length === 1) item.fromVolumeId = candidates[0].id
+                            else {
+                                console.warn(TAG, "无法通过卷名唯一定位Item归属，将移除本地项", item.fromFile, item.name, candidates.length)
+                            }
+                        }
+
+                        const volumeId = item.fromVolumeId
+                        if (!volumeId || !openedById.has(volumeId)) {
+                            staleItemKeys.push(ensureItemKey(item))
+                            return
+                        }
+
+                        const volume = openedById.get(volumeId)!
+                        item.fromFile = volume.name
+                        if (item.id === -1 || item.volumeRevision === undefined) item.volumeRevision = volume.revision
+                    })
+
+                    if (staleItemKeys.length > 0) {
+                        console.warn(TAG, "移除失效或无法定位归属的Item数量", staleItemKeys.length)
+                        removeOpenedItemsByKeys(staleItemKeys)
+                    }
                 })
                 console.log(TAG, "OpenedVolumesChanged监听器已创建")
 
                 addWebEventListener("VolumeItemRenamed", (args: string[]) => {
-                    const [massName, oldName, newName] = args
-                    console.log(TAG, massName, "接收重命名", oldName, "->", newName)
+                    const [volumeId, oldName, newName] = args
+                    console.log(TAG, volumeId, "接收重命名", oldName, "->", newName)
 
-                    const item = openedItems.value.find(i => i.fromFile === massName && i.name === oldName)
+                    const item = openedItems.value.find(i => i.fromVolumeId === volumeId && i.name === oldName)
                     if (item) {
                         item.name = newName
                         const thePage = openedTabs.value.find(tab => tab.data === item.itemKey)
@@ -906,18 +1113,18 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 console.log(TAG, "ItemRenamed监听器已创建")
 
                 addWebEventListener("VolumeItemDeleted", (args: any[]) => {
-                    const [massName, id] = args as [string, number]
-                    console.log(TAG, massName, "接收删除", id)
-                    const index = openedItems.value.findIndex(i => i.fromFile === massName && i.id === id)
+                    const [volumeId, id] = args as [string, number]
+                    console.log(TAG, volumeId, "接收删除", id)
+                    const index = openedItems.value.findIndex(i => i.fromVolumeId === volumeId && i.id === id)
                     if (index !== -1) openedItems.value[index].id = -1 // 标记为未写入后端，对了，可能要重置unsaved、dirty啥的状态
                 })
                 console.log(TAG, "ItemDeleted监听器已创建")
 
                 addWebEventListener("VolumeIdsRemapped", (args: any[]) => {
-                    const [massName, intArr] = args as [string, number[]]
-                    console.log(TAG, massName, "已打开项目的ID重新同步", intArr) // 主要是处理openedItems里面的ID
+                    const [volumeId, intArr] = args as [string, number[]]
+                    console.log(TAG, volumeId, "已打开项目的ID重新同步", intArr) // 主要是处理openedItems里面的ID
                     openedItems.value.forEach(item => {
-                        if (item.fromFile === massName && item.id !== -1) {
+                        if (item.fromVolumeId === volumeId && item.id !== -1) {
                             const newId = intArr[item.id]
                             if (newId !== -1) item.id = newId
                         }
@@ -942,6 +1149,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeTab,
             activeTabIndex,
             activeTabExposed,
+            activeVolumeId,
             activeVolume,
             anchorTab,
             available,
@@ -965,6 +1173,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             pageSave,
             recordItemSessionChange,
             renameItem,
+            renameVolume,
+            cloneVolume,
             pageUndo,
             undoItemSession,
             redoItemSession,
@@ -982,6 +1192,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             saveItemByKey,
             setActiveTabExposed,
             addItemInVolume,
+            explorerLocateTarget,
         }
     }
 )

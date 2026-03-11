@@ -7,7 +7,9 @@ export interface VolumeItemModel {
 }
 
 export interface VolumeModel {
+    id: string
     name: string
+    localPath?: string | null
     revision?: number
     unsaved?: boolean
     items: VolumeItemModel[]
@@ -77,6 +79,7 @@ export interface FileModel {
     id: number
     itemKey?: string
     preferredRootEditorId?: string
+    fromVolumeId?: string
     fromFile?: string
     name?: string
     unsaved?: boolean

@@ -28,5 +28,5 @@ public interface IHostBackend {
     bool TrySetWindowState(KurisuWindowState state);
     bool TryGetWindowState(out KurisuWindowState state);
     bool TryOpenFileByDialog(string fileDescription, string fileExtension, out string? filePath);
-    bool TrySaveFileByDialog(string fileDescription, string fileExtension, out string? filePath);
+    bool TrySaveFileByDialog(string fileDescription, string fileExtension, string? suggestedFileName, out string? filePath);
 }

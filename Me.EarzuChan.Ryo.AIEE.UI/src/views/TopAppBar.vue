@@ -32,7 +32,7 @@ import type {MenuBarItem, MenuItem} from "@/models/UIModels"
 import {useKurisuStateStore} from "@/stores/KurisuState"
 import {KurisuWindowState} from "@/models/KurisuModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
-import {ensure, openLink, TODO} from "@/utils/UsefulUtils"
+import {openLink, TODO} from "@/utils/UsefulUtils"
 import {TabType} from "@/models/AppModels"
 import AboutDialog from "@/views/dialogs/AboutDialog.vue"
 import {inject} from "vue"
@@ -88,29 +88,30 @@ function showMenuOf(menuType: MenuBarItem) {
   const canRedo = !pageNotOk && workspaceState.activeTabExposed?.canRedo?.() === true
   const canOpenVolume = kurisuState.hostCapabilities.supportsOpenFileDialog
   const canSaveVolume = kurisuState.hostCapabilities.supportsSaveFileDialog
+  const activeVolume = workspaceState.activeVolume
 
   switch (menuType.id) {
     case 'file':
       const items: MenuItem[] = [
         {name: t('new'), action: () => workspaceState.newVolume()},
         {name: t('open'), disabled: !canOpenVolume, action: () => workspaceState.openVolume()}]
-      if (ensure(workspaceState.activeVolume)) {
+      if (activeVolume) {
         items.push({
-              name: t('saveFile', {file: workspaceState.activeVolume!}),
+              name: t('saveFile', {file: activeVolume.name}),
               disabled: !canSaveVolume,
-              action: () => workspaceState.saveVolume(workspaceState.activeVolume!)
+              action: () => workspaceState.saveVolume(activeVolume.id)
             }, {
-              name: t('closeFile', {file: workspaceState.activeVolume!}),
-              action: () => workspaceState.closeVolume(workspaceState.activeVolume!)
+              name: t('closeFile', {file: activeVolume.name}),
+              action: () => workspaceState.closeVolume(activeVolume.id)
             },
             {
-              name: t('garbageCollectFile', {file: workspaceState.activeVolume!}),
-              action: () => workspaceState.gcVolume(workspaceState.activeVolume!)
+              name: t('garbageCollectFile', {file: activeVolume.name}),
+              action: () => workspaceState.gcVolume(activeVolume.id)
             },
             {
-              name: t('saveFileAs', {file: workspaceState.activeVolume!}),
+              name: t('saveFileAs', {file: activeVolume.name}),
               disabled: !canSaveVolume,
-              action: () => workspaceState.saveVolumeAs(workspaceState.activeVolume!)
+              action: () => workspaceState.saveVolumeAs(activeVolume.id)
             })
       }
       items.push({name: t('saveAll'), disabled: true, action: () => console.log(TAG,'全部保存')},

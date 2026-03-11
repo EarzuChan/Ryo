@@ -4,7 +4,6 @@ using Me.EarzuChan.Ryo.Kurisu.WebCalls;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
-using Me.EarzuChan.Ryo.AIEE.Data;
 using Me.EarzuChan.Ryo.AIEE.Exceptions;
 using Me.EarzuChan.Ryo.AIEE.Utils;
 using Me.EarzuChan.Ryo.Core.Codecations;
@@ -18,13 +17,11 @@ using Newtonsoft.Json.Linq;
 
 namespace Me.EarzuChan.Ryo.AIEE.RespondersAndHandlers;
 
-[WebEventHandler("NewVolume")]
-public class NewVolumeHandler(string namePrefix) : IWebEventHandler {
+[WebEventHandler("CreateVolume")]
+public class CreateVolumeHandler(string volumeName) : IWebEventHandler {
     public void Handle(KurisuAppContext context) {
-        var localVolumeManager = context.Inject<LocalVolumeManager>()!;
-        var newMassRepo = context.Inject<NewMassRepository>()!;
-
-        localVolumeManager.CreateNewVolume($"{namePrefix}{newMassRepo.GetAndIncrementNewMassCounter()}");
+        if (string.IsNullOrWhiteSpace(volumeName)) return;
+        context.Inject<LocalVolumeManager>()!.CreateNewVolume(volumeName.Trim());
     }
 }
 
@@ -42,6 +39,17 @@ public class OpenVolumeHandler : IWebEventHandler {
         if (filePath is null) return;
 
         localVolumeManager.OpenLocalVolume(filePath);
+    }
+}
+
+[WebEventHandler("OpenVolumeByPath")]
+public class OpenVolumeByPathHandler(string filePath, bool openAsCopy = false, string? volumeName = null) : IWebEventHandler {
+    public void Handle(KurisuAppContext context) {
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+        var manager = context.Inject<LocalVolumeManager>()!;
+        var trimmedName = string.IsNullOrWhiteSpace(volumeName) ? null : volumeName.Trim();
+        if (openAsCopy) manager.OpenLocalVolumeAsCopy(filePath, trimmedName);
+        else manager.OpenLocalVolume(filePath, trimmedName);
     }
 }
 
@@ -73,7 +81,7 @@ public class NotifyOpenedFilesHandler : IWebEventHandler {
 
 // TODO：另外，无名项目怎么编辑/保存？
 [WebCallResponder("SaveItem")]
-public class SaveItemResponder(string volumeName, int itemId, string itemName, object data, string dataTypeName, int expectedVolumeRevision) : IWebCallResponder {
+public class SaveItemResponder(string volumeId, int itemId, string itemName, object data, string dataTypeName, int expectedVolumeRevision) : IWebCallResponder {
     private static object ConvertPayload(object payload, Type targetType) {
         switch (payload) {
             case JObject jobj:
@@ -95,9 +103,9 @@ public class SaveItemResponder(string volumeName, int itemId, string itemName, o
         var volumeRevision = -1;
 
         context.Inject<LocalVolumeManager>()!.Also(it => {
-            Trace.WriteLine($"Saving {itemName}#{itemId} of {volumeName}: {data.GetType()}");
+            Trace.WriteLine($"Saving {itemName}#{itemId} of {volumeId}: {data.GetType()}");
 
-            it.GetVolumeByName(volumeName)
+            it.GetVolumeById(volumeId)
                 .EnsureNotNull(vol => {
                     if (expectedVolumeRevision >= 0 && vol.Revision != expectedVolumeRevision) throw new RyoException($"卷版本冲突：期望{expectedVolumeRevision}，当前{vol.Revision}。请先刷新后再保存。");
 
@@ -146,71 +154,87 @@ public class SaveItemResponder(string volumeName, int itemId, string itemName, o
 }
 
 [WebEventHandler("CloseVolume")]
-public class CloseVolumeHandler(string volumeName) : IWebEventHandler {
+public class CloseVolumeHandler(string volumeId) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        var volume = it.GetVolumeByName(volumeName);
+        var volume = it.GetVolumeById(volumeId);
         volume?.Also(it.Close);
     });
 }
 
 [WebEventHandler("SaveVolume")]
-public class SaveVolumeHandler(string volumeName, bool saveAs) : IWebEventHandler {
+public class SaveVolumeHandler(string volumeId, bool saveAs) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        Trace.WriteLine($"保存{volumeName} {saveAs}");
-        var volume = it.GetVolumeByName(volumeName);
+        Trace.WriteLine($"保存{volumeId} {saveAs}");
+        var volume = it.GetVolumeById(volumeId);
         volume?.Also(vol => it.Save(
             vol,
-            () => context.ExecuteAppCommand<string?>(KurisuAppCommand.SaveFileDialog, "MassFile", "fs"),
+            () => context.ExecuteAppCommand<string?>(KurisuAppCommand.SaveFileDialog, "MassFile", "fs", vol.VolumeName),
             saveAs
         ));
     });
 }
 
 [WebEventHandler("GcVolume")]
-public class GcVolumeHandler(string volumeName) : IWebEventHandler {
+public class GcVolumeHandler(string volumeId) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        var volume = it.GetVolumeByName(volumeName);
+        var volume = it.GetVolumeById(volumeId);
         volume?.CollectGarbage();
     });
 }
 
-// TODO：复制副本（需要Mass里面改）
+[WebEventHandler("CloneVolume")]
+public class CloneVolumeHandler(string volumeId, string newVolumeName) : IWebEventHandler {
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
+        if (string.IsNullOrWhiteSpace(newVolumeName)) return;
+        var source = it.GetVolumeById(volumeId);
+        source?.Also(vol => it.CloneVolume(vol, newVolumeName.Trim()));
+    });
+}
+
+[WebEventHandler("RenameVolume")]
+public class RenameVolumeHandler(string volumeId, string newVolumeName) : IWebEventHandler {
+    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
+        if (string.IsNullOrWhiteSpace(newVolumeName)) return;
+        it.RenameVolume(volumeId, newVolumeName.Trim());
+    });
+}
+
 // TODO：客户端未保存提示，未写入后端项目提示
 [WebEventHandler("DeleteItem")]
-public class DeleteItemHandler(string volumeName, string itemName) : IWebEventHandler {
+public class DeleteItemHandler(string volumeId, string itemName) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        Trace.WriteLine($"Deleting {itemName} of {volumeName}");
+        Trace.WriteLine($"Deleting {itemName} of {volumeId}");
 
-        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.Remove(itemName));
+        it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.Remove(itemName));
     });
 }
 
 // TODO：前端实现这功能的入口
 [WebEventHandler("GiveItemName")]
-public class GiveItemNameHandler(string volumeName, int id, string name) : IWebEventHandler {
+public class GiveItemNameHandler(string volumeId, int id, string name) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        Trace.WriteLine($"Giving No.{id} a name {name} of {volumeName}");
+        Trace.WriteLine($"Giving No.{id} a name {name} of {volumeId}");
 
-        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.GiveName(id, name));
+        it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.GiveName(id, name));
     });
 }
 
 [WebEventHandler("RenameItem")]
-public class RenameItemHandler(string volumeName, string oldItemName, string newItemName) : IWebEventHandler {
+public class RenameItemHandler(string volumeId, string oldItemName, string newItemName, bool allowOverwrite = false) : IWebEventHandler {
     public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        Trace.WriteLine($"Renaming {oldItemName} of {volumeName} to {newItemName}");
+        Trace.WriteLine($"Renaming {oldItemName} of {volumeId} to {newItemName}, overwrite={allowOverwrite}");
 
-        it.GetVolumeByName(volumeName).EnsureNotNull(vol => vol.Rename(oldItemName, newItemName));
+        it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.Rename(oldItemName, newItemName, allowOverwrite));
     });
 }
 
 [WebCallResponder("GetFullFileModel")]
-public class GetFullFileModelResponder(string volumeName, int fileId) : IWebCallResponder {
+public class GetFullFileModelResponder(string volumeId, int fileId) : IWebCallResponder {
     public WebResponse Respond(KurisuAppContext context) {
         var volumeManager = context.Inject<LocalVolumeManager>()!;
-        var volume = volumeManager.GetVolumeByName(volumeName);
+        var volume = volumeManager.GetVolumeById(volumeId);
 
-        if (volume is null) return WebResponse.Failure(EditorErrorCode.VolumeNotFound, "LocalVolume not found", volumeName);
+        if (volume is null) return WebResponse.Failure(EditorErrorCode.VolumeNotFound, "LocalVolume not found", volumeId);
 
         return WebResponse.Success(volume[fileId]);
     }

@@ -5,7 +5,8 @@
         <div id="headline" class="ryo-typography-headline-small">
           {{ t('addItem') }}
         </div>
-        <OutlinedTextField :label="t('itemName')" v-model="itemName" :placeholder="t('useGangAndMinor')"/>
+        <OutlinedTextField :label="t('itemName')" v-model="itemName" :placeholder="t('useGangAndMinor')"
+                           :error="basicNameErrorText"/>
         <OutlinedTextField :label="t('searchTypeHere')" v-model="filterText"
                            :placeholder="t('ignoreCase')" :error="typeFilterErrorText"/>
       </div>
@@ -28,6 +29,18 @@
         <Select :items="wrapperTypeLabels" v-model:selected="wrapperSelectIndex"
                 :unselected-text="t('wrapperNoWrapperPrompt')"/>
       </div>
+      <Divider v-if="props.showOverwrite"/>
+      <div v-if="props.showOverwrite" class="dialog-contents overwrite-container">
+        <div class="overwrite-row">
+          <CheckBox v-model:checked="allowOverwrite" :disabled="overwriteDisabled"/>
+          <div class="ryo-typography-body-medium" :class="{'overwrite-disabled': overwriteDisabled}">
+            {{ overwriteLabelText }}
+          </div>
+        </div>
+        <div v-if="overwriteHintText" class="overwrite-disabled-text ryo-typography-body-small">
+          {{ overwriteHintText }}
+        </div>
+      </div>
       <div id="dialog-actions">
         <TextButton @click="handleCancel">{{ t('cancel') }}</TextButton>
         <TextButton :disabled="!available" @click="handleConfirm">{{ t('confirm') }}</TextButton>
@@ -37,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, computed, defineProps} from 'vue'
+import {onMounted, ref, computed, defineProps, watch} from 'vue'
 import DialogBase from "@/views/DialogBase.vue"
 import Divider from "@/components/Divider.vue"
 import TextButton from "@/components/TextButton.vue"
@@ -47,6 +60,7 @@ import OutlinedTextField from "@/components/OutlinedTextField.vue"
 import {useI18n} from "vue-i18n"
 import type {RyoType} from "@/models/AppModels"
 import Select from "@/components/Select.vue"
+import CheckBox from "@/components/CheckBox.vue"
 
 const {t} = useI18n()
 
@@ -59,8 +73,6 @@ const ctrlShow = ref(false)
 const selectedSchema = ref<any>(null)
 
 const typeFilterErrorText = ref("")
-
-const itemNameErrorText = ref("")
 
 const wrapperTypeKeys = ["noWrapper", "array", "array2D"]
 
@@ -76,17 +88,49 @@ const wrapperSelectIndex = computed({
 })
 
 const props = defineProps<{
-  confirm: (str: string, ryoType: RyoType) => void
+  showOverwrite?: boolean
+  overwriteDefault?: boolean
+  overwriteLabel?: string
+  overwriteDisabled?: (name: string) => boolean
+  overwriteDisabledReason?: (name: string) => string | undefined
+  nameValidator?: (name: string, allowOverwrite: boolean) => string | undefined
+  confirm: (str: string, ryoType: RyoType, allowOverwrite?: boolean) => void
 }>()
 
 const emit = defineEmits(['open', 'opened', 'close', 'closed'])
 
 const itemName = ref("")
 const filterText = ref("")
+const allowOverwrite = ref(!!props.overwriteDefault)
 
 const viewport = ref<HTMLElement>()
 
-const available = computed(() => selectedSchema.value && itemName.value && !itemNameErrorText.value)
+const normalizedName = computed(() => itemName.value.trim())
+const overwriteLabelText = computed(() => props.overwriteLabel || t("allowOverwriteSameName"))
+const overwriteDisabled = computed(() => props.showOverwrite
+  ? (props.overwriteDisabled?.(normalizedName.value) ?? false)
+  : false
+)
+const overwriteDisabledReasonText = computed(() => {
+  if (!overwriteDisabled.value) return ""
+  return props.overwriteDisabledReason?.(normalizedName.value) ?? t("itemOverwriteBlockedByOpenedTarget")
+})
+const basicNameErrorText = computed(() => {
+  if (!normalizedName.value) return t("nameCannotBeEmpty")
+  return ""
+})
+const overwriteValidationErrorText = computed(() => {
+  if (!props.showOverwrite || overwriteDisabled.value || !normalizedName.value) return ""
+  const customError = props.nameValidator?.(normalizedName.value, allowOverwrite.value)
+  if (customError) return customError
+  return ""
+})
+const overwriteHintText = computed(() => overwriteDisabledReasonText.value || overwriteValidationErrorText.value)
+const available = computed(() => !!selectedSchema.value && !basicNameErrorText.value && !overwriteHintText.value)
+
+watch(overwriteDisabled, disabled => {
+  if (disabled && allowOverwrite.value) allowOverwrite.value = false
+}, {immediate: true})
 
 // 添加计算属性获取实际高度
 const viewportHeight = computed(() => viewport.value?.clientHeight || 240)
@@ -144,7 +188,7 @@ function handleConfirm() {
   let ryoType = appState.typeSchemaToRyoType(selectedSchema.value, effectiveWrapperType.value !== 0)
   if (effectiveWrapperType.value === 2) ryoType = appState.getRyoTypeByDataTypeName(appState.getDataTypeNameByRyoType(ryoType) + "[]")
 
-  props.confirm(itemName.value, ryoType)
+  props.confirm(normalizedName.value, ryoType, allowOverwrite.value)
 
   closeDialog()
 }
@@ -244,13 +288,18 @@ function closeDialog() {
   color: var(--ryo-color-on-surface-variant);
 }
 
-.hori {
-  display: flex;
+.overwrite-row {
   align-items: center;
+  color: var(--ryo-color-on-surface-variant);
+  display: flex;
+  gap: 8px;
 }
 
-.desc {
-  color: var(--ryo-color-on-surface-variant);
-  flex: 1;
+.overwrite-disabled {
+  opacity: 0.6;
+}
+
+.overwrite-disabled-text {
+  color: var(--ryo-color-error);
 }
 </style>

@@ -1,12 +1,12 @@
 <template>
   <EditableLabel elegant editable v-model:edit-text="filterText">{{ $t('explorer') }}</EditableLabel>
   <TreeView :nodes="computedMassFiles" @node-click="treeNodeClicked"
-            @node-right-click="treeNodeRightClicked" :filter-text="filterText"/>
+            @node-right-click="treeNodeRightClicked" :filter-text="filterText" ref="treeViewRef"/>
 </template>
 
 <script setup lang="ts">
 import EditableLabel from "@/components/EditableLabel.vue"
-import {computed, ref} from "vue"
+import {computed, nextTick, ref, watch} from "vue"
 import TreeView from "@/components/TreeView.vue"
 import type {MenuItem, TreeNodeModel} from "@/models/UIModels"
 import {useWorkspaceStateStore} from "@/stores/WorkspaceState"
@@ -20,9 +20,12 @@ const TAG = "ExplorerPanel"
 const workspaceState = useWorkspaceStateStore()
 const dialogState = useDialogStateStore()
 const {t} = useI18n()
+const treeViewRef = ref<any>(null)
 
 const computedMassFiles = computed(() => {
   const ori = workspaceState.openedVolumes as VolumeModel[]
+  const sameNameCount = new Map<string, number>()
+  ori.forEach(vol => sameNameCount.set(vol.name, (sameNameCount.get(vol.name) ?? 0) + 1))
 
   // 把MassFile[]弄成TreeNodeModels
   let result: TreeNodeModel[] = []
@@ -34,7 +37,13 @@ const computedMassFiles = computed(() => {
       childrenTreeNodeModel.push({name: itemName})
     })
 
-    const volumeName = mf.unsaved ? `${mf.name} *` : mf.name
+    let volumeName = mf.name
+    const hasBoundPath = !!(mf.localPath && mf.localPath.trim().length > 0)
+    if ((sameNameCount.get(mf.name) ?? 0) > 1) {
+      const suffix = mf.localPath ?? t("volumePathUnsaved")
+      volumeName = t("volumeNameWithPath", {name: mf.name, path: suffix})
+    }
+    if (mf.unsaved || !hasBoundPath) volumeName = `${volumeName} *`
     result.push({name: volumeName, children: childrenTreeNodeModel})
   })
 
@@ -43,8 +52,19 @@ const computedMassFiles = computed(() => {
 
 const filterText = ref("")
 
+watch(() => workspaceState.explorerLocateTarget, target => {
+  if (!target) return
+  filterText.value = ""
+
+  const volumeIndex = workspaceState.openedVolumes.findIndex(vol => vol.id === target.volumeId)
+  if (volumeIndex === -1) return
+
+  nextTick(() => treeViewRef.value?.locatePath?.([volumeIndex]))
+}, {deep: true})
+
 function treeNodeClicked(nodePath: number[]) {
   const [item, _, dad] = parsePath(nodePath)
+  if (!item || !dad) return
   dialogState.order({
     headline: t('itemClicked'),
     description: t('nodeDescription', {path: nodePath.join('/'), name: item.name, id: item.id}),
@@ -52,7 +72,7 @@ function treeNodeClicked(nodePath: number[]) {
     actions: [
       {
         text: t('open'), onClick() {
-          workspaceState.mentionItem(dad.name, item.id)
+          workspaceState.mentionItem(dad.id, item.id)
         },
       },
       {text: t('cancel')}],
@@ -79,33 +99,41 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
         {name: t('itemId', {itemId: stuff.id}), disabled: true},
         {
           name: t('openItem'),
-          action: () => workspaceState.mentionItem(dad.name, stuff.id)
+          action: () => workspaceState.mentionItem(dad.id, stuff.id)
         },
         {
           name: t('renameItem'),
-          action: () => workspaceState.renameItem(dad.name, stuff.name)
+          action: () => workspaceState.renameItem(dad.id, stuff.name)
         },
         {
           name: t('deleteItem'),
-          action: () => workspaceState.deleteItem(dad.name, stuff.name)
+          action: () => workspaceState.deleteItem(dad.id, stuff.name)
         }
     )
     else items.push(
         {
+          name: t('renameVolume'),
+          action: () => workspaceState.renameVolume(stuff.id, stuff.name)
+        },
+        {
+          name: t('cloneVolume'),
+          action: () => workspaceState.cloneVolume(stuff.id)
+        },
+        {
           name: t('addItem'),
-          action: () => workspaceState.addItemInVolume(stuff.name)
+          action: () => workspaceState.addItemInVolume(stuff.id)
         },
         {
           name: t('garbageCollect'),
-          action: () => workspaceState.gcVolume(stuff.name)
+          action: () => workspaceState.gcVolume(stuff.id)
         },
         {
           name: t('saveMass'),
-          action: () => workspaceState.saveVolume(stuff.name)
+          action: () => workspaceState.saveVolume(stuff.id)
         },
         {
           name: t('closeMass'),
-          action: () => workspaceState.closeVolume(stuff.name)
+          action: () => workspaceState.closeVolume(stuff.id)
         },
     )
   }

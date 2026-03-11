@@ -163,16 +163,22 @@ internal sealed class PhotinoHostBackend : IHostBackend {
         return true;
     }
 
-    public bool TrySaveFileByDialog(string fileDescription, string fileExtension, out string? filePath) {
+    public bool TrySaveFileByDialog(string fileDescription, string fileExtension, string? suggestedFileName, out string? filePath) {
         if (_window == null) {
             filePath = null;
             return false;
         }
 
         var normalizedExtension = NormalizeExtension(fileExtension);
+        var defaultPath = string.Empty;
+        if (!string.IsNullOrWhiteSpace(suggestedFileName)) {
+            var suggested = suggestedFileName.Trim();
+            if (!suggested.EndsWith($".{normalizedExtension}", StringComparison.OrdinalIgnoreCase)) suggested = $"{suggested}.{normalizedExtension}";
+            defaultPath = suggested;
+        }
         filePath = _window.ShowSaveFile(
             $"保存{fileDescription}",
-            string.Empty,
+            defaultPath,
             [(fileDescription, [normalizedExtension])]
         );
         return true;
