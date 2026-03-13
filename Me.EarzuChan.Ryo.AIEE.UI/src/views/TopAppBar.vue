@@ -14,7 +14,7 @@
         <IconButton :size="48" icon="minimize" @click="minimizeWindow"/>
         <IconButton :size="48" :icon="kurisuState.isAppWindowMaximized?'restore':'fullscreen'"
                     @click="switchWindowState"/>
-        <IconButton :size="48" icon="close" @click="kurisuState.stopApp()"/>
+        <IconButton :size="48" icon="close" @click="workspaceState.tryExitApp()"/>
       </div>
     </div>
   </div>
@@ -146,22 +146,7 @@ function showMenuOf(menuType: MenuBarItem) {
           },
           {name: t('restartApp'), disabled: true, action: () => console.log(TAG,'重启软件')},
           {
-            name: t('exit'), action: () => {
-              dialogState.order({
-                icon: 'ryo',
-                headline: t('exitRyo'),
-                description: t('areYouSureToExit'),
-                actions: [
-                  {
-                    text: t('cancel')
-                  },
-                  {
-                    text: t('exit'),
-                    onClick: () => kurisuState.stopApp()
-                  }
-                ]
-              })
-            }
+            name: t('exit'), action: () => workspaceState.tryExitApp()
           })
       currentMenu.value = showMenu({
         items, attachToId: menuType.id, onClose() {

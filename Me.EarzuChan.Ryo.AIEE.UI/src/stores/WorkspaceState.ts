@@ -83,6 +83,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const closingVolumes = new Set<string>()
         const pendingLocalVolumeRevisionSync = new Set<string>()
         const explorerLocateTarget = ref<ExplorerLocateTarget | null>(null)
+        let exitFlowRunning = false
 
         function copyData<T>(value: T): T {
             if (value === undefined) return value
@@ -737,6 +738,90 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     .map(tab => tab.key)
                     .filter((key): key is string => !!key)
             )
+        }
+
+        async function confirmAppExit(): Promise<boolean> {
+            return new Promise(resolve => {
+                let shouldExit = false
+                dialogState.order({
+                    icon: "ryo",
+                    headline: t("exitRyo"),
+                    description: t("areYouSureToExit"),
+                    actions: [
+                        {text: t("cancel"), onClick: () => { shouldExit = false }},
+                        {text: t("exit"), onClick: () => { shouldExit = true }},
+                    ],
+                    onClosed: () => resolve(shouldExit),
+                })
+            })
+        }
+
+        async function ensureTabsSavedBeforeAppExit(): Promise<boolean> {
+            const handledItemKeys = new Set<string>()
+            const tabKeys = openedTabs.value
+                .map(tab => tab.key)
+                .filter((key): key is string => !!key)
+
+            for (const tabKey of tabKeys) {
+                const index = openedTabs.value.findIndex(tab => tab.key === tabKey)
+                if (index === -1) continue
+
+                const tab = openedTabs.value[index]
+                if (!getIsTabUnsaved(index)) continue
+
+                if (typeof tab.data === "string") {
+                    if (handledItemKeys.has(tab.data)) continue
+                    handledItemKeys.add(tab.data)
+                }
+
+                const action = await askUnsavedItemAction(tab.name)
+                if (action === "cancel") return false
+                if (action === "save" && typeof tab.data === "string") {
+                    const saved = await saveItemByKey(tab.data, true)
+                    if (!saved) return false
+                }
+            }
+
+            return true
+        }
+
+        async function ensureVolumesSavedBeforeAppExit(): Promise<boolean> {
+            const volumeIds = openedVolumes.value.map(volume => volume.id)
+            for (const volumeId of volumeIds) {
+                const volume = getOpenedVolume(volumeId)
+                if (!volume || !isVolumePendingSave(volume)) continue
+
+                const volumeName = volume.name ?? t("unknown")
+                const action = await askUnsavedVolumeAction(volumeName)
+                if (action === "cancel") return false
+
+                if (action === "save") {
+                    saveVolume(volumeId)
+                    const clean = await waitForVolumeClean(volumeId)
+                    if (!clean) {
+                        await showVolumeSaveIncompleteDialog(volumeName)
+                        return false
+                    }
+                }
+            }
+
+            return true
+        }
+
+        async function tryExitApp(): Promise<boolean> {
+            if (exitFlowRunning) return false
+            exitFlowRunning = true
+
+            try {
+                if (!await ensureTabsSavedBeforeAppExit()) return false
+                if (!await ensureVolumesSavedBeforeAppExit()) return false
+                if (!await confirmAppExit()) return false
+
+                kurisuState.stopApp()
+                return true
+            } finally {
+                exitFlowRunning = false
+            }
         }
 
         function canRenameTabItem(index: number): boolean {
@@ -1756,6 +1841,12 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 })
                 console.log(TAG, "VolumeIdsRemapped监听器已创建")
 
+                addWebEventListener("HostWindow:CloseRequested", () => {
+                    console.log(TAG, "宿主请求关闭窗口")
+                    void tryExitApp()
+                })
+                console.log(TAG, "HostWindow:CloseRequested监听器已创建")
+
                 emitWebEvent(makeWebLetter('NotifyOpenedVolumes'))
                 console.log(TAG, "已提醒发送OpenedVolumes")
 
@@ -1841,6 +1932,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             setActiveTabExposed,
             addItemInVolume,
             explorerLocateTarget,
+            tryExitApp,
         }
     }
 )

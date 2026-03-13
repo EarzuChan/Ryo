@@ -22,6 +22,7 @@ namespace Me.EarzuChan.Ryo.Kurisu.HostBackends;
 
 internal sealed class Win32HostBackend : IHostBackend {
     private KurisuApp? App;
+    private bool _allowWindowClose;
     private bool _webAppReadyRaised;
     private KurisuWindowState? _lastReportedWindowState;
 
@@ -38,6 +39,7 @@ internal sealed class Win32HostBackend : IHostBackend {
         EnsureProcessDpiConfigured();
 
         App = app;
+        _allowWindowClose = false;
         StartUpUri = new Uri(app.Profile is { IsDebug: true, DebugStartUpWithDebugUrl: true } ? app.Profile.DebugStartUpUrl : app.Profile.StartUpUrl);
 
         Window = new KurisuHostWindow();
@@ -64,6 +66,7 @@ internal sealed class Win32HostBackend : IHostBackend {
         _lastReportedWindowState = ToKurisuWindowState(Window.WindowState);
 
         Window.Load += OnWindowLoaded;
+        Window.FormClosing += OnWindowClosing;
         Window.FormClosed += OnWindowClosed;
         Window.Resize += OnWindowResized;
         Window.ResizeBegin += (_, _) => Window.MarkUserSizing(true);
@@ -77,6 +80,7 @@ internal sealed class Win32HostBackend : IHostBackend {
 
     public void Close() {
         if (Window == null) return;
+        _allowWindowClose = true;
         if (!Window.IsDisposed) Window.Close();
     }
 
@@ -167,6 +171,15 @@ internal sealed class Win32HostBackend : IHostBackend {
     private void OnWindowLoaded(object? _, EventArgs __) {
         var initTask = InitWebViewAsync();
         initTask.ContinueWith(task => { Trace.WriteLine(TextUtils.MakeErrorMsgText("初始化WebView2失败", task.Exception!, true)); }, TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private void OnWindowClosing(object? _, FormClosingEventArgs e) {
+        if (_allowWindowClose) return;
+        if (e.CloseReason != CloseReason.UserClosing) return;
+        if (!_webAppReadyRaised || App == null) return;
+
+        e.Cancel = true;
+        App.EmitWebEvent(new WebLetter("HostWindow:CloseRequested"));
     }
 
     private void OnWindowClosed(object? _, FormClosedEventArgs __) => AppClosed?.Invoke();

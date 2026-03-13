@@ -62,6 +62,7 @@ internal sealed class PhotinoHostBackend : IHostBackend {
             .SetMinSize(640, 480)
             .RegisterWindowCreatedHandler((_, _) => Trace.WriteLine("Photino window created"))
             .RegisterWindowClosingHandler((_, _) => {
+                // TODO：Align native close with the frontend tryExitApp flow, same as Win32HostBackend.
                 _windowClosed = true;
                 lock (_bridgeLock) {
                     _bridgeReady = false;
