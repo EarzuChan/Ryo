@@ -421,7 +421,12 @@ export const useAppStateStore = defineStore('app-state', () => {
             const tr = i18n.global.t
 
             const walk = (ryoType: RyoType, val: any, path: string) => {
-                if (val === null || val === undefined) return
+                if (val === null || val === undefined) {
+                    const baseType = ryoType.baseType
+                    if (baseType?.type !== "java.lang.Void")
+                        issues.push({path, message: tr("validationValueMissing") as string})
+                    return
+                }
 
                 if (ryoType.isArray) {
                     if (!Array.isArray(val)) {

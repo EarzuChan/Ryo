@@ -21,6 +21,7 @@
                   :prefer-editor-id="resolvedEditorId" :item-key="itemKey" editor-path="$"
                   :data-type-name="itemData.dataTypeName" is-root-editor>
       <div id="editor-holder-action-bar">
+        <IconButton button-style="filled" id="rename-item-button" icon="edit" @click="renameItem"/>
         <IconButton button-style="filled" id="reload-editor-button" icon="reload" @click="reload(false)"/>
         <IconButton button-style="filled" id="discard-unsaved-changes-button" icon="discard" @click="discard"/>
         <Select id="action-bar-text" :items="supportedEditorTitles" v-model:selected="selectedEditorIndex"/>
@@ -32,7 +33,7 @@
 
 <script setup lang="ts">
 import {computed, getCurrentInstance, onActivated, onDeactivated, ref, watch} from "vue"
-import {arrayToText, boolToText, ensure, TODO} from "@/utils/UsefulUtils"
+import {arrayToText, boolToText, ensure} from "@/utils/UsefulUtils"
 import EditorHolder from "@/components/EditorHolder.vue"
 import IconButton from "@/components/IconButton.vue"
 import TextButton from "@/components/TextButton.vue"
@@ -90,9 +91,7 @@ const supportedEditorTitles = computed(() => {
   return editors.map((editor: EditorDescriptor) => t(editor.titleKey))
 })
 const inOutMethods = computed(() => {
-  const typeName = itemData.value.ryoType
-
-  return [TODO(TAG, "Get Import/Export Methods")]
+  return [t("jsonFileShort")]
 })
 
 const holder = ref<any>(null)
@@ -228,6 +227,11 @@ function redo() {
   workspaceState.redoItemSession(itemKey.value)
 }
 
+function renameItem() {
+  if (!itemKey.value) return
+  workspaceState.renameItemByKey(itemKey.value)
+}
+
 function canUndo() {
   if (!itemKey.value) return false
   return workspaceState.canUndoItemSession(itemKey.value)
@@ -305,6 +309,11 @@ onDeactivated(() => {
 #discard-unsaved-changes-button {
   --ryo-color-primary: var(--ryo-color-primary-container);
   --ryo-color-on-primary: var(--ryo-color-on-primary-container);
+}
+
+#rename-item-button {
+  --ryo-color-primary: var(--ryo-color-tertiary-container);
+  --ryo-color-on-primary: var(--ryo-color-on-tertiary-container);
 }
 
 #save-button {

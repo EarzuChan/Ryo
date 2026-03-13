@@ -14,11 +14,13 @@ import type {VolumeModel} from "@/models/AppModels"
 import {useDialogStateStore} from "@/stores/DialogState"
 import {showMenu} from "@/utils/MenuUtils"
 import {useI18n} from "vue-i18n"
+import {useKurisuStateStore} from "@/stores/KurisuState"
 
 const TAG = "ExplorerPanel"
 
 const workspaceState = useWorkspaceStateStore()
 const dialogState = useDialogStateStore()
+const kurisuState = useKurisuStateStore()
 const {t} = useI18n()
 const treeViewRef = ref<any>(null)
 
@@ -55,11 +57,7 @@ const filterText = ref("")
 watch(() => workspaceState.explorerLocateTarget, target => {
   if (!target) return
   filterText.value = ""
-
-  const volumeIndex = workspaceState.openedVolumes.findIndex(vol => vol.id === target.volumeId)
-  if (volumeIndex === -1) return
-
-  nextTick(() => treeViewRef.value?.locatePath?.([volumeIndex]))
+  nextTick(() => treeViewRef.value?.locatePath?.(target.path))
 }, {deep: true})
 
 function treeNodeClicked(nodePath: number[]) {
@@ -106,6 +104,20 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
           action: () => workspaceState.renameItem(dad.id, stuff.name)
         },
         {
+          name: t('makeItemCopy'),
+          action: () => workspaceState.copyItem(dad.id, stuff.name)
+        },
+        {
+          name: t('exportItem'),
+          disabled: !kurisuState.hostCapabilities.supportsSaveFileDialog,
+          action: () => workspaceState.exportVolumeItem(dad.id, stuff.id)
+        },
+        {
+          name: t('importReplaceItem'),
+          disabled: !kurisuState.hostCapabilities.supportsOpenFileDialog,
+          action: () => workspaceState.importVolumeItem(dad.id, stuff.id)
+        },
+        {
           name: t('deleteItem'),
           action: () => workspaceState.deleteItem(dad.id, stuff.name)
         }
@@ -122,6 +134,11 @@ function treeNodeRightClicked(nodePath: number[], e: MouseEvent) {
         {
           name: t('addItem'),
           action: () => workspaceState.addItemInVolume(stuff.id)
+        },
+        {
+          name: t('importItemFromFile'),
+          disabled: !kurisuState.hostCapabilities.supportsOpenFileDialog,
+          action: () => workspaceState.importItemIntoVolume(stuff.id)
         },
         {
           name: t('garbageCollect'),

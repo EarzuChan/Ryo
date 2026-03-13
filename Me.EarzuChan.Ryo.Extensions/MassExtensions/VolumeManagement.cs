@@ -326,6 +326,16 @@ public class LocalVolume {
         return state;
     }
 
+    public void Copy(string sourceName, string destName, bool allowOverwrite = false) {
+        _massFile.Copy(sourceName, destName, allowOverwrite);
+
+        var newId = IdStrPairs.GetValueOrDefault(destName, -1);
+        if (newId >= 0) MarkItemDirty(newId);
+        Touch();
+
+        _manager.NotifyVolumesChanged();
+    }
+
     public LocalVolumeItemModel GetWrappedItem(int id, string? name = null) {
         var result = _massFile.Get<object>(id);
 

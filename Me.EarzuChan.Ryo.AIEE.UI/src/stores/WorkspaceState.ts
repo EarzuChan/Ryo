@@ -21,8 +21,33 @@ import {applyOperations, buildSessionFrame, hasRedo, hasUndo, pushUndoFrame} fro
 import {CommandErrorCode, type CommandError, type CommandResult} from "@/models/CommandModels"
 import {fail, normalizeCommandError, ok} from "@/utils/CommandUtils"
 import {useKurisuStateStore} from "@/stores/KurisuState"
+import ImportItemDialog from "@/views/dialogs/ImportItemDialog.vue"
+import {
+    buildItemExchangeEnvelope,
+    decodeImportedItemData,
+    parseItemExchangeDocument
+} from "@/utils/ItemExchangeUtils"
 
 const TAG = "WorkspaceState"
+
+type ExplorerLocateTarget = {
+    path: number[]
+    nonce: number
+}
+
+type ItemNameConflict = {
+    volume?: VolumeModel
+    backendExists?: { id: number, name: string }
+    localDraftExists: boolean
+    openedConflict: boolean
+    conflict: boolean
+    overwriteBlocked: boolean
+}
+
+type ImportDialogSubmitResult = {
+    close?: boolean
+    error?: string
+}
 
 export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const available = ref(false)
@@ -56,7 +81,8 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         const kurisuState = useKurisuStateStore()
         const DEFAULT_MAX_UNDO = 200
         const closingVolumes = new Set<string>()
-        const explorerLocateTarget = ref<{volumeId: string, nonce: number} | null>(null)
+        const pendingLocalVolumeRevisionSync = new Set<string>()
+        const explorerLocateTarget = ref<ExplorerLocateTarget | null>(null)
 
         function copyData<T>(value: T): T {
             if (value === undefined) return value
@@ -77,6 +103,13 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             return openedVolumes.value.find(v => v.id === volumeId)
         }
 
+        function syncOpenedItemVolumeRevision(volumeId: string, revision?: number) {
+            if (revision === undefined) return
+            openedItems.value.forEach(item => {
+                if (item.fromVolumeId === volumeId) item.volumeRevision = revision
+            })
+        }
+
         function hasBoundVolumePath(volume?: VolumeModel): boolean {
             return !!(volume?.localPath && volume.localPath.trim().length > 0)
         }
@@ -84,6 +117,30 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         function isVolumePendingSave(volume?: VolumeModel): boolean {
             if (!volume) return false
             return volume.unsaved === true || !hasBoundVolumePath(volume)
+        }
+
+        function getFileNameWithoutExtension(filePath: string): string {
+            const normalized = filePath.replace(/\\/g, "/")
+            const fileName = normalized.slice(normalized.lastIndexOf("/") + 1)
+            const extIndex = fileName.lastIndexOf(".")
+            return extIndex > 0 ? fileName.slice(0, extIndex) : fileName
+        }
+
+        function buildSuggestedJsonFileName(itemName: string): string {
+            const safeName = (itemName || "item")
+                .replace(/[\\/:*?"<>|]/g, "_")
+                .trim()
+            return `${safeName || "item"}.json`
+        }
+
+        function buildImportValidationDetails(issues: { path: string, message: string }[]): string {
+            const top = issues.slice(0, 5)
+                .map(issue => `${issue.path}: ${issue.message}`)
+                .join("\n")
+            const remain = issues.length > 5
+                ? t("itemImportValidationRemaining", {count: issues.length - 5})
+                : ""
+            return `${top}${remain}`
         }
 
         function makeVolumeNamePlaceholder(baseName: string): string {
@@ -117,6 +174,19 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         function getItemByKey(itemKey?: string): FileModel | undefined {
             const index = getItemIndexByKey(itemKey)
             return index === -1 ? undefined : openedItems.value[index]
+        }
+
+        function getTabItem(index: number): FileModel | undefined {
+            const tab = openedTabs.value[index]
+            return typeof tab?.data === "string" ? getItemByKey(tab.data) : undefined
+        }
+
+        function getOpenedVolumeItem(volumeId: string, itemId: number) {
+            return openedVolumes.value.find(volume => volume.id === volumeId)?.items?.find(item => item.id === itemId)
+        }
+
+        function getOpenedItemByVolumeEntry(volumeId: string, itemId: number): FileModel | undefined {
+            return openedItems.value.find(item => item.fromVolumeId === volumeId && item.id === itemId)
         }
 
         function makeSessionId(item: FileModel) {
@@ -171,7 +241,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function isSessionDirty(item: FileModel, session: EditorSession) {
-            return item.id === -1 || session.undoStack.length > 0
+            return item.unsaved === true || item.id === -1 || session.undoStack.length > 0
         }
 
         function resolveItemIndex(itemRef: number | string): number {
@@ -264,8 +334,11 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             const itemIndex = resolveItemIndex(itemRef)
             const session = ensureItemSession(itemIndex)
             if (!session) return
+            const item = openedItems.value[itemIndex]
+            if (!item) return
 
             session.applying = true
+            item.unsaved = false
             session.baselineData = copyData(savedData)
             session.currentData = copyData(savedData)
             session.undoStack = []
@@ -316,7 +389,10 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
         async function pickVolumeFilePath(): Promise<string | undefined> {
             if (!kurisuState.hostCapabilities.supportsOpenFileDialog) return undefined
-            const result = await sendWebCallAndTakeItsReturnValues(makeWebLetter("AppCommand:OpenFileDialog", "MassFile", "fs"))
+            const result = await sendWebCallAndTakeItsReturnValues(
+                makeWebLetter("AppCommand:OpenFileDialog", "MassFile", "fs"),
+                null
+            )
             const path = result[0] as string | null | undefined
             return path ?? undefined
         }
@@ -337,9 +413,178 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             })
         }
 
-        function locateVolumeInExplorer(volumeId: string) {
+        function locateExplorerPath(path: number[]) {
             appState.sidePanelExpanded = true
-            explorerLocateTarget.value = {volumeId, nonce: Date.now()}
+            explorerLocateTarget.value = {path: [...path], nonce: Date.now()}
+        }
+
+        function locateVolumeInExplorer(volumeId: string): boolean {
+            const volumeIndex = openedVolumes.value.findIndex(vol => vol.id === volumeId)
+            if (volumeIndex === -1) return false
+            locateExplorerPath([volumeIndex])
+            return true
+        }
+
+        function locateItemInExplorer(volumeId: string, itemId: number): boolean {
+            const volumeIndex = openedVolumes.value.findIndex(vol => vol.id === volumeId)
+            if (volumeIndex === -1) return false
+
+            const itemIndex = openedVolumes.value[volumeIndex]?.items?.findIndex(item => item.id === itemId) ?? -1
+            if (itemIndex === -1) return false
+
+            locateExplorerPath([volumeIndex, itemIndex])
+            return true
+        }
+
+        function canLocateItemInExplorer(item?: FileModel): boolean {
+            if (!item?.fromVolumeId || item.id < 0) return false
+            const volumeIndex = openedVolumes.value.findIndex(vol => vol.id === item.fromVolumeId)
+            if (volumeIndex === -1) return false
+            return (openedVolumes.value[volumeIndex]?.items?.findIndex(entry => entry.id === item.id) ?? -1) !== -1
+        }
+
+        function resolveItemNameConflict(
+            volumeId: string,
+            itemName: string,
+            options?: {
+                excludeItemKey?: string
+                excludeName?: string
+            }
+        ): ItemNameConflict {
+            const normalizedName = itemName.trim()
+            const excludeItemKey = options?.excludeItemKey
+            const excludeName = options?.excludeName
+            const volume = getOpenedVolume(volumeId)
+            const backendExists = volume?.items?.find(item =>
+                item.name === normalizedName && item.name !== excludeName
+            )
+            const localDraftExists = openedItems.value.some(item =>
+                item.fromVolumeId === volumeId
+                && item.id === -1
+                && item.name === normalizedName
+                && item.itemKey !== excludeItemKey
+                && item.name !== excludeName
+            )
+            const openedConflict = openedItems.value.some(item =>
+                item.fromVolumeId === volumeId
+                && item.name === normalizedName
+                && item.itemKey !== excludeItemKey
+                && item.name !== excludeName
+                && item.itemKey !== undefined
+                && openedTabs.value.some(tab => tab.data === item.itemKey)
+            )
+
+            return {
+                volume,
+                backendExists: backendExists ? {id: backendExists.id, name: backendExists.name} : undefined,
+                localDraftExists,
+                openedConflict,
+                conflict: !!backendExists || localDraftExists,
+                overwriteBlocked: localDraftExists || openedConflict,
+            }
+        }
+
+        function getItemConflictValidator(
+            volumeId: string,
+            options?: {
+                excludeItemKey?: string
+                excludeName?: string
+            }
+        ) {
+            const resolveConflict = (itemName: string) => resolveItemNameConflict(volumeId, itemName, options)
+            return {
+                resolveConflict,
+                overwriteDisabled: (itemName: string) => resolveConflict(itemName).overwriteBlocked,
+                overwriteDisabledReason: (itemName: string) =>
+                    resolveConflict(itemName).overwriteBlocked ? t("itemOverwriteBlockedByOpenedTarget") : undefined,
+                nameValidator: (itemName: string, allowOverwrite: boolean) => {
+                    const conflict = resolveConflict(itemName)
+                    if (conflict.openedConflict) return t("itemOverwriteBlockedByOpenedTarget")
+                    if (conflict.conflict && !allowOverwrite) return t("itemRenameConflictHint")
+                    return undefined
+                }
+            }
+        }
+
+        function createDraftItem(
+            volumeId: string,
+            itemName: string,
+            ryoType: RyoType,
+            data: any,
+            allowOverwrite: boolean = false
+        ): FileModel {
+            const conflict = resolveItemNameConflict(volumeId, itemName)
+            if (conflict.overwriteBlocked) throw new Error(t("itemOverwriteBlockedByOpenedTarget"))
+            if (conflict.conflict && !allowOverwrite) throw new Error(t("itemRenameConflictHint"))
+
+            const fileModel: FileModel = {
+                data: copyData(data),
+                tempData: copyData(data),
+                fromVolumeId: volumeId,
+                fromFile: conflict.volume?.name,
+                id: conflict.backendExists && allowOverwrite ? conflict.backendExists.id : -1,
+                name: itemName,
+                parseSuccess: true,
+                volumeRevision: getVolumeRevision(volumeId),
+                ryoType,
+                dataTypeName: appState.getDataTypeNameByRyoType(ryoType),
+                unsaved: true
+            }
+
+            ensureItemKey(fileModel)
+            openedItems.value.push(fileModel)
+            ensureItemSession(fileModel.itemKey!)
+            return fileModel
+        }
+
+        function buildImportPayload(
+            rawData: any,
+            ryoType: RyoType,
+            dataTypeName: string,
+            sourceTypeName?: string
+        ) {
+            if (sourceTypeName && sourceTypeName !== dataTypeName) {
+                throw new Error(t("itemImportTypeMismatch", {expected: dataTypeName, actual: sourceTypeName}))
+            }
+
+            const payload = decodeImportedItemData(rawData, ryoType, typeName => appState.getRyoTypeByDataTypeName(typeName))
+            const validation = appState.validateDataByRyoType(ryoType, payload)
+            if (!validation.valid) {
+                throw new Error(t("itemImportValidationFailed", {
+                    details: buildImportValidationDetails(validation.issues)
+                }))
+            }
+
+            return payload
+        }
+
+        async function pickJsonFileToOpen(): Promise<string | undefined> {
+            if (!kurisuState.hostCapabilities.supportsOpenFileDialog) return undefined
+            const result = await sendWebCallAndTakeItsReturnValues(
+                makeWebLetter("AppCommand:OpenFileDialog", t("jsonFileDescription"), "json"),
+                null
+            )
+            const path = result[0] as string | null | undefined
+            return path ?? undefined
+        }
+
+        async function pickJsonFileToSave(suggestedFileName: string): Promise<string | undefined> {
+            if (!kurisuState.hostCapabilities.supportsSaveFileDialog) return undefined
+            const result = await sendWebCallAndTakeItsReturnValues(
+                makeWebLetter("AppCommand:SaveFileDialog", t("jsonFileDescription"), "json", suggestedFileName),
+                null
+            )
+            const path = result[0] as string | null | undefined
+            return path ?? undefined
+        }
+
+        async function readTextFile(filePath: string): Promise<string> {
+            const result = await sendWebCallAndTakeItsReturnValues(makeWebLetter("ReadTextFile", filePath))
+            return result[0] as string
+        }
+
+        async function writeTextFile(filePath: string, content: string): Promise<void> {
+            await sendWebCallAndTakeItsReturnValues(makeWebLetter("WriteTextFile", filePath, content))
         }
 
         function newVolume() {
@@ -410,64 +655,163 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             else return false
         }
 
-        function closeTab(index: number) {
+        async function closeTab(index: number): Promise<boolean> {
             const tab = openedTabs.value[index]
-            if (!tab) return
+            if (!tab) return true
 
             activeTabIndex.value = index
 
             const closeCurrentTab = () => {
-                if (typeof tab.data === "string" && getItemByKey(tab.data)) {
-                    removeOpenedItemByKey(tab.data)
-                } else {
-                    internalCloseTab(tab, index)
-                }
+                if (typeof tab.data === "string" && getItemByKey(tab.data)) removeOpenedItemByKey(tab.data)
+                else internalCloseTab(tab, index)
             }
 
-            if (getIsTabUnsaved(index)) {
-                let closeAction: "save" | "discard" | "cancel" = "cancel"
+            if (!getIsTabUnsaved(index)) {
+                closeCurrentTab()
+                return true
+            }
 
-                dialogState.order({
-                    headline: t("saveItemChangesPromptTitle", {item: tab.name}),
-                    description: t("saveItemChangesPromptDescription"),
-                    actions: [
-                        {
-                            text: t("save"), onClick() {
-                                closeAction = "save"
-                            }
-                        },
-                        {
-                            text: t("dontSave"), onClick() {
-                                closeAction = "discard"
-                            }
-                        },
-                        {
-                            text: t("cancel"), onClick() {
-                                closeAction = "cancel"
-                            }
-                        }
-                    ],
-                    onClosed() {
-                        ;(async () => {
-                            switch (closeAction) {
-                                case "save":
-                                    if (typeof tab.data === "string") {
-                                        const saved = await saveItemByKey(tab.data, true)
-                                        if (saved) closeCurrentTab()
-                                    } else {
-                                        activeTabExposed.value?.save?.(() => closeCurrentTab())
-                                    }
-                                    break
-                                case "discard":
-                                    closeCurrentTab()
-                                    break
-                                case "cancel":
-                                    break
-                            }
-                        })()
-                    }
-                })
-            } else closeCurrentTab()
+            const action = await askUnsavedItemAction(tab.name)
+            if (action === "cancel") return false
+            if (action === "save" && typeof tab.data === "string") {
+                const saved = await saveItemByKey(tab.data, true)
+                if (!saved) return false
+            }
+
+            closeCurrentTab()
+            return true
+        }
+
+        async function closeTabsByKeys(tabKeys: string[]): Promise<boolean> {
+            const uniqueKeys = [...new Set(tabKeys)]
+            for (const tabKey of uniqueKeys) {
+                const index = openedTabs.value.findIndex(tab => tab.key === tabKey)
+                if (index === -1) continue
+                const closed = await closeTab(index)
+                if (!closed) return false
+            }
+            return true
+        }
+
+        async function closeAllTabs(): Promise<boolean> {
+            return closeTabsByKeys(
+                openedTabs.value
+                    .map(tab => tab.key)
+                    .filter((key): key is string => !!key)
+            )
+        }
+
+        async function closeOtherTabs(index: number): Promise<boolean> {
+            const keepKey = openedTabs.value[index]?.key
+            if (!keepKey) return true
+
+            return closeTabsByKeys(
+                openedTabs.value
+                    .filter(tab => tab.key && tab.key !== keepKey)
+                    .map(tab => tab.key!)
+            )
+        }
+
+        async function closeSavedTabs(): Promise<boolean> {
+            return closeTabsByKeys(
+                openedTabs.value
+                    .filter((_, index) => !getIsTabUnsaved(index))
+                    .map(tab => tab.key)
+                    .filter((key): key is string => !!key)
+            )
+        }
+
+        async function closeTabsToLeft(index: number): Promise<boolean> {
+            return closeTabsByKeys(
+                openedTabs.value
+                    .slice(0, index)
+                    .map(tab => tab.key)
+                    .filter((key): key is string => !!key)
+            )
+        }
+
+        async function closeTabsToRight(index: number): Promise<boolean> {
+            return closeTabsByKeys(
+                openedTabs.value
+                    .slice(index + 1)
+                    .map(tab => tab.key)
+                    .filter((key): key is string => !!key)
+            )
+        }
+
+        function canRenameTabItem(index: number): boolean {
+            return !!getTabItem(index)
+        }
+
+        function canCopyTabItem(index: number): boolean {
+            const item = getTabItem(index)
+            return !!item?.fromVolumeId && !!item.name && item.id !== -1
+        }
+
+        function canExportTabItem(index: number): boolean {
+            const item = getTabItem(index)
+            return !!item?.itemKey && !!item.ryoType && !!item.dataTypeName && kurisuState.hostCapabilities.supportsSaveFileDialog
+        }
+
+        function canImportTabItem(index: number): boolean {
+            const item = getTabItem(index)
+            return !!item?.itemKey && !!item.ryoType && !!item.dataTypeName && kurisuState.hostCapabilities.supportsOpenFileDialog
+        }
+
+        function canLocateTabInExplorer(index: number): boolean {
+            const item = getTabItem(index)
+            if (!item?.fromVolumeId || item.id < 0) return false
+            const volumeIndex = openedVolumes.value.findIndex(vol => vol.id === item.fromVolumeId)
+            if (volumeIndex === -1) return false
+            return (openedVolumes.value[volumeIndex]?.items?.findIndex(entry => entry.id === item.id) ?? -1) !== -1
+        }
+
+        function locateTabInExplorer(index: number) {
+            const item = getTabItem(index)
+            if (!item?.fromVolumeId || item.id < 0) return
+            locateItemInExplorer(item.fromVolumeId, item.id)
+        }
+
+        function reorderTabs(nextTabs: TabModel[]) {
+            const activeTabKey = openedTabs.value[activeTabIndex.value]?.key
+            openedTabs.value = [...nextTabs]
+
+            if (openedTabs.value.length === 0) {
+                activeTabIndex.value = -1
+                return
+            }
+
+            if (activeTabKey) {
+                const nextActiveIndex = openedTabs.value.findIndex(tab => tab.key === activeTabKey)
+                activeTabIndex.value = nextActiveIndex === -1 ? 0 : nextActiveIndex
+                return
+            }
+
+            activeTabIndex.value = Math.min(activeTabIndex.value, openedTabs.value.length - 1)
+        }
+
+        function renameTabItem(index: number) {
+            const item = getTabItem(index)
+            if (!item?.itemKey) return
+            renameItemByKey(item.itemKey)
+        }
+
+        function copyTabItem(index: number) {
+            const item = getTabItem(index)
+            if (!item?.fromVolumeId || !item.name || item.id === -1) return
+            copyItem(item.fromVolumeId, item.name)
+        }
+
+        async function exportTabItem(index: number) {
+            const item = getTabItem(index)
+            if (!item?.itemKey) return
+            await exportItemByKey(item.itemKey)
+        }
+
+        async function importTabItem(index: number) {
+            const item = getTabItem(index)
+            if (!item?.itemKey) return
+            await importItemByKey(item.itemKey)
         }
 
         function internalCloseTab(tab: TabModel, indexHint?: number) {
@@ -590,36 +934,30 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             activeTabExposed.value?.undo()
         }
 
-        function deleteItem(volumeId: string, itemName: string) {
-            emitWebEvent(makeWebLetter('DeleteItem', volumeId, itemName))
+        async function deleteItem(volumeId: string, itemName: string) {
+            const openedItem = openedItems.value.find(item =>
+                item.fromVolumeId === volumeId && item.name === itemName && item.id !== -1
+            )
+            const shouldDelete = await askDeleteOpenedItemAction(
+                itemName,
+                !!openedItem,
+                !!openedItem && isItemUnsaved(openedItem)
+            )
+            if (!shouldDelete) return
+
+            try {
+                pendingLocalVolumeRevisionSync.add(volumeId)
+                await sendWebCallAndTakeItsReturnValues(makeWebLetter("DeleteItem", volumeId, itemName))
+                if (openedItem?.itemKey) removeOpenedItemByKey(openedItem.itemKey)
+            } catch (err) {
+                pendingLocalVolumeRevisionSync.delete(volumeId)
+                console.error(TAG, "删除项目失败", volumeId, itemName, err)
+                await showOperationErrorDialog(t("deleteItemFailed", {item: itemName}), err)
+            }
         }
 
-        function renameItem(volumeId: string, oldItemName: string) {
-            const resolveRenameConflict = (newItemName: string) => {
-                const volume = getOpenedVolume(volumeId)
-                const backendConflict = !!volume?.items?.some(item =>
-                    item.name === newItemName && item.name !== oldItemName
-                )
-                const localConflict = openedItems.value.some(item =>
-                    item.fromVolumeId === volumeId &&
-                    item.id === -1 &&
-                    item.name === newItemName &&
-                    item.name !== oldItemName
-                )
-                const openedConflict = openedItems.value.some(item =>
-                    item.fromVolumeId === volumeId &&
-                    item.name === newItemName &&
-                    item.name !== oldItemName &&
-                    item.itemKey !== undefined &&
-                    openedTabs.value.some(tab => tab.data === item.itemKey)
-                )
-
-                return {
-                    conflict: backendConflict || localConflict,
-                    openedConflict,
-                }
-            }
-
+        function renameItem(volumeId: string, oldItemName: string, options?: { anchorItemKey?: string }) {
+            const validator = getItemConflictValidator(volumeId, {excludeName: oldItemName})
             dialogState.orderSpecial(NameEditDialog, {
                 headline: t("renameItem"),
                 nameLabel: t("itemName"),
@@ -627,18 +965,98 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 placeholder: oldItemName,
                 showOverwrite: true,
                 overwriteLabel: t("allowOverwriteSameName"),
-                overwriteDisabled: (itemName: string) => resolveRenameConflict(itemName).openedConflict,
-                overwriteDisabledReason: (itemName: string) =>
-                    resolveRenameConflict(itemName).openedConflict ? t("itemOverwriteBlockedByOpenedTarget") : undefined,
-                nameValidator: (itemName: string, allowOverwrite: boolean) => {
-                    const conflict = resolveRenameConflict(itemName)
-                    if (conflict.openedConflict) return t("itemOverwriteBlockedByOpenedTarget")
-                    if (conflict.conflict && !allowOverwrite) return t("itemRenameConflictHint")
-                    return undefined
-                },
+                overwriteDisabled: validator.overwriteDisabled,
+                overwriteDisabledReason: validator.overwriteDisabledReason,
+                nameValidator: validator.nameValidator,
                 confirm: (itemName: string, allowOverwrite?: boolean) => {
-                    console.log(TAG, volumeId, "Rename", oldItemName, "To", itemName)
-                    emitWebEvent(makeWebLetter('RenameItem', volumeId, oldItemName, itemName, !!allowOverwrite))
+                    if (options?.anchorItemKey) markItemTabsResident(options.anchorItemKey)
+                    pendingLocalVolumeRevisionSync.add(volumeId)
+                    emitWebEvent(makeWebLetter("RenameItem", volumeId, oldItemName, itemName, !!allowOverwrite))
+                }
+            })
+        }
+
+        function renameItemByKey(itemKey: string) {
+            const item = getItemByKey(itemKey)
+            if (!item?.fromVolumeId || !item.name) return
+
+            if (item.id !== -1) {
+                renameItem(item.fromVolumeId, item.name, {anchorItemKey: itemKey})
+                return
+            }
+
+            const validator = getItemConflictValidator(item.fromVolumeId, {
+                excludeItemKey: item.itemKey,
+                excludeName: item.name,
+            })
+
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("renameItem"),
+                nameLabel: t("itemName"),
+                oldName: item.name,
+                placeholder: item.name,
+                showOverwrite: true,
+                overwriteLabel: t("allowOverwriteSameName"),
+                overwriteDisabled: validator.overwriteDisabled,
+                overwriteDisabledReason: validator.overwriteDisabledReason,
+                nameValidator: validator.nameValidator,
+                confirm: (nextName: string, allowOverwrite?: boolean) => {
+                    const conflict = resolveItemNameConflict(item.fromVolumeId!, nextName, {
+                        excludeItemKey: item.itemKey,
+                        excludeName: item.name,
+                    })
+                    item.name = nextName
+                    item.fromFile = conflict.volume?.name ?? item.fromFile
+                    item.volumeRevision = getVolumeRevision(item.fromVolumeId)
+                    item.id = conflict.backendExists && allowOverwrite ? conflict.backendExists.id : -1
+                    item.unsaved = true
+                    const itemIndex = getItemIndexByKey(itemKey)
+                    if (itemIndex !== -1) refreshItemTabState(itemIndex)
+                    markItemTabsResident(itemKey)
+                    ensureItemSession(itemKey)
+                }
+            })
+        }
+
+        async function copyItem(volumeId: string, sourceItemName: string) {
+            const openedSource = openedItems.value.find(item =>
+                item.fromVolumeId === volumeId && item.name === sourceItemName && item.id !== -1
+            )
+            if (openedSource?.itemKey && isItemUnsaved(openedSource)) {
+                const action = await askSaveBeforeCopyItemAction(sourceItemName)
+                if (action !== "save") return
+
+                const saved = await saveItemByKey(openedSource.itemKey, true)
+                if (!saved) return
+            }
+
+            const base = sourceItemName || t("copySuffixBase")
+            const placeholder = `${base} ${t("copySuffixBase")}`.trim()
+            const validator = getItemConflictValidator(volumeId)
+
+            dialogState.orderSpecial(NameEditDialog, {
+                headline: t("makeItemCopy"),
+                description: t("makeItemCopyDesc", {item: sourceItemName}),
+                nameLabel: t("itemName"),
+                placeholder,
+                allowPlaceholderSubmit: true,
+                showOverwrite: true,
+                overwriteLabel: t("allowOverwriteSameName"),
+                overwriteDisabled: validator.overwriteDisabled,
+                overwriteDisabledReason: validator.overwriteDisabledReason,
+                nameValidator: validator.nameValidator,
+                confirm: async (itemName: string, allowOverwrite?: boolean) => {
+                    pendingLocalVolumeRevisionSync.add(volumeId)
+                    try {
+                        await sendWebCallAndTakeItsReturnValues(
+                            makeWebLetter("CopyItem", volumeId, sourceItemName, itemName, !!allowOverwrite)
+                        )
+                    } catch (err) {
+                        pendingLocalVolumeRevisionSync.delete(volumeId)
+                        console.error(TAG, "创建项目副本失败", volumeId, sourceItemName, itemName, err)
+                        await showOperationErrorDialog(t("copyItemFailed", {item: sourceItemName}), err)
+                        return false
+                    }
                 }
             })
         }
@@ -672,31 +1090,219 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             })
         }
 
-        async function mentionItem(volumeId: string, itemId: number) {
-            console.log(TAG, "提及项目", volumeId, itemId)
+        async function exportItemData(itemName: string, ryoType: RyoType, dataTypeName: string, payload: any) {
+            const filePath = await pickJsonFileToSave(buildSuggestedJsonFileName(itemName))
+            if (!filePath) return
 
-            let itemKey = openedItems.value.find(item =>
-                item.id === itemId && item.fromVolumeId === volumeId)
-            ?.itemKey
+            const envelope = buildItemExchangeEnvelope(
+                copyData(payload),
+                ryoType,
+                dataTypeName,
+                typeName => appState.getRyoTypeByDataTypeName(typeName)
+            )
+            await writeTextFile(filePath, `${JSON.stringify(envelope, null, 2)}\n`)
+        }
 
-            if (itemKey) {
-                const tabIndex = openedTabs.value.findIndex(tab => tab.data === itemKey)
+        async function buildImportPayloadFromFile(filePath: string, ryoType: RyoType, dataTypeName: string) {
+            const parsed = parseItemExchangeDocument(await readTextFile(filePath))
+            return buildImportPayload(
+                parsed.data,
+                ryoType,
+                dataTypeName,
+                parsed.envelope?.dataTypeName
+            )
+        }
 
-                if (tabIndex !== -1) {
-                    activeTabIndex.value = tabIndex
-                    return
-                }
-            } else {
+        async function requestImportPayloadForItem(item: Pick<FileModel, "ryoType" | "dataTypeName">) {
+            if (!item.ryoType || !item.dataTypeName) return undefined
+            const filePath = await pickJsonFileToOpen()
+            if (!filePath) return undefined
+            return buildImportPayloadFromFile(filePath, item.ryoType, item.dataTypeName)
+        }
+
+        async function askImportReplaceItemAction(itemName: string, dirty: boolean): Promise<boolean> {
+            return new Promise(resolve => {
+                let shouldImport = false
+                dialogState.order({
+                    headline: t("importReplaceConfirmTitle", {item: itemName}),
+                    description: dirty
+                        ? t("importReplaceDirtyDescription")
+                        : t("importReplaceConfirmDescription"),
+                    actions: [
+                        {text: t("cancel"), onClick: () => { shouldImport = false }},
+                        {text: t("importReplaceItem"), onClick: () => { shouldImport = true }},
+                    ],
+                    onClosed: () => resolve(shouldImport),
+                })
+            })
+        }
+
+        async function ensureOpenedItemByVolumeEntry(volumeId: string, itemId: number, activateTab: boolean): Promise<FileModel | undefined> {
+            let item = getOpenedItemByVolumeEntry(volumeId, itemId)
+            if (!item) {
                 const fileModel = await getFullFileModel(volumeId, itemId)
-
-                if (ensure(fileModel)) {
-                    ensureItemKey(fileModel!)
-                    openedItems.value.push(fileModel!)
-                    itemKey = fileModel!.itemKey
-                }
+                if (!ensure(fileModel)) return undefined
+                ensureItemKey(fileModel)
+                openedItems.value.push(fileModel)
+                item = fileModel
             }
 
-            if (itemKey) openTab(TabType.Item, itemKey)
+            if (activateTab && item.itemKey) openTab(TabType.Item, item.itemKey)
+            return item
+        }
+
+        async function exportItemByKey(itemKey: string) {
+            const item = getItemByKey(itemKey)
+            if (!item?.ryoType || !item.dataTypeName) return
+
+            try {
+                await exportItemData(
+                    item.name ?? "item",
+                    item.ryoType,
+                    item.dataTypeName,
+                    item.tempData ?? item.data
+                )
+            } catch (err) {
+                console.error(TAG, "导出项目失败", item.name, err)
+                await showOperationErrorDialog(t("exportCurrentItemFailed", {item: item.name ?? t("unknown")}), err)
+            }
+        }
+
+        async function exportVolumeItem(volumeId: string, itemId: number) {
+            const openedItem = getOpenedItemByVolumeEntry(volumeId, itemId)
+            if (openedItem?.itemKey) {
+                await exportItemByKey(openedItem.itemKey)
+                return
+            }
+
+            try {
+                const snapshot = await getFullFileModel(volumeId, itemId)
+                if (!snapshot?.ryoType || !snapshot.dataTypeName) return
+                await exportItemData(
+                    snapshot.name ?? "item",
+                    snapshot.ryoType,
+                    snapshot.dataTypeName,
+                    snapshot.data
+                )
+            } catch (err) {
+                const itemName = getOpenedVolumeItem(volumeId, itemId)?.name ?? t("unknown")
+                console.error(TAG, "导出资源树项目失败", volumeId, itemId, err)
+                await showOperationErrorDialog(t("exportCurrentItemFailed", {item: itemName}), err)
+            }
+        }
+
+        async function importItemByKey(itemKey: string) {
+            const item = getItemByKey(itemKey)
+            if (!item?.itemKey || !item.ryoType || !item.dataTypeName) return
+
+            try {
+                const payload = await requestImportPayloadForItem(item)
+                if (payload === undefined) return
+                const shouldImport = await askImportReplaceItemAction(
+                    item.name ?? t("unknown"),
+                    isItemUnsaved(item)
+                )
+                if (!shouldImport) return
+
+                recordItemSessionChange(item.itemKey, payload)
+            } catch (err) {
+                console.error(TAG, "导入当前项目失败", item.name, err)
+                await showOperationErrorDialog(t("importCurrentItemFailed", {item: item.name ?? t("unknown")}), err)
+            }
+        }
+
+        async function importVolumeItem(volumeId: string, itemId: number) {
+            const openedItem = getOpenedItemByVolumeEntry(volumeId, itemId)
+            if (openedItem?.itemKey) {
+                await importItemByKey(openedItem.itemKey)
+                return
+            }
+
+            try {
+                const snapshot = await getFullFileModel(volumeId, itemId)
+                if (!snapshot?.ryoType || !snapshot.dataTypeName) return
+
+                const payload = await requestImportPayloadForItem(snapshot)
+                if (payload === undefined) return
+
+                const shouldImport = await askImportReplaceItemAction(snapshot.name ?? t("unknown"), false)
+                if (!shouldImport) return
+
+                const targetItem = getOpenedItemByVolumeEntry(volumeId, itemId) ?? snapshot
+                if (targetItem === snapshot) {
+                    ensureItemKey(snapshot)
+                    openedItems.value.push(snapshot)
+                }
+
+                if (!targetItem.itemKey) return
+                openTab(TabType.Item, targetItem.itemKey)
+                recordItemSessionChange(targetItem.itemKey, payload)
+            } catch (err) {
+                const itemName = getOpenedVolumeItem(volumeId, itemId)?.name ?? t("unknown")
+                console.error(TAG, "导入资源树项目失败", volumeId, itemId, err)
+                await showOperationErrorDialog(t("importCurrentItemFailed", {item: itemName}), err)
+            }
+        }
+
+        async function exportCurrentItem() {
+            if (!activeItem.value?.itemKey) return
+            await exportItemByKey(activeItem.value.itemKey)
+        }
+
+        async function importCurrentItem() {
+            if (!activeItem.value?.itemKey) return
+            await importItemByKey(activeItem.value.itemKey)
+        }
+
+        async function requestImportItemFile() {
+            try {
+                const filePath = await pickJsonFileToOpen()
+                if (!filePath) return undefined
+
+                const parsed = parseItemExchangeDocument(await readTextFile(filePath))
+                return {
+                    filePath,
+                    suggestedItemName: getFileNameWithoutExtension(filePath),
+                    suggestedDataTypeName: parsed.suggestedDataTypeName,
+                }
+            } catch (err) {
+                return {
+                    error: formatErrorReason(err),
+                }
+            }
+        }
+
+        function importItemIntoVolume(volumeId: string) {
+            const validator = getItemConflictValidator(volumeId)
+
+            dialogState.orderSpecial(ImportItemDialog, {
+                showOverwrite: true,
+                overwriteLabel: t("allowOverwriteSameName"),
+                overwriteDisabled: validator.overwriteDisabled,
+                overwriteDisabledReason: validator.overwriteDisabledReason,
+                nameValidator: validator.nameValidator,
+                requestFile: requestImportItemFile,
+                confirm: async (filePath: string, itemName: string, ryoType: RyoType, allowOverwrite?: boolean) => {
+                    try {
+                        const dataTypeName = appState.getDataTypeNameByRyoType(ryoType)
+                        const payload = await buildImportPayloadFromFile(filePath, ryoType, dataTypeName)
+                        const draft = createDraftItem(volumeId, itemName, ryoType, payload, !!allowOverwrite)
+                        openTab(TabType.Item, draft.itemKey)
+                        return {close: true} satisfies ImportDialogSubmitResult
+                    } catch (err) {
+                        console.error(TAG, "导入为新项目失败", volumeId, itemName, filePath, err)
+                        return {
+                            close: false,
+                            error: formatErrorReason(err),
+                        } satisfies ImportDialogSubmitResult
+                    }
+                }
+            })
+        }
+
+        async function mentionItem(volumeId: string, itemId: number) {
+            console.log(TAG, "提及项目", volumeId, itemId)
+            await ensureOpenedItemByVolumeEntry(volumeId, itemId, true)
         }
 
         async function getFullFileModel(volumeId: string, itemId: number) {
@@ -811,11 +1417,58 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         async function showSaveErrorDialog(itemName: string, reason: any): Promise<void> {
             return new Promise(resolve => {
                 dialogState.order({
-                    icon: "close",
+                    icon: "error",
                     headline: t("saveItemFailed", {item: itemName}),
                     description: formatErrorReason(reason),
                     actions: [{text: t('confirm')}],
                     onClosed: () => resolve(),
+                })
+            })
+        }
+
+        async function showOperationErrorDialog(headline: string, reason: any): Promise<void> {
+            return new Promise(resolve => {
+                dialogState.order({
+                    icon: "error",
+                    headline,
+                    description: formatErrorReason(reason),
+                    actions: [{text: t("confirm")}],
+                    onClosed: () => resolve(),
+                })
+            })
+        }
+
+        async function askSaveBeforeCopyItemAction(itemName: string): Promise<"save" | "cancel"> {
+            return new Promise(resolve => {
+                let action: "save" | "cancel" = "cancel"
+                dialogState.order({
+                    headline: t("copyItemRequiresSavedSourceTitle", {item: itemName}),
+                    description: t("copyItemRequiresSavedSourceDescription"),
+                    actions: [
+                        {text: t("cancel"), onClick: () => { action = "cancel" }},
+                        {text: t("saveThenCopy"), onClick: () => { action = "save" }},
+                    ],
+                    onClosed: () => resolve(action),
+                })
+            })
+        }
+
+        async function askDeleteOpenedItemAction(itemName: string, opened: boolean, dirty: boolean): Promise<boolean> {
+            return new Promise(resolve => {
+                let shouldDelete = false
+                dialogState.order({
+                    icon: "discard",
+                    headline: t("deleteItemConfirmTitle", {item: itemName}),
+                    description: !opened
+                        ? t("deleteItemConfirmDescription")
+                        : dirty
+                            ? t("deleteItemOpenedDirtyDescription")
+                            : t("deleteItemOpenedDescription"),
+                    actions: [
+                        {text: t("cancel"), onClick: () => { shouldDelete = false }},
+                        {text: t("delete"), onClick: () => { shouldDelete = true }},
+                    ],
+                    onClosed: () => resolve(shouldDelete),
                 })
             })
         }
@@ -835,6 +1488,7 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 const saved = result.value
                 item.id = saved.itemId
                 item.volumeRevision = saved.volumeRevision
+                syncOpenedItemVolumeRevision(item.fromVolumeId!, saved.volumeRevision)
                 item.data = payload
                 commitItemSessionAsSaved(itemKey, payload)
                 return true
@@ -993,62 +1647,27 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
         }
 
         function addItemInVolume(volumeId: string) {
-            const resolveAddConflict = (itemName: string) => {
-                const volume = openedVolumes.value.find(v => v.id === volumeId)
-                const backendExists = volume?.items?.find(item => item.name === itemName)
-                const localDraftExists = openedItems.value.some(item =>
-                    item.fromVolumeId === volumeId && item.id === -1 && item.name === itemName
-                )
-                const openedConflict = openedItems.value.some(item =>
-                    item.fromVolumeId === volumeId &&
-                    item.name === itemName &&
-                    item.itemKey !== undefined &&
-                    openedTabs.value.some(tab => tab.data === item.itemKey)
-                )
-
-                return {
-                    volume,
-                    backendExists,
-                    conflict: !!backendExists || localDraftExists,
-                    overwriteBlocked: localDraftExists || openedConflict,
-                }
-            }
+            const validator = getItemConflictValidator(volumeId)
 
             dialogState.orderSpecial(AddItemDialog, {
                 showOverwrite: true,
                 overwriteLabel: t("allowOverwriteSameName"),
-                overwriteDisabled: (itemName: string) => resolveAddConflict(itemName).overwriteBlocked,
-                overwriteDisabledReason: (itemName: string) =>
-                    resolveAddConflict(itemName).overwriteBlocked ? t("itemOverwriteBlockedByOpenedTarget") : undefined,
-                nameValidator: (itemName: string, allowOverwrite: boolean) => {
-                    const conflict = resolveAddConflict(itemName)
-                    if (conflict.overwriteBlocked) return t("itemOverwriteBlockedByOpenedTarget")
-                    if (conflict.conflict && !allowOverwrite) return t("itemRenameConflictHint")
-                    return undefined
-                },
+                overwriteDisabled: validator.overwriteDisabled,
+                overwriteDisabledReason: validator.overwriteDisabledReason,
+                nameValidator: validator.nameValidator,
                 confirm: (itemName: string, ryoType: RyoType, allowOverwrite?: boolean) => {
-                    console.log(volumeId, itemName, ryoType)
-                    const conflict = resolveAddConflict(itemName)
-                    if (conflict.overwriteBlocked) return
-                    if (conflict.conflict && !allowOverwrite) return
-
-                    const fileModel: FileModel = {
-                        data: appState.getInitValue(ryoType),
-                        fromVolumeId: volumeId,
-                        fromFile: conflict.volume?.name,
-                        id: conflict.backendExists && allowOverwrite ? conflict.backendExists.id : -1,
-                        name: itemName,
-                        parseSuccess: true,
-                        volumeRevision: getVolumeRevision(volumeId),
-                        ryoType: ryoType,
-                        dataTypeName: appState.getDataTypeNameByRyoType(ryoType),
-                        unsaved: true
+                    try {
+                        const fileModel = createDraftItem(
+                            volumeId,
+                            itemName,
+                            ryoType,
+                            appState.getInitValue(ryoType),
+                            !!allowOverwrite
+                        )
+                        openTab(TabType.Item, fileModel.itemKey)
+                    } catch (err) {
+                        console.error(TAG, "新建项目草稿失败", volumeId, itemName, err)
                     }
-                    ensureItemKey(fileModel)
-
-                    openedItems.value.push(fileModel)
-
-                    openTab(TabType.Item, fileModel.itemKey)
                 }
             })
         }
@@ -1089,8 +1708,11 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
 
                         const volume = openedById.get(volumeId)!
                         item.fromFile = volume.name
-                        if (item.id === -1 || item.volumeRevision === undefined) item.volumeRevision = volume.revision
+                        if (pendingLocalVolumeRevisionSync.has(volumeId) || item.id === -1 || item.volumeRevision === undefined)
+                            item.volumeRevision = volume.revision
                     })
+
+                    openedVolumes.value.forEach(volume => pendingLocalVolumeRevisionSync.delete(volume.id))
 
                     if (staleItemKeys.length > 0) {
                         console.warn(TAG, "移除失效或无法定位归属的Item数量", staleItemKeys.length)
@@ -1103,11 +1725,11 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                     const [volumeId, oldName, newName] = args
                     console.log(TAG, volumeId, "接收重命名", oldName, "->", newName)
 
-                    const item = openedItems.value.find(i => i.fromVolumeId === volumeId && i.name === oldName)
+                    const itemIndex = openedItems.value.findIndex(i => i.fromVolumeId === volumeId && i.name === oldName)
+                    const item = itemIndex === -1 ? undefined : openedItems.value[itemIndex]
                     if (item) {
                         item.name = newName
-                        const thePage = openedTabs.value.find(tab => tab.data === item.itemKey)
-                        if (thePage) thePage.name = newName
+                        refreshItemTabState(itemIndex)
                     }
                 })
                 console.log(TAG, "ItemRenamed监听器已创建")
@@ -1115,8 +1737,10 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
                 addWebEventListener("VolumeItemDeleted", (args: any[]) => {
                     const [volumeId, id] = args as [string, number]
                     console.log(TAG, volumeId, "接收删除", id)
-                    const index = openedItems.value.findIndex(i => i.fromVolumeId === volumeId && i.id === id)
-                    if (index !== -1) openedItems.value[index].id = -1 // 标记为未写入后端，对了，可能要重置unsaved、dirty啥的状态
+                    const staleKeys = openedItems.value
+                        .filter(item => item.fromVolumeId === volumeId && item.id === id && item.itemKey)
+                        .map(item => item.itemKey!)
+                    if (staleKeys.length > 0) removeOpenedItemsByKeys(staleKeys)
                 })
                 console.log(TAG, "ItemDeleted监听器已创建")
 
@@ -1155,6 +1779,12 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             available,
             clickTab,
             closeTab,
+            closeAllTabs,
+            closeOtherTabs,
+            closeSavedTabs,
+            closeTabsToLeft,
+            closeTabsToRight,
+            reorderTabs,
             deleteItem,
             closeVolume,
             ensureItemSession,
@@ -1173,13 +1803,31 @@ export const useWorkspaceStateStore = defineStore('workspace-state', () => {
             pageSave,
             recordItemSessionChange,
             renameItem,
+            renameItemByKey,
             renameVolume,
             cloneVolume,
+            copyItem,
+            exportCurrentItem,
+            importCurrentItem,
+            importItemIntoVolume,
             pageUndo,
             undoItemSession,
             redoItemSession,
             canUndoItemSession,
             canRedoItemSession,
+            canRenameTabItem,
+            canCopyTabItem,
+            canExportTabItem,
+            canImportTabItem,
+            canLocateTabInExplorer,
+            copyTabItem,
+            exportTabItem,
+            importTabItem,
+            exportVolumeItem,
+            importVolumeItem,
+            locateTabInExplorer,
+            locateItemInExplorer,
+            renameTabItem,
             getItemSessionEditorOverrideVersion,
             getItemSessionOnceEditorOverrides,
             setItemSessionOnceEditorOverride,

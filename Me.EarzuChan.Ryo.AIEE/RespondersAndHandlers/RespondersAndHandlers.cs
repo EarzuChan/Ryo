@@ -4,6 +4,7 @@ using Me.EarzuChan.Ryo.Kurisu.WebCalls;
 using Me.EarzuChan.Ryo.Kurisu.WebCalls.Responders;
 using Me.EarzuChan.Ryo.Kurisu.WebEvents.Handlers;
 using System.Diagnostics;
+using System.IO;
 using Me.EarzuChan.Ryo.AIEE.Exceptions;
 using Me.EarzuChan.Ryo.AIEE.Utils;
 using Me.EarzuChan.Ryo.Core.Codecations;
@@ -14,6 +15,7 @@ using Me.EarzuChan.Ryo.Kurisu.AppEvents;
 using Me.EarzuChan.Ryo.Kurisu.AppEvents.Handlers;
 using Me.EarzuChan.Ryo.Utils;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace Me.EarzuChan.Ryo.AIEE.RespondersAndHandlers;
 
@@ -199,14 +201,53 @@ public class RenameVolumeHandler(string volumeId, string newVolumeName) : IWebEv
     });
 }
 
-// TODO：客户端未保存提示，未写入后端项目提示
-[WebEventHandler("DeleteItem")]
-public class DeleteItemHandler(string volumeId, string itemName) : IWebEventHandler {
-    public void Handle(KurisuAppContext context) => context.Inject<LocalVolumeManager>()!.Also(it => {
-        Trace.WriteLine($"Deleting {itemName} of {volumeId}");
+[WebCallResponder("DeleteItem")]
+public class DeleteItemResponder(string volumeId, string itemName) : IWebCallResponder {
+    public WebResponse Respond(KurisuAppContext context) {
+        context.Inject<LocalVolumeManager>()!.Also(it => {
+            Trace.WriteLine($"Deleting {itemName} of {volumeId}");
+            it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.Remove(itemName));
+        });
 
-        it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.Remove(itemName));
-    });
+        return WebResponse.Success();
+    }
+}
+
+[WebCallResponder("CopyItem")]
+public class CopyItemResponder(string volumeId, string sourceItemName, string destItemName, bool allowOverwrite = false) : IWebCallResponder {
+    public WebResponse Respond(KurisuAppContext context) {
+        if (string.IsNullOrWhiteSpace(destItemName))
+            return WebResponse.Failure(EditorErrorCode.InvalidName, "复制项目失败：目标名称为空");
+
+        context.Inject<LocalVolumeManager>()!.Also(it => {
+            var trimmedName = destItemName.Trim();
+            Trace.WriteLine($"Copying {sourceItemName} of {volumeId} to {trimmedName}, overwrite={allowOverwrite}");
+            it.GetVolumeById(volumeId).EnsureNotNull(vol => vol.Copy(sourceItemName, trimmedName, allowOverwrite));
+        });
+
+        return WebResponse.Success();
+    }
+}
+
+[WebCallResponder("ReadTextFile")]
+public class ReadTextFileResponder(string filePath) : IWebCallResponder {
+    public WebResponse Respond(KurisuAppContext context) {
+        if (string.IsNullOrWhiteSpace(filePath)) return WebResponse.Failure(EditorErrorCode.InvalidName, "读取文件失败：路径为空");
+        if (!File.Exists(filePath)) return WebResponse.Failure(EditorErrorCode.InvalidName, "读取文件失败：文件不存在", filePath);
+
+        var text = File.ReadAllText(filePath, Encoding.UTF8);
+        return WebResponse.Success(text);
+    }
+}
+
+[WebCallResponder("WriteTextFile")]
+public class WriteTextFileResponder(string filePath, string content) : IWebCallResponder {
+    public WebResponse Respond(KurisuAppContext context) {
+        if (string.IsNullOrWhiteSpace(filePath)) return WebResponse.Failure(EditorErrorCode.InvalidName, "写入文件失败：路径为空");
+
+        File.WriteAllText(filePath, content ?? string.Empty, new UTF8Encoding(false));
+        return WebResponse.Success();
+    }
 }
 
 // TODO：前端实现这功能的入口

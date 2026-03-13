@@ -163,6 +163,7 @@ internal sealed class PhotinoHostBackend : IHostBackend {
         return true;
     }
 
+    // FIXME：Photino的保存文件API问题：Win保存窗口出不来（无报错失败。虽说我不打算让AIEE版在Win上跑，所以这个Win的行为也许可以忽略）、Linux（Arch）保存完丢后缀名、mac
     public bool TrySaveFileByDialog(string fileDescription, string fileExtension, string? suggestedFileName, out string? filePath) {
         if (_window == null) {
             filePath = null;

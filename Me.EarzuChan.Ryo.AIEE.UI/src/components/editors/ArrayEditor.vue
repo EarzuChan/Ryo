@@ -1,13 +1,21 @@
 <template>
   <!--TODO:文本框宽度最窄、右键或脱出删除、文本框文字选取-->
   <div class="array-editor"
-       :class="{'even':!even}">
+       :class="{'even':!even}"
+       @pointerdown.stop
+       @mousedown.stop
+       @touchstart.stop>
     <VueDraggable class="draggable-place" v-model="modelWithIds" @start="notice(true)"
-                  :animation="200" @end="notice(false)">
+                  :animation="200" :handle="dragHandleSelector"
+                  filter="[data-array-drag-safe]" :prevent-on-filter="false"
+                  @end="notice(false)">
       <div class="array-item base" v-for="(item,index) in modelWithIds" :key="item.second">
+        <div v-if="showDragHandle" class="array-item-drag-zone">
+          <Icon icon="drag_indicator" class="array-item-drag-icon"/>
+        </div>
         <EditorHolder :even="even" not-use-card v-model="model![index]" :type="itemType"
                       :item-key="itemKey" :editor-path="getItemPath(index)" :data-type-name="itemTypeName"
-                      :context-menu-contributions="getContextMenuContributions(index)"/>
+                      :context-menu-contributions="getContextMenuContributions(index)" class="array-item-editor"/>
       </div>
     </VueDraggable>
     <div id="add-item-button" class="base" @click="addItem">
@@ -29,6 +37,7 @@ import {appendEditorPath, dataTypeNameFromRyoType} from "@/utils/EditorOverrideU
 import type {ContextMenuContribution} from "@/models/UIModels"
 import {useI18n} from "vue-i18n"
 import {createContextMenuGroup} from "@/utils/ContextMenuUtils"
+import Icon from "../Icon.vue"
 
 const TAG = "ArrayEditor"
 
@@ -68,6 +77,23 @@ const modelWithIds = computed<Pair<any, number>[]>({
 })
 const ids = ref<number[]>([])
 const itemTypeName = computed(() => itemType.value ? dataTypeNameFromRyoType(itemType.value) : "")
+const showDragHandle = computed(() => {
+  const ryoType = itemType.value
+  if (!ryoType || ryoType.isArray || !ryoType.baseType) return false
+
+  return [
+    "java.lang.String",
+    "java.lang.Character",
+    "java.lang.Integer",
+    "java.lang.Long",
+    "java.lang.Float",
+    "java.lang.Double",
+    "java.lang.Short",
+    "java.lang.Byte",
+    "java.lang.Boolean"
+  ].includes(ryoType.baseType.type)
+})
+const dragHandleSelector = computed(() => showDragHandle.value ? ".array-item-drag-zone" : undefined)
 
 watchSyncEffect(() => {
   console.debug(TAG, "数量监测", model.value!.length, ids.value.length)
@@ -162,6 +188,29 @@ function getContextMenuContributions(index: number): ContextMenuContribution[] {
   align-items: center;
   display: flex;
   min-height: 36px;
+}
+
+.array-item-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+.array-item-drag-zone {
+  align-items: center;
+  cursor: grab;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  min-height: 100%;
+  padding: 0 6px;
+}
+
+.array-item-drag-zone:active {
+  cursor: grabbing;
+}
+
+.array-item-drag-icon {
+  --ryo-color-primary: var(--ryo-color-on-surface-variant);
 }
 
 #add-item-button {

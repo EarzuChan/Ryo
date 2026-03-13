@@ -1,6 +1,8 @@
 <template>
   <div class="use-flex fulfill" :class="{'with-margin':isComplexEditor&&props.withMargin,
-  'editor-holder-card':shouldUseCard}" @contextmenu.prevent.stop="handleContextMenu">
+  'editor-holder-card':shouldUseCard}"
+       :data-array-drag-safe="isArrayDragSafe ? 'true' : undefined"
+       @contextmenu.prevent.stop="handleContextMenu">
     <component v-if="ready" :even="realEven" @err="(e:Error)=>onError(e as any as string)" :errorMsg="errorMsg"
                class="fulfill" :is="editorType" v-model="model" :type="type" :item-key="itemKey"
                :editor-path="editorPath" :data-type-name="dataTypeName" :is-root-editor="isRootEditor"
@@ -116,6 +118,13 @@ const resolvedEditorSelection = computed(() => {
       props.preferEditorId
   )
 })
+const resolvedEditorId = computed(() => resolvedEditorSelection.value?.editor?.id ?? "")
+const isArrayDragSafe = computed(() => [
+  "generic.text",
+  "generic.number",
+  "generic.boolean",
+  "special.string-list",
+].includes(resolvedEditorId.value))
 
 const selfContextMenuContribution = computed<ContextMenuContribution | undefined>(() => {
   if (!editorContext.value) return undefined

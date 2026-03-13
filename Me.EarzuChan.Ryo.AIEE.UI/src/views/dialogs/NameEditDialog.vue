@@ -21,13 +21,13 @@
             {{ overwriteLabelText }}
           </div>
         </div>
-        <div v-if="overwriteHintText" class="overwrite-disabled-text ryo-typography-body-small">
+        <div v-if="overwriteHintText" class="overwrite-disabled-text ryo-typography-body-medium">
           {{ overwriteHintText }}
         </div>
       </div>
       <div id="dialog-actions">
         <TextButton @click="handleCancel">{{ t('cancel') }}</TextButton>
-        <TextButton :disabled="!available" @click="handleConfirm">{{ t('confirm') }}</TextButton>
+        <TextButton :disabled="!available || submitting" @click="handleConfirm">{{ t('confirm') }}</TextButton>
       </div>
     </div>
   </DialogBase>
@@ -58,7 +58,7 @@ const props = withDefaults(defineProps<{
   overwriteDisabled?: (name: string) => boolean
   overwriteDisabledReason?: (name: string) => string | undefined
   nameValidator?: (name: string, allowOverwrite: boolean) => string | undefined
-  confirm: (name: string, allowOverwrite?: boolean) => void
+  confirm: (name: string, allowOverwrite?: boolean) => boolean | void | Promise<boolean | void>
 }>(), {
   oldName: "",
   headline: "",
@@ -81,6 +81,7 @@ const itemName = ref("")
 const nameInputRef = ref<{focus?: () => void} | null>(null)
 const hasEditedName = ref(false)
 const allowOverwrite = ref(props.overwriteDefault)
+const submitting = ref(false)
 
 const normalizedOldName = computed(() => (props.oldName ?? "").trim())
 const normalizedName = computed(() => itemName.value.trim())
@@ -113,12 +114,14 @@ watch(overwriteDisabled, disabled => {
 }, {immediate: true})
 
 const basicNameErrorText = computed(() => {
+  if (submitting.value) return ""
   if (basicNameIssue.value === "empty") return hasEditedName.value ? t("nameCannotBeEmpty") : ""
   if (basicNameIssue.value === "same") return t('cantNameSame')
   return ""
 })
 
 const overwriteValidationErrorText = computed(() => {
+  if (submitting.value) return ""
   if (!props.showOverwrite || overwriteDisabled.value || !effectiveName.value) return ""
   const customError = props.nameValidator?.(effectiveName.value, allowOverwrite.value)
   if (customError) return customError
@@ -134,10 +137,21 @@ function handleCancel() {
   closeDialog()
 }
 
-function handleConfirm() {
-  if (!available.value) return
-  props.confirm(effectiveName.value, allowOverwrite.value)
-  closeDialog()
+async function handleConfirm() {
+  if (!available.value || submitting.value) return
+
+  submitting.value = true
+  try {
+    const result = await props.confirm(effectiveName.value, allowOverwrite.value)
+    if (result === false) {
+      submitting.value = false
+      return
+    }
+    closeDialog()
+  } catch (err) {
+    submitting.value = false
+    throw err
+  }
 }
 
 onMounted(() => {
@@ -147,6 +161,7 @@ onMounted(() => {
 
 function opened() {
   emit('opened')
+  submitting.value = false
   nameInputRef.value?.focus?.()
 }
 

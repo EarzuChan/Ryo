@@ -6,6 +6,7 @@ public sealed class EditorErrorCode
     
     private EditorErrorCode(string value) => Value = value;
 
+    public static readonly EditorErrorCode InvalidName = new("invalid_name");
     public static readonly EditorErrorCode SaveItemFailed = new("save_item_failed");
     public static readonly EditorErrorCode VolumeNotFound = new("volume_not_found");
 

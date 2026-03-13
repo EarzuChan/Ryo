@@ -89,6 +89,11 @@ function showMenuOf(menuType: MenuBarItem) {
   const canOpenVolume = kurisuState.hostCapabilities.supportsOpenFileDialog
   const canSaveVolume = kurisuState.hostCapabilities.supportsSaveFileDialog
   const activeVolume = workspaceState.activeVolume
+  const activeItem = workspaceState.activeItem
+  const canAddItem = !!activeVolume
+  const canImportNewItem = !!activeVolume && kurisuState.hostCapabilities.supportsOpenFileDialog
+  const canExportCurrentItem = !!activeItem && kurisuState.hostCapabilities.supportsSaveFileDialog
+  const canImportCurrentItem = !!activeItem && kurisuState.hostCapabilities.supportsOpenFileDialog
 
   switch (menuType.id) {
     case 'file':
@@ -116,9 +121,22 @@ function showMenuOf(menuType: MenuBarItem) {
       }
       items.push({name: t('saveAll'), disabled: true, action: () => console.log(TAG,'全部保存')},
           {name: t('closeAll'), disabled: true, action: () => console.log(TAG,'全部关闭')},
-          {name: t('addItem'), disabled: true, action: () => console.log(TAG,'添加资源')},
-          {name: t('exportCurrentItem'), disabled: true, action: () => console.log(TAG,'导出当前资源')},
-          {name: t('importCurrentItem'), disabled: true, action: () => console.log(TAG,'导入当前资源')}, {
+          {name: t('addItem'), disabled: !canAddItem, action: () => activeVolume && workspaceState.addItemInVolume(activeVolume.id)},
+          {
+            name: t('importItemFromFile'),
+            disabled: !canImportNewItem,
+            action: () => activeVolume && workspaceState.importItemIntoVolume(activeVolume.id)
+          },
+          {
+            name: t('exportCurrentItem'),
+            disabled: !canExportCurrentItem,
+            action: () => workspaceState.exportCurrentItem()
+          },
+          {
+            name: t('importCurrentItem'),
+            disabled: !canImportCurrentItem,
+            action: () => workspaceState.importCurrentItem()
+          }, {
             name: t('recentFiles'), disabled: true, children:
                 [
                   {name: '文件1', action: () => console.log(TAG,'文件1')},
@@ -183,7 +201,7 @@ function showMenuOf(menuType: MenuBarItem) {
                 [{name: 'TexturePacker', action: () => console.log(TAG,'TexturePacker')},]
           },
           {name: t('saveAllTabs'), disabled: true, action: () => console.log(TAG,'保存全部标签页')},
-          {name: t('closeAllTabs'), disabled: true, action: () => console.log(TAG,'关闭全部标签页')},
+          {name: t('closeAllTabs'), disabled: workspaceState.openedTabs.length === 0, action: () => workspaceState.closeAllTabs()},
           {name: t('preferences'), disabled: true, action: () => console.log(TAG,'偏好设置')},
         ], attachToId: menuType.id, onClose() {
           currentMenu.value = null

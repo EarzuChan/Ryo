@@ -8,7 +8,7 @@ type WebEventListener = (args: any[]) => void
 type PendingWebCall = {
     resolve: (response: WebResponse) => void
     reject: (error: Error) => void
-    timeoutId: number
+    timeoutId?: number
 }
 type BridgeMessageHandler = (message: KurisuBridgeMessage) => void
 type BridgeTransport = {
@@ -66,7 +66,7 @@ function resolvePendingWebCall(requestId: string, response: WebResponse) {
     if (!pending) return
 
     pendingWebCalls.delete(requestId)
-    clearTimeout(pending.timeoutId)
+    if (pending.timeoutId !== undefined) clearTimeout(pending.timeoutId)
     pending.resolve(response)
 }
 
@@ -75,7 +75,7 @@ function rejectPendingWebCall(requestId: string, error: Error) {
     if (!pending) return
 
     pendingWebCalls.delete(requestId)
-    clearTimeout(pending.timeoutId)
+    if (pending.timeoutId !== undefined) clearTimeout(pending.timeoutId)
     pending.reject(error)
 }
 
@@ -291,14 +291,15 @@ export function removeWebEventListener(name: string, lambda?: WebEventListener) 
     if (listeners.size === 0) webEventListeners.delete(name)
 }
 
-export async function sendWebCall(call: WebLetter, timeout = DEFAULT_CALL_TIMEOUT): Promise<WebResponse> {
+export async function sendWebCall(call: WebLetter, timeout: number | null = DEFAULT_CALL_TIMEOUT): Promise<WebResponse> {
     const requestId = nextRequestId()
-    const safeTimeout = Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_CALL_TIMEOUT
 
     return await new Promise<WebResponse>((resolve, reject) => {
-        const timeoutId = window.setTimeout(() => {
-            rejectPendingWebCall(requestId, new Error(`WebCall超时：${call.name}`))
-        }, safeTimeout)
+        const timeoutId = timeout === null
+            ? undefined
+            : window.setTimeout(() => {
+                rejectPendingWebCall(requestId, new Error(`WebCall超时：${call.name}`))
+            }, Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_CALL_TIMEOUT)
 
         pendingWebCalls.set(requestId, {
             resolve,
@@ -318,8 +319,8 @@ export async function sendWebCall(call: WebLetter, timeout = DEFAULT_CALL_TIMEOU
     })
 }
 
-export async function sendWebCallAndTakeItsReturnValues(call: WebLetter) {
-    const response = await sendWebCall(call)
+export async function sendWebCallAndTakeItsReturnValues(call: WebLetter, timeout: number | null = DEFAULT_CALL_TIMEOUT) {
+    const response = await sendWebCall(call, timeout)
     if (response.state == WebResponseState.Success) return response.returnValues
     throw new Error(response.error?.message ?? "WebCall failed without error message")
 }

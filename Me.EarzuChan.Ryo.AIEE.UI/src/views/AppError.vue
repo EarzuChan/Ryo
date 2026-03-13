@@ -42,7 +42,7 @@ const {t} = useI18n()
 
 function repoErr() {
   dialogState.order({
-    icon: "close",
+    icon: "error",
     headline: t('featureNotImplemented'),
     description: t('featureNotImplementedDescription'),
     actions: [

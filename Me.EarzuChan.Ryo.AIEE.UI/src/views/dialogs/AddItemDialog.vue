@@ -5,7 +5,7 @@
         <div id="headline" class="ryo-typography-headline-small">
           {{ t('addItem') }}
         </div>
-        <OutlinedTextField :label="t('itemName')" v-model="itemName" :placeholder="t('useGangAndMinor')"
+        <OutlinedTextField ref="nameInputRef" :label="t('itemName')" v-model="itemName" :placeholder="t('useGangAndMinor')"
                            :error="basicNameErrorText"/>
         <OutlinedTextField :label="t('searchTypeHere')" v-model="filterText"
                            :placeholder="t('ignoreCase')" :error="typeFilterErrorText"/>
@@ -37,7 +37,7 @@
             {{ overwriteLabelText }}
           </div>
         </div>
-        <div v-if="overwriteHintText" class="overwrite-disabled-text ryo-typography-body-small">
+        <div v-if="overwriteHintText" class="overwrite-disabled-text ryo-typography-body-medium">
           {{ overwriteHintText }}
         </div>
       </div>
@@ -102,6 +102,8 @@ const emit = defineEmits(['open', 'opened', 'close', 'closed'])
 const itemName = ref("")
 const filterText = ref("")
 const allowOverwrite = ref(!!props.overwriteDefault)
+const nameInputRef = ref<{focus?: () => void} | null>(null)
+const hasEditedName = ref(false)
 
 const viewport = ref<HTMLElement>()
 
@@ -115,8 +117,9 @@ const overwriteDisabledReasonText = computed(() => {
   if (!overwriteDisabled.value) return ""
   return props.overwriteDisabledReason?.(normalizedName.value) ?? t("itemOverwriteBlockedByOpenedTarget")
 })
+const hasValidName = computed(() => !!normalizedName.value)
 const basicNameErrorText = computed(() => {
-  if (!normalizedName.value) return t("nameCannotBeEmpty")
+  if (!normalizedName.value) return hasEditedName.value ? t("nameCannotBeEmpty") : ""
   return ""
 })
 const overwriteValidationErrorText = computed(() => {
@@ -126,11 +129,15 @@ const overwriteValidationErrorText = computed(() => {
   return ""
 })
 const overwriteHintText = computed(() => overwriteDisabledReasonText.value || overwriteValidationErrorText.value)
-const available = computed(() => !!selectedSchema.value && !basicNameErrorText.value && !overwriteHintText.value)
+const available = computed(() => !!selectedSchema.value && hasValidName.value && !overwriteHintText.value)
 
 watch(overwriteDisabled, disabled => {
   if (disabled && allowOverwrite.value) allowOverwrite.value = false
 }, {immediate: true})
+
+watch(itemName, (next, prev) => {
+  if (next !== prev) hasEditedName.value = true
+})
 
 // 添加计算属性获取实际高度
 const viewportHeight = computed(() => viewport.value?.clientHeight || 240)
@@ -205,7 +212,13 @@ function opened() {
   resetScroll()
 
   selectedSchema.value = null
+  itemName.value = ""
+  allowOverwrite.value = !!props.overwriteDefault
+  hasEditedName.value = false
+  preferredWrapperType.value = -1
   filterText.value = ""
+  typeFilterErrorText.value = ""
+  nameInputRef.value?.focus?.()
 }
 
 function closed() {
