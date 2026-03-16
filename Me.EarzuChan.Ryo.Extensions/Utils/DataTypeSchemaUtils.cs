@@ -102,7 +102,7 @@ public static class DataTypeSchemaUtils
         var sourceSchemas = CodecationUtils.BasicRyoTypes.Select(ryoType => ryoType.ToDataTypeSchema());
 
         // 第二步：遍历当前程序集中所有带有CodecableFormat注解的类，调用GetDataTypeSchema方法
-        var codecableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<CodecableFormationAttribute>().Any())
+        var codecableSchemas = TypeUtils.GetAppAllTypes().Where(type => type.GetCustomAttributes<CodecableFormation>().Any())
             .Select(type => type.ToRyoType().ToDataTypeSchema());
 
         // 第三步：合并两个列表

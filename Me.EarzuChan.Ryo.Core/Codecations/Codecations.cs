@@ -49,15 +49,13 @@ public interface ICtorCodecable
 {
     // TODO：一、我希望能动态构建类；二、如果真没多个Mass构造器，那就改成根据类公开成员的顺序进行输入输出类型的构建
     [AttributeUsage(AttributeTargets.Constructor)]
-    public class CodecableConstructor : Attribute
-    {
-    }
+    public class CodecableConstructor : Attribute;
 
     object[] GetCodecatedArray();
 }
 
 [AttributeUsage(AttributeTargets.Class)]
-public class CodecableFormationAttribute(string formatName) : Attribute
+public class CodecableFormation(string formatName) : Attribute
 {
     public readonly string FormationName = formatName;
 }

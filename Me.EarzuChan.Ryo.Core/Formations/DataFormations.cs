@@ -247,6 +247,7 @@ namespace Me.EarzuChan.Ryo.Core.Formations
             }
         }
 
+        // TIPS：WeakPipe is for internal research only, not presenting in real games
         namespace WeakPipe
         {
             [CodecableFormation("me.earzuchan.weakpipe.Outer")]
@@ -345,6 +346,156 @@ namespace Me.EarzuChan.Ryo.Core.Formations
             {
                 public bool IsHidden;
                 public string Message;
+            }
+        }
+
+        namespace SimuOne {
+            [CodecableFormation("game27.model.DialogueTreeModel")]
+            public class DialogueTreeModel {
+                public string Filename;
+                public string Namespace;
+                public ConversationModel[] conversations;
+            }
+            
+            [CodecableFormation("game27.model.DialogueTreeModel$ConversationModel")]
+            public class ConversationModel
+            {
+                public string Tags;
+                public string Condition;
+                public UserMessageModel[] UserMessages;
+                public bool IsUserIgnored;
+                public SenderMessageModel[] SenderMessages;
+                public string TagsToUnlock;
+                public string TagsToLock;
+                public string Trigger;
+            }
+            
+            [CodecableFormation("game27.model.DialogueTreeModel$UserMessageModel")]
+            public class UserMessageModel
+            {
+                public string Message;
+                public bool IsHidden;
+            }
+
+            [CodecableFormation("game27.model.DialogueTreeModel$SenderMessageModel")]
+            public class SenderMessageModel
+            {
+                public string Message;
+                public string Origin;
+                public string DateText;
+                public string TimeText;
+                public float IdleTime;
+                public float TypingTime;
+                public string Trigger;
+                public float TriggerTime;
+            }
+            
+            [CodecableFormation("game27.DialogueTree$DialogueTreeDescriptor")]
+            public class DialogueTreeDescriptor : ICtorCodecable
+            {
+                public string DialogueNameSpace;
+                public List<Conversation> ConversationList;
+
+                [ICtorCodecable.CodecableConstructor]
+                public DialogueTreeDescriptor(string nsps, Conversation[] cons)
+                {
+                    DialogueNameSpace = nsps;
+                    ConversationList = cons?.ToList() ?? new List<Conversation>();
+                }
+
+                public object[] GetCodecatedArray() => [DialogueNameSpace, ConversationList.ToArray()];
+            }
+            
+            [CodecableFormation("game27.DialogueTree$Conversation")]
+            public class Conversation : ICtorCodecable
+            {
+                public string[] Tags;
+                public string Condition;
+                public UserMessage[] UserMessages;
+                public bool IsUserIgnored;
+                public SenderMessage[] SenderMessages;
+                public string[] TagsToUnlock;
+                public string[] TagsToLock;
+                public string Trigger;
+
+                [ICtorCodecable.CodecableConstructor]
+                public Conversation(string[] tags, string condition, UserMessage[] userMessages, bool isUserIgnored, SenderMessage[] senderMessages, string[] tagsToUnlock, string[] tagsToLock, string trigger)
+                {
+                    Tags = tags;
+                    Condition = condition;
+                    UserMessages = userMessages;
+                    IsUserIgnored = isUserIgnored;
+                    SenderMessages = senderMessages;
+                    TagsToUnlock = tagsToUnlock;
+                    TagsToLock = tagsToLock;
+                    Trigger = trigger;
+                }
+
+                public object[] GetCodecatedArray() => 
+                [
+                    Tags, 
+                    Condition, 
+                    UserMessages, 
+                    IsUserIgnored, 
+                    SenderMessages, 
+                    TagsToUnlock, 
+                    TagsToLock, 
+                    Trigger
+                ];
+            }
+            
+            [CodecableFormation("game27.DialogueTree$SenderMessage")]
+            public class SenderMessage : ICtorCodecable
+            {
+                public string Message;
+                public string Origin;
+                public string DateText;
+                public string TimeText;
+                public float TIdleTime;
+                public float TTypingTime;
+                public string Trigger;
+                public float TTriggerTime;
+
+                [ICtorCodecable.CodecableConstructor]
+                public SenderMessage(string message, string origin, string dateText, string timeText, float tIdleTime, float tTypingTime, string trigger, float tTriggerTime)
+                {
+                    Message = message;
+                    Origin = origin;
+                    DateText = dateText;
+                    TimeText = timeText;
+                    TIdleTime = tIdleTime;
+                    TTypingTime = tTypingTime;
+                    Trigger = trigger;
+                    TTriggerTime = tTriggerTime;
+                }
+
+                public object[] GetCodecatedArray() => 
+                [
+                    Message, 
+                    Origin, 
+                    DateText, 
+                    TimeText, 
+                    TIdleTime, 
+                    TTypingTime, 
+                    Trigger, 
+                    TTriggerTime
+                ];
+            }
+            
+            [CodecableFormation("game27.DialogueTree$UserMessage")]
+            public class UserMessage : ICtorCodecable
+            {
+                public string Message;
+                public bool IsHidden;
+
+                [ICtorCodecable.CodecableConstructor]
+                public UserMessage(string message, bool isHidden)
+                {
+                    Message = message;
+                    IsHidden = isHidden;
+                }
+
+                public object[] GetCodecatedArray() => [Message, IsHidden];
             }
         }
     }

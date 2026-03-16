@@ -80,7 +80,7 @@ public static class CodecationUtils {
         Type? baseType = null;
         var types = TypeUtils.GetAppAllTypes();
         foreach (var item in types) {
-            var attribute = item.GetCustomAttribute<CodecableFormationAttribute>();
+            var attribute = item.GetCustomAttribute<CodecableFormation>();
             if (attribute == null || attribute.FormationName != clzName) continue;
 
             baseType = item;
@@ -273,7 +273,7 @@ public static class CodecationUtils {
 
         if (ryoType == null) {
             // 如果为可适配自定义，那么就有attr_format_name，就不用if 然后检测字段还是构造器
-            var attr = type.GetCustomAttribute<CodecableFormationAttribute>();
+            var attr = type.GetCustomAttribute<CodecableFormation>();
             var clzName = attr?.FormationName;
             bool isCodecateCodCoWithCtor = clzName != null && typeof(ICtorCodecable).IsAssignableFrom(type);
             //clzName ??= type.Name; 

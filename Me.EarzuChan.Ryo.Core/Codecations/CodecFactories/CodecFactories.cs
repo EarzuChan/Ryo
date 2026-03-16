@@ -62,8 +62,7 @@ public class CustomFormatCodecFactory : ICodecFactory {
         }
 
         public void To(object obj, Mass mass, RyoWriter writer) {
-            object[] args = ((ICtorCodecable)obj).GetCodecatedArray() ??
-                            throw new NullReferenceException($"该类型{obj.GetType()}暂不能构建适配列表");
+            object[] args = ((ICtorCodecable)obj).GetCodecatedArray() ?? throw new NullReferenceException($"该类型{obj.GetType()}暂不能构建适配列表");
 
             int matchedCtorIndex;
             for (matchedCtorIndex = 0; matchedCtorIndex < _ctors.Count && _ctorParams[matchedCtorIndex].Count != args.Length; matchedCtorIndex++) ;
