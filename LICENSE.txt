@@ -1,0 +1,19 @@
+VAMOS LICENSE
+Version 1.0
+
+Copyright (c) 2026 Earzu Chan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the following conditions:
+
+ATTRIBUTION: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+TRANSPARENCY: You shall not "steal" this code by rebranding it as your own without explicit credit. If you incorporate this Software into a commercial product, you must maintain the attribution and must not attempt to hide the use of this Software to deceive the community or the Author.
+
+THE VAMOS CLAUSE (DIMENSIONALITY REDUCTION STRIKE):
+In the event that you violate the terms of this License—specifically through non-attribution, plagiarism, or secretly closing the source for deceptive commercial gain—the Author reserves the absolute right to initiate a "Dimensionality Reduction Strike" (降维打击) against you. This includes, but is not limited to:
+a. Publicly exposing the theft to the global developer community.
+b. Absolute technical or legal retaliation that collapses your project's multi-dimensional complexity into a single, non-functional line of code.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+VAMOS! Play fair, or prepare for the strike.
