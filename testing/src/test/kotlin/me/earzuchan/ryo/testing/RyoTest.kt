@@ -1,1 +1,0 @@
-package me.earzuchan.ryo.testing

@@ -1,7 +1,6 @@
 ﻿import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
-val appId = "me.earzuchan.ryo.aiee"
-val ver = "1.0.0"
+val appId = "$group.$name"
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -19,10 +18,12 @@ kotlin {
 dependencies {
     api(project(":modern"))
 
-    implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.components.resources)
     implementation(compose.preview)
+
+    implementation(compose.desktop.currentOs)
+    implementation(libs.coroutines.swing)
 
     implementation(libs.koin.core)
     implementation(libs.koin.compose)
@@ -47,12 +48,12 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "me.earzuchan.ryo.aiee.InitAppKt"
+        mainClass = "$appId.InitAppKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appId
-            packageVersion = ver
+            packageVersion = version as String
         }
     }
 }
@@ -65,10 +66,4 @@ compose.resources {
 
 room {
     schemaDirectory("$projectDir/roomSchemas")
-}
-
-compose.resources {
-    publicResClass = false
-    packageOfResClass = "$appId.resources"
-    generateResClass = auto
 }
