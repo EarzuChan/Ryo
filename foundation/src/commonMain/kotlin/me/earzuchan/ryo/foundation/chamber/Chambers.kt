@@ -7,28 +7,18 @@ import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.util.CompressionUtils
 import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
-import okio.FileSystem
-import okio.Path
 
 // VAMOS，这个Chamber的命名太好了，既表面了它是一个容器，也致敬了尚勃的臭勒。Vamos！
 
 abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // TIPS：Id等为内部可用，故不向调库者泄露
     @Suppress("ArrayInDataClass")
-    private data class EntryFrame(
-        var gloryBindingId: Int, var metaHeapOffset: Int, var metaHeapCount: Int, var data: ByteArray?
-    )
+    private data class EntryFrame(var gloryBindingId: Int, var metaHeapOffset: Int, var metaHeapCount: Int, var data: ByteArray?)
 
-    private data class GloryBinding(
-        val wireTypeId: String, val gloryId: String
-    )
+    private data class GloryBinding(val wireTypeId: String, val gloryId: String)
 
-    internal class ReadCtx(
-        val chamber: Chamber, val reader: RyoReader, var metaPtr: Int, val metaEnd: Int
-    )
+    internal class ReadCtx(val chamber: Chamber, val reader: RyoReader, var metaPtr: Int, val metaEnd: Int)
 
-    internal class WriteCtx(
-        val chamber: Chamber, val writer: RyoWriter, val pendingChildren: MutableList<Pair<Int, RyoValue>> = mutableListOf()
-    )
+    internal class WriteCtx(val chamber: Chamber, val writer: RyoWriter, val pendingChildren: MutableList<Pair<Int, RyoValue>> = mutableListOf())
 
     companion object {
         internal const val META_SHIFT = 2
@@ -39,8 +29,8 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         internal const val TOMBSTONE_BINDING_ID = -1
 
         internal const val BLOB_DEFLATE_MIN_BYTES = 64
-        internal const val BLOB_DEFLATE_RATIO_THRESHOLD = 0.90
-        internal const val INDEX_DEFLATE_RATIO_THRESHOLD = 1.10
+        internal const val BLOB_DEFLATE_RATIO_THRESHOLD = 0.9
+        internal const val INDEX_DEFLATE_RATIO_THRESHOLD = 1.1
     }
 
     protected abstract val chamberName: String
@@ -117,17 +107,6 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         entryFrames[id].gloryBindingId = TOMBSTONE_BINDING_ID
         onRemove(id)
         return true
-    }
-
-    // HACK：load、write这俩是方便函数，要不要提到Ryo得了
-    fun loadFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM) { // 要不要先清空当前？
-        val bytes = fileSystem.read(path) { readByteArray() }
-        loadFromBytes(bytes)
-    }
-
-    fun writeTo(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM, allowDeflate: Boolean = true) {
-        val bytes = saveToBytes(allowDeflate)
-        fileSystem.write(path) { write(bytes) }
     }
 
     fun loadFromBytes(bytes: ByteArray): Chamber {
@@ -562,9 +541,7 @@ class VolumeChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
         }
     }
 
-    override fun clearExtraIndex() {
-        tokenToId.clear()
-    }
+    override fun clearExtraIndex() = tokenToId.clear()
 
     override fun writeExtraIndex(writer: RyoWriter) {
         writer.writeInt(tokenToId.size)
@@ -586,7 +563,7 @@ class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
     fun getGroup(groupIndex: Int): ImageGroup = groups[groupIndex]
 
     // CHECK、TODO：未来写FragmentalImage这个SpecialValue后，在中心Ryo提供图片快速转组，甚至快速创建Texture的API
-    fun addImageWithMipmaps(mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
+    fun createGroup(mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
         val totalCount = 1 + mipmaps.size
         val ids = IntArray(totalCount)
 

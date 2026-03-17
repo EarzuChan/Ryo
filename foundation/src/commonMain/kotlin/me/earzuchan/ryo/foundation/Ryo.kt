@@ -36,7 +36,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
     fun scalar(typeRef: TypeRef, value: Any?): RyoScalarValue = RyoScalarValue.of(typeRef, value)
     fun scalar(wireTypeId: String, value: Any?): RyoScalarValue = scalar(TypeRefs.fromWireTypeId(wireTypeId), value)
 
-    // HACK：我个人认为下面的有点无意义，但AI说留着也无妨，静态类型约束这一块
+    // HACK：我个人认为下面的有点无意义（已有自动推导、传type和null），但AI说留着也无妨，静态类型约束这一块
     fun bool(value: Boolean): RyoScalarValue = RyoScalarValue.of(TypeRefs.BOOLEAN, value)
     fun int(value: Int): RyoScalarValue = RyoScalarValue.of(TypeRefs.INT, value)
     fun long(value: Long): RyoScalarValue = RyoScalarValue.of(TypeRefs.LONG, value)
