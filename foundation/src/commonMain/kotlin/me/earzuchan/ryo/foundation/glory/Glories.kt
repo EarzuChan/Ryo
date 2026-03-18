@@ -5,8 +5,6 @@ import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.chamber.Chamber
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
-import me.earzuchan.ryo.foundation.schema.CtorCase
-import me.earzuchan.ryo.foundation.schema.GloryKind
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.type.ObjectTypeRef
 import me.earzuchan.ryo.foundation.type.PrimitiveTypeRef
@@ -144,7 +142,7 @@ internal class FieldGlory(private val ryo: RyoRuntime) : Glory {
 
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         val schema = ryo.requireSchema(declaredWireTypeId)
-        require(schema.kind == GloryKind.FIELD) { "Schema $declaredWireTypeId is not FIELD" }
+        require(schema.kind == ModelSchema.GloryKind.FIELD) { "Schema $declaredWireTypeId is not FIELD" }
 
         val map = LinkedHashMap<String, RyoValue?>()
         schema.members.forEach { m ->
@@ -157,7 +155,7 @@ internal class FieldGlory(private val ryo: RyoRuntime) : Glory {
 
     override fun write(ctx: Chamber.WriteCtx, value: RyoValue, declaredWireTypeId: String) {
         val schema = ryo.requireSchema(declaredWireTypeId)
-        require(schema.kind == GloryKind.FIELD) { "Schema $declaredWireTypeId is not FIELD" }
+        require(schema.kind == ModelSchema.GloryKind.FIELD) { "Schema $declaredWireTypeId is not FIELD" }
         val hosted = value as? RyoHostedValue ?: error("Expect RyoHostedValue for $declaredWireTypeId")
 
         schema.members.forEach { m ->
@@ -180,7 +178,7 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
 
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         val schema = ryo.requireSchema(declaredWireTypeId)
-        require(schema.kind == GloryKind.CTOR) { "Schema $declaredWireTypeId is not CTOR" }
+        require(schema.kind == ModelSchema.GloryKind.CTOR) { "Schema $declaredWireTypeId is not CTOR" }
 
         val cases = effectiveCases(schema)
         val caseIndex = if (cases.size > 1) normalizeSignedByteIndex(ctx.reader.readSignedByte(), cases.size) else 0
@@ -199,7 +197,7 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
 
     override fun write(ctx: Chamber.WriteCtx, value: RyoValue, declaredWireTypeId: String) {
         val schema = ryo.requireSchema(declaredWireTypeId)
-        require(schema.kind == GloryKind.CTOR) { "Schema $declaredWireTypeId is not CTOR" }
+        require(schema.kind == ModelSchema.GloryKind.CTOR) { "Schema $declaredWireTypeId is not CTOR" }
         val hosted = value as? RyoHostedValue ?: error("Expect RyoHostedValue for $declaredWireTypeId")
 
         val cases = effectiveCases(schema)
@@ -220,9 +218,9 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
         }
     }
 
-    private fun effectiveCases(schema: ModelSchema): List<CtorCase> = schema.ctorCases.ifEmpty { listOf(CtorCase("default", schema.members.map { it.name })) }
+    private fun effectiveCases(schema: ModelSchema): List<ModelSchema.CtorCase> = schema.ctorCases.ifEmpty { listOf(ModelSchema.CtorCase("default", schema.members.map { it.name })) }
 
-    private fun inferCase(hosted: RyoHostedValue, cases: List<CtorCase>): Int {
+    private fun inferCase(hosted: RyoHostedValue, cases: List<ModelSchema.CtorCase>): Int {
         val keys = hosted.members.keys
         val idx = cases.indexOfFirst { c -> c.args.all { it in keys } }
         return if (idx >= 0) idx else 0

@@ -100,12 +100,16 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         return glory.read(rctx, binding.wireTypeId)
     }
 
-    internal fun remove(id: Int): Boolean {
+    internal fun remove(id: Int): Boolean = removeInternal(id, notify = true)
+
+    protected fun removeSilently(id: Int): Boolean = removeInternal(id, notify = false)
+
+    private fun removeInternal(id: Int, notify: Boolean): Boolean {
         if (id !in entryFrames.indices) return false
         entryFrames[id].data = null
         entryFrames[id].metaHeapCount = 0
         entryFrames[id].gloryBindingId = TOMBSTONE_BINDING_ID
-        onRemove(id)
+        if (notify) onRemove(id)
         return true
     }
 
@@ -476,6 +480,8 @@ class VolumeChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
 
     private val tokenToId = linkedMapOf<String, Int>()
 
+    fun tokens(): Set<String> = tokenToId.keys.toSet()
+    fun contains(token: String): Boolean = token in tokenToId
     fun get(token: String): RyoValue? = tokenToId[token]?.let { get(it) }
     fun tryGet(token: String): Result<RyoValue?> = runCatching { get(token) }
 
@@ -561,6 +567,7 @@ class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
     val groupCount: Int get() = groups.size
 
     fun getGroup(groupIndex: Int): ImageGroup = groups[groupIndex]
+    fun snapshotGroup(groupIndex: Int): List<RyoValue> = List(getGroup(groupIndex).levelCount) { level -> getGroup(groupIndex).getMipmapLevel(level) }
 
     // CHECK、TODO：未来写FragmentalImage这个SpecialValue后，在中心Ryo提供图片快速转组，甚至快速创建Texture的API
     fun createGroup(mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
@@ -574,6 +581,21 @@ class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
         groups.add(group)
         return group
     }
+
+    fun replaceGroup(groupIndex: Int, mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
+        require(groupIndex in groups.indices) { "Invalid group index: $groupIndex" }
+        val oldGroup = groups[groupIndex]
+        if (!oldGroup.isDeleted) for (id in oldGroup.mipmapIds) removeSilently(id)
+
+        val ids = IntArray(1 + mipmaps.size)
+        ids[0] = add(mainImage)
+        for (i in mipmaps.indices) ids[i + 1] = add(mipmaps[i])
+
+        oldGroup.markAsDeleted()
+        return ImageGroup(this, ids).also { groups[groupIndex] = it }
+    }
+
+    fun deleteGroup(groupIndex: Int) = deleteGroup(getGroup(groupIndex))
 
     fun deleteGroup(group: ImageGroup) {
         if (group.isDeleted) return

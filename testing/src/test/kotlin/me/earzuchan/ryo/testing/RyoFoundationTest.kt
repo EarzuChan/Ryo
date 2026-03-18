@@ -2,9 +2,6 @@ package me.earzuchan.ryo.testing
 
 import me.earzuchan.ryo.foundation.Ryo
 import me.earzuchan.ryo.foundation.type.TypeIds
-import me.earzuchan.ryo.foundation.schema.CtorCase
-import me.earzuchan.ryo.foundation.schema.GloryKind
-import me.earzuchan.ryo.foundation.schema.ModelMember
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.io.loadFrom
@@ -56,25 +53,25 @@ class RyoFoundationTest {
         return listOf(
             ModelSchema(
                 modelId = dialogueDescriptorTypeId,
-                kind = GloryKind.CTOR,
-                members = listOf(ModelMember("dialogueNameSpace", str), ModelMember("conversationList", conversationArr)),
-                ctorCases = listOf(CtorCase("default", listOf("dialogueNameSpace", "conversationList")))
+                kind = ModelSchema.GloryKind.CTOR,
+                members = listOf(ModelSchema.ModelMember("dialogueNameSpace", str), ModelSchema.ModelMember("conversationList", conversationArr)),
+                ctorCases = listOf(ModelSchema.CtorCase("default", listOf("dialogueNameSpace", "conversationList")))
             ),
             ModelSchema(
                 modelId = conversationTypeId,
-                kind = GloryKind.CTOR,
+                kind = ModelSchema.GloryKind.CTOR,
                 members = listOf(
-                    ModelMember("tags", strArr),
-                    ModelMember("status", str),
-                    ModelMember("userMessages", userMessageArr),
-                    ModelMember("stateOfDiswatch", bool),
-                    ModelMember("senderMessagers", senderMessageArr),
-                    ModelMember("tagsToUnlock", strArr),
-                    ModelMember("tagsToLock", strArr),
-                    ModelMember("trigger", str)
+                    ModelSchema.ModelMember("tags", strArr),
+                    ModelSchema.ModelMember("status", str),
+                    ModelSchema.ModelMember("userMessages", userMessageArr),
+                    ModelSchema.ModelMember("stateOfDiswatch", bool),
+                    ModelSchema.ModelMember("senderMessagers", senderMessageArr),
+                    ModelSchema.ModelMember("tagsToUnlock", strArr),
+                    ModelSchema.ModelMember("tagsToLock", strArr),
+                    ModelSchema.ModelMember("trigger", str)
                 ),
                 ctorCases = listOf(
-                    CtorCase(
+                    ModelSchema.CtorCase(
                         "default",
                         listOf("tags", "status", "userMessages", "stateOfDiswatch", "senderMessagers", "tagsToUnlock", "tagsToLock", "trigger")
                     )
@@ -82,30 +79,30 @@ class RyoFoundationTest {
             ),
             ModelSchema(
                 modelId = userMessageTypeId,
-                kind = GloryKind.CTOR,
+                kind = ModelSchema.GloryKind.CTOR,
                 members = listOf(
-                    ModelMember("message", str),
-                    ModelMember("isHidden", bool)
+                    ModelSchema.ModelMember("message", str),
+                    ModelSchema.ModelMember("isHidden", bool)
                 ),
                 ctorCases = listOf(
-                    CtorCase("default", listOf("message", "isHidden"))
+                    ModelSchema.CtorCase("default", listOf("message", "isHidden"))
                 )
             ),
             ModelSchema(
                 modelId = senderMessageTypeId,
-                kind = GloryKind.CTOR,
+                kind = ModelSchema.GloryKind.CTOR,
                 members = listOf(
-                    ModelMember("message", str),
-                    ModelMember("origin", str),
-                    ModelMember("dateText", str),
-                    ModelMember("timeText", str),
-                    ModelMember("idleTime", float),
-                    ModelMember("typingTime", float),
-                    ModelMember("trigger", str),
-                    ModelMember("triggerTime", float)
+                    ModelSchema.ModelMember("message", str),
+                    ModelSchema.ModelMember("origin", str),
+                    ModelSchema.ModelMember("dateText", str),
+                    ModelSchema.ModelMember("timeText", str),
+                    ModelSchema.ModelMember("idleTime", float),
+                    ModelSchema.ModelMember("typingTime", float),
+                    ModelSchema.ModelMember("trigger", str),
+                    ModelSchema.ModelMember("triggerTime", float)
                 ),
                 ctorCases = listOf(
-                    CtorCase(
+                    ModelSchema.CtorCase(
                         "default",
                         listOf("message", "origin", "dateText", "timeText", "idleTime", "typingTime", "trigger", "triggerTime")
                     )

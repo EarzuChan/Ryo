@@ -11,6 +11,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":foundation"))
+            api(libs.coroutines.core)
             implementation(libs.okio)
             implementation(libs.kotlinx.serialization.json)
         }

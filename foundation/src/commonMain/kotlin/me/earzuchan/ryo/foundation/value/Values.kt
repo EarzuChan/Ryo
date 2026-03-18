@@ -7,15 +7,15 @@ import me.earzuchan.ryo.foundation.type.TypeRefs
 
 // TIPS：从设计上，Value是希望“创建后（内容）不可变的”。想改内容，建议是通过Copy，懂我意思？
 
+// HACK、CHECK：我感觉仅Scalar可Null有点怪，全部应该都有可Null，或者搞个具有WireTypeId（TypeRef）的RyoNullValue
+
 sealed interface RyoValue {
     val typeRef: TypeRef
     val wireTypeId: String get() = typeRef.wireTypeId
 }
 
-data class RyoScalarValue private constructor(
-    override val typeRef: TypeRef,
-    val value: Any?
-) : RyoValue {
+@ConsistentCopyVisibility
+data class RyoScalarValue private constructor(override val typeRef: TypeRef, val value: Any?) : RyoValue {
     val isNull: Boolean get() = value == null
 
     companion object {

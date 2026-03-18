@@ -3,6 +3,7 @@ build/
 **/build/
 out/
 .idea/
+.kotlin/
 *.iml
 .DS_Store
 AGENTS.md
