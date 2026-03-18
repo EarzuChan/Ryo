@@ -103,7 +103,7 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
 }
 
 // ==========================================
-// 3. 智能游标系统 (Cursors)
+// 智能游标系统 (Cursors)
 // ==========================================
 sealed class RyoCursor(val session: EditorSession, val path: ValuePath) {
     val stateFlow: StateFlow<RyoValue?> get() = session.observe(path)
@@ -212,7 +212,7 @@ class EditorTransaction(
 
 
 // ==========================================
-// 5. 核心算法：批量结构共享合并
+// 核心算法：批量结构共享合并
 // ==========================================
 private fun resolveValue(root: RyoValue?, path: ValuePath): RyoValue? {
     var current = root

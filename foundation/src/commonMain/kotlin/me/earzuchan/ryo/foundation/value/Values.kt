@@ -75,9 +75,10 @@ data class RyoHostedValue(
 ) : RyoValue
 
 // TIPS：特制值，需要用独立的读写逻辑（即独立的Glory）来进行序列化反序列化
-data class RyoSpecialValue(
+data class RyoSpecialValue<out T : Any>(
     override val typeRef: TypeRef,
-    val payload: Any
+    val kind: String,
+    val payload: T
 ) : RyoValue
 
 // The Fallback？

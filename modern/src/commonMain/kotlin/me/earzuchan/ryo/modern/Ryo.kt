@@ -19,11 +19,9 @@ class ModernizedRyo private constructor(val foundation: FoundationalRyo, interna
 
     // 管理大盘
     fun manage(volume: VolumeChamber): ManagedVolume = ManagedVolume(this, volume)
-    fun manage(texture: TextureChamber): ManagedTexture = ManagedTexture(this, texture)
+    fun manage(texture: TextureChamber): ManagedTexture = ManagedTexture(texture)
 
     class Builder internal constructor(private val foundation: FoundationalRyo) {
-        // 未来在这里注册 Projection Schema
-
         fun build(): ModernizedRyo = ModernizedRyo(foundation, ModernRuntime(foundation))
     }
 }

@@ -39,6 +39,8 @@ object GloryIds {
     const val ARR_BOOLEAN = "sengine.mass.serializers.DefaultArraySerializers\$BooleanArraySerializer"
     const val ARR_STRING = "sengine.mass.serializers.DefaultArraySerializers\$StringArraySerializer"
     const val ARR_OBJECT = "sengine.mass.serializers.DefaultArraySerializers\$ObjectArraySerializer"
+
+    const val FI = "sengine.graphics2d.texturefile.FIFormat"
 }
 
 internal interface Glory {
@@ -48,11 +50,8 @@ internal interface Glory {
 }
 
 internal class ScalarGlory(
-    override val id: String,
-    private val wireTypeId: String,
-    private val typeRef: TypeRef,
-    private val r: RyoReader.() -> Any?,
-    private val w: RyoWriter.(Any?) -> Unit
+    override val id: String, private val wireTypeId: String, private val typeRef: TypeRef,
+    private val r: RyoReader.() -> Any?, private val w: RyoWriter.(Any?) -> Unit
 ) : Glory {
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         require(declaredWireTypeId == wireTypeId) { "Declared wire mismatch: $declaredWireTypeId != $wireTypeId" }

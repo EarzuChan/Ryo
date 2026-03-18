@@ -6,6 +6,7 @@ import me.earzuchan.ryo.foundation.exception.GloryNotFoundException
 import me.earzuchan.ryo.foundation.exception.SchemaNotFoundException
 import me.earzuchan.ryo.foundation.glory.CtorGlory
 import me.earzuchan.ryo.foundation.glory.FieldGlory
+import me.earzuchan.ryo.foundation.glory.SpecialGlories
 import me.earzuchan.ryo.foundation.glory.Glory
 import me.earzuchan.ryo.foundation.glory.GloryIds
 import me.earzuchan.ryo.foundation.glory.ObjectArrayGlory
@@ -14,6 +15,7 @@ import me.earzuchan.ryo.foundation.glory.ScalarGlory
 import me.earzuchan.ryo.foundation.glory.StringArrayGlory
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
+import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.type.ArrayTypeRef
 import me.earzuchan.ryo.foundation.type.ObjectTypeRef
@@ -25,6 +27,7 @@ import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
+import me.earzuchan.ryo.foundation.value.RyoSpecialValue
 import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
 
@@ -88,6 +91,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
 
     fun container(typeRef: TypeRef, elements: List<RyoValue?>): RyoContainerValue = RyoContainerValue(typeRef, elements)
     fun container(wireTypeId: String, elements: List<RyoValue?>): RyoContainerValue = RyoContainerValue(TypeRefs.fromWireTypeId(wireTypeId), elements)
+    fun <T : Any> special(typeRef: TypeRef, kind: String, payload: T): RyoSpecialValue<T> = RyoSpecialValue(typeRef, kind, payload)
 
     class Builder internal constructor() {
         private val schemas = linkedMapOf<String, ModelSchema>()
@@ -222,8 +226,8 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         is RyoScalarValue -> Unit
         is RyoHostedValue -> validateHosted(value)
         is RyoContainerValue -> validateContainer(value)
+        is RyoSpecialValue<*> -> Unit
         is RyoUnknownValue -> requireNotNull(value.opaquePayload) { "Cannot write unknown value without opaque payload. glory=${value.gloryId}" }
-        else -> {}
     }
 
     fun readDirectScalar(wireTypeId: String, reader: RyoReader): Any? {
@@ -373,6 +377,8 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
         registerGlory(StringArrayGlory())
         registerGlory(ObjectArrayGlory())
+        registerGlory(SpecialGlories())
         mapWireTypeToGlory(stringArrayWireTypeId, GloryIds.ARR_STRING)
+        mapWireTypeToGlory(FragmentalImage.WIRE_TYPE_ID, GloryIds.FI)
     }
 }

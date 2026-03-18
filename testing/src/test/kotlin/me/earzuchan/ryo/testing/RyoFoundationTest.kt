@@ -1,16 +1,20 @@
 package me.earzuchan.ryo.testing
 
 import me.earzuchan.ryo.foundation.Ryo
+import me.earzuchan.ryo.foundation.io.loadFrom
 import me.earzuchan.ryo.foundation.type.TypeIds
+import me.earzuchan.ryo.foundation.special.FragmentalImage
+import me.earzuchan.ryo.foundation.special.fragmentalImageOrNull
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.type.TypeRefs
-import me.earzuchan.ryo.foundation.io.loadFrom
 import me.earzuchan.ryo.foundation.io.writeTo
+import me.earzuchan.ryo.foundation.special.specialValue
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
 import okio.FileSystem
 import okio.Path.Companion.toPath
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
@@ -34,6 +38,11 @@ class RyoFoundationTest {
     private val initialFixturePath = testEnvDir / "initialFixture.fs"
     private val clonedFixturePath = testEnvDir / "clonedFixture.fs"
     private val afterGcFixturePath = testEnvDir / "afterGcFixture.fs"
+    private val textureFixturePath = testEnvDir / "screenbg-right.png.texture"
+    private val textureStructurePath = testEnvDir / "texture-structure.txt"
+    private val textureFixturePath2 = testEnvDir / "12-paranoid.png.texture"
+    private val textureStructurePath2 = testEnvDir / "texture-structure-12-paranoid.txt"
+    private val textureBindingPath = testEnvDir / "texture-bindings.txt"
 
     private val dialogueDescriptorTypeId = "game31.DialogueTree\$DialogueTreeDescriptor"
     private val conversationTypeId = "game31.DialogueTree\$Conversation"
@@ -189,7 +198,7 @@ class RyoFoundationTest {
 
     @Test
     fun testSimpleRead() {
-        assertTrue(FileSystem.SYSTEM.exists(legacyFixturePath))
+        assumeTrue(FileSystem.SYSTEM.exists(legacyFixturePath), "Skip testSimpleRead because legacyFixture.fs is missing")
 
         val loaded = ryo.createVolumeChamber().apply { loadFrom(legacyFixturePath) }
 
@@ -235,7 +244,7 @@ class RyoFoundationTest {
 
     @Test
     fun testComplexRead() {
-        assertTrue(FileSystem.SYSTEM.exists(complexLegacyFixturePath))
+        assumeTrue(FileSystem.SYSTEM.exists(complexLegacyFixturePath), "Skip testComplexRead because complexLegacyFixture.fs is missing")
         val loaded = ryo.createVolumeChamber().apply { loadFrom(complexLegacyFixturePath) }
         val testValue = assertIs<RyoHostedValue>(loaded.get("test"))
         assertEquals(expectedComplexDescriptor(), testValue)
@@ -246,6 +255,37 @@ class RyoFoundationTest {
         val volume = ryo.createVolumeChamber().apply { set("test", expectedComplexDescriptor()) }
         volume.writeTo(complexNeoFixturePath)
         assertTrue(FileSystem.SYSTEM.exists(complexNeoFixturePath))
+    }
+
+    @Test
+    fun testFragmentalImageRoundTrip() {
+        val fi = FragmentalImage(
+            clipSize = 4,
+            levels = listOf(
+                FragmentalImage.Level(
+                    width = 5,
+                    height = 3,
+                    format = FragmentalImage.PixelFormat.RGB888,
+                    fragments = listOf(
+                        FragmentalImage.Fragment(4, 3, FragmentalImage.PixelFormat.RGB888, FragmentalImage.Encoding.RAW, ByteArray(4 * 3 * 3) { it.toByte() }),
+                        FragmentalImage.Fragment(1, 3, FragmentalImage.PixelFormat.RGB888, FragmentalImage.Encoding.JPEG, byteArrayOf(0x01, 0x23, 0x45, 0x67))
+                    )
+                ),
+                FragmentalImage.Level(
+                    width = 2,
+                    height = 2,
+                    format = FragmentalImage.PixelFormat.RGBA8888,
+                    fragments = listOf(
+                        FragmentalImage.Fragment(2, 2, FragmentalImage.PixelFormat.RGBA8888, FragmentalImage.Encoding.RAW, ByteArray(2 * 2 * 4) { (it * 3).toByte() })
+                    )
+                )
+            )
+        )
+
+        val bytes = ryo.createVolumeChamber().apply { set("fi", fi.specialValue()) }.saveToBytes()
+        val loadedFi = ryo.createVolumeChamber().apply { loadFromBytes(bytes) }.get("fi").fragmentalImageOrNull()
+        assertNotNull(loadedFi)
+        assertFragmentalImageEquals(fi, loadedFi)
     }
 
     @Test
@@ -331,5 +371,92 @@ class RyoFoundationTest {
 
         chamber.writeTo(afterGcFixturePath)
         assertTrue(FileSystem.SYSTEM.exists(afterGcFixturePath))
+    }
+
+    private fun assertFragmentalImageEquals(expected: FragmentalImage, actual: FragmentalImage) {
+        assertEquals(expected.clipSize, actual.clipSize)
+        assertEquals(expected.levels.size, actual.levels.size)
+        expected.levels.zip(actual.levels).forEach { (el, al) ->
+            assertEquals(el.width, al.width)
+            assertEquals(el.height, al.height)
+            assertEquals(el.format, al.format)
+            assertEquals(el.fragments.size, al.fragments.size)
+            el.fragments.zip(al.fragments).forEach { (ef, af) ->
+                assertEquals(ef.width, af.width)
+                assertEquals(ef.height, af.height)
+                assertEquals(ef.format, af.format)
+                assertEquals(ef.encoding, af.encoding)
+                assertTrue(ef.bytes.contentEquals(af.bytes))
+            }
+        }
+    }
+
+    @Test
+    fun inspectTextureFixtureStructure() {
+        assumeTrue(FileSystem.SYSTEM.exists(textureFixturePath), "Skip inspectTextureFixtureStructure because texture fixture is missing")
+        val texture = Ryo().createTextureChamber().apply { loadFrom(textureFixturePath) }
+        val sb = StringBuilder().appendLine("groupCount=${texture.groupCount}")
+        for (gi in 0 until texture.groupCount) {
+            val items = texture.getGroup(gi)
+            sb.appendLine("group[$gi].entryCount=${items.size}")
+            items.forEachIndexed { ei, value ->
+                val fi = value.fragmentalImageOrNull()
+                if (fi == null) sb.appendLine("group[$gi].entry[$ei]=${value::class.simpleName} wire=${value.wireTypeId}")
+                else {
+                    sb.appendLine("group[$gi].entry[$ei]=FragmentalImage clipSize=${fi.clipSize} levels=${fi.levels.size}")
+                    fi.levels.forEachIndexed { li, lvl -> sb.appendLine("group[$gi].entry[$ei].level[$li]=${lvl.width}x${lvl.height} format=${lvl.format} fragments=${lvl.fragments.size}") }
+                }
+            }
+        }
+        FileSystem.SYSTEM.write(textureStructurePath) { writeUtf8(sb.toString()) }
+        assertTrue(sb.isNotEmpty())
+    }
+
+    @Test
+    fun inspectTextureFixtureStructureParanoid() {
+        assumeTrue(FileSystem.SYSTEM.exists(textureFixturePath2), "Skip inspectTextureFixtureStructureParanoid because texture fixture is missing")
+        val texture = Ryo().createTextureChamber().apply { loadFrom(textureFixturePath2) }
+        val sb = StringBuilder().appendLine("groupCount=${texture.groupCount}")
+        for (gi in 0 until texture.groupCount) {
+            val items = texture.getGroup(gi)
+            sb.appendLine("group[$gi].entryCount=${items.size}")
+            items.forEachIndexed { ei, value ->
+                val fi = value.fragmentalImageOrNull()
+                if (fi == null) sb.appendLine("group[$gi].entry[$ei]=${value::class.simpleName} wire=${value.wireTypeId}")
+                else {
+                    sb.appendLine("group[$gi].entry[$ei]=FragmentalImage clipSize=${fi.clipSize} levels=${fi.levels.size}")
+                    fi.levels.forEachIndexed { li, lvl -> sb.appendLine("group[$gi].entry[$ei].level[$li]=${lvl.width}x${lvl.height} format=${lvl.format} fragments=${lvl.fragments.size}") }
+                }
+            }
+        }
+        FileSystem.SYSTEM.write(textureStructurePath2) { writeUtf8(sb.toString()) }
+        assertTrue(sb.isNotEmpty())
+    }
+
+    @Test
+    fun inspectTextureBindingWireTypes() {
+        val sb = StringBuilder()
+        dumpTextureBindings(textureFixturePath, "screenbg-right", sb)
+        dumpTextureBindings(textureFixturePath2, "12-paranoid", sb)
+        FileSystem.SYSTEM.write(textureBindingPath) { writeUtf8(sb.toString()) }
+        assertTrue(sb.isNotEmpty())
+    }
+
+    private fun dumpTextureBindings(path: okio.Path, label: String, sb: StringBuilder) {
+        if (!FileSystem.SYSTEM.exists(path)) {
+            sb.appendLine("$label:missing")
+            return
+        }
+        val texture = Ryo().createTextureChamber().apply { loadFrom(path) }
+        val frameClass = texture::class.java.superclass
+        val bindingsField = frameClass.getDeclaredField("gloryBindings").apply { isAccessible = true }
+        val bindings = bindingsField.get(texture) as List<*>
+        sb.appendLine("$label.bindings=${bindings.size}")
+        bindings.forEachIndexed { idx, any ->
+            val clazz = any!!::class.java
+            val wire = clazz.getDeclaredField("wireTypeId").apply { isAccessible = true }.get(any)
+            val glory = clazz.getDeclaredField("gloryId").apply { isAccessible = true }.get(any)
+            sb.appendLine("$label.binding[$idx].wire=$wire glory=$glory")
+        }
     }
 }

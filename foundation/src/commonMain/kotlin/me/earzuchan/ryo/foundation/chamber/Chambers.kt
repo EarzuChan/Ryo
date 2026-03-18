@@ -4,6 +4,9 @@ import me.earzuchan.ryo.foundation.RyoRuntime
 import me.earzuchan.ryo.foundation.exception.GloryNotFoundException
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
+import me.earzuchan.ryo.foundation.special.FragmentalImage
+import me.earzuchan.ryo.foundation.special.requireFragmentalImage
+import me.earzuchan.ryo.foundation.special.specialValue
 import me.earzuchan.ryo.foundation.util.CompressionUtils
 import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
@@ -558,117 +561,116 @@ class VolumeChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
     }
 }
 
-// TIPS：极具侵略性的API设计😎
 class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
     override val chamberName: String = "TextureFile"
-
-    private val groups = mutableListOf<ImageGroup>()
+    private val groups = mutableListOf<IntArray>()
 
     val groupCount: Int get() = groups.size
 
-    fun getGroup(groupIndex: Int): ImageGroup = groups[groupIndex]
-    fun snapshotGroup(groupIndex: Int): List<RyoValue> = List(getGroup(groupIndex).levelCount) { level -> getGroup(groupIndex).getMipmapLevel(level) }
+    fun getGroup(groupIndex: Int): List<RyoValue> = groups[groupIndex].map(::get)
 
-    // CHECK、TODO：未来写FragmentalImage这个SpecialValue后，在中心Ryo提供图片快速转组，甚至快速创建Texture的API
-    fun createGroup(mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
-        val totalCount = 1 + mipmaps.size
-        val ids = IntArray(totalCount)
-
-        ids[0] = add(mainImage)
-        for (i in mipmaps.indices) ids[i + 1] = add(mipmaps[i])
-
-        val group = ImageGroup(this, ids)
-        groups.add(group)
-        return group
+    fun setGroup(groupIndex: Int, values: List<RyoValue>) {
+        require(values.isNotEmpty()) { "Group must contain at least one value" }
+        val old = groups[groupIndex]
+        for (id in old) removeSilently(id)
+        groups[groupIndex] = values.map(::add).toIntArray()
     }
 
-    fun replaceGroup(groupIndex: Int, mainImage: RyoValue, mipmaps: List<RyoValue> = emptyList()): ImageGroup {
-        require(groupIndex in groups.indices) { "Invalid group index: $groupIndex" }
-        val oldGroup = groups[groupIndex]
-        if (!oldGroup.isDeleted) for (id in oldGroup.mipmapIds) removeSilently(id)
-
-        val ids = IntArray(1 + mipmaps.size)
-        ids[0] = add(mainImage)
-        for (i in mipmaps.indices) ids[i + 1] = add(mipmaps[i])
-
-        oldGroup.markAsDeleted()
-        return ImageGroup(this, ids).also { groups[groupIndex] = it }
+    fun createGroup(values: List<RyoValue>): Int {
+        require(values.isNotEmpty()) { "Group must contain at least one value" }
+        groups += values.map(::add).toIntArray()
+        return groups.lastIndex
     }
 
-    fun deleteGroup(groupIndex: Int) = deleteGroup(getGroup(groupIndex))
-
-    fun deleteGroup(group: ImageGroup) {
-        if (group.isDeleted) return
-
-        val idsToDelete = group.mipmapIds
-        group.markAsDeleted() // 让这个 Facade 立即失效，防止悬垂引用
-        groups.remove(group)
-
-        // 调用基类的 remove，真正清理底层二进制槽位；用super防止递归
-        for (id in idsToDelete) super.remove(id)
+    fun appendToGroup(groupIndex: Int, value: RyoValue): Int {
+        val id = add(value)
+        groups[groupIndex] = groups[groupIndex] + id
+        return groups[groupIndex].lastIndex
     }
+
+    fun removeFromGroup(groupIndex: Int, valueIndex: Int): Boolean {
+        if (groupIndex !in groups.indices) return false
+        val ids = groups[groupIndex]
+        if (valueIndex !in ids.indices) return false
+        removeSilently(ids[valueIndex])
+        val next = ids.filterIndexed { idx, _ -> idx != valueIndex }.toIntArray()
+        if (next.isEmpty()) groups.removeAt(groupIndex) else groups[groupIndex] = next
+        return true
+    }
+
+    fun deleteGroup(groupIndex: Int): Boolean {
+        if (groupIndex !in groups.indices) return false
+        val ids = groups.removeAt(groupIndex)
+        for (id in ids) removeSilently(id)
+        return true
+    }
+
+    fun cloneGroup(groupIndex: Int): Int {
+        val source = groups[groupIndex]
+        val copied = IntArray(source.size) { i -> deepCopy(source[i]) }
+        groups += copied
+        return groups.lastIndex
+    }
+
+    fun getFi(groupIndex: Int, valueIndex: Int = 0): FragmentalImage = getGroup(groupIndex)[valueIndex].requireFragmentalImage()
+
+    fun setFi(groupIndex: Int, fi: FragmentalImage, valueIndex: Int = 0) {
+        val group = getGroup(groupIndex).toMutableList()
+        require(valueIndex in group.indices) { "Invalid valueIndex=$valueIndex for group=$groupIndex" }
+        group[valueIndex] = fi.specialValue()
+        setGroup(groupIndex, group)
+    }
+
+    fun createFiGroup(fi: FragmentalImage): Int = createGroup(listOf(fi.specialValue()))
 
     override fun rootIds(): IntArray {
-        var totalFrames = 0
-        for (i in groups.indices) totalFrames += groups[i].levelCount
-        val roots = IntArray(totalFrames)
+        var total = 0
+        groups.forEach { total += it.size }
+        val roots = IntArray(total)
         var offset = 0
-        for (i in groups.indices) {
-            val groupIds = groups[i].mipmapIds
-            groupIds.copyInto(roots, offset)
-            offset += groupIds.size
+        groups.forEach { ids ->
+            ids.copyInto(roots, offset)
+            offset += ids.size
         }
         return roots
     }
 
-    // 屏蔽对外的局部 id 删除，防止破坏 Mipmap 链完整性
-    override fun onRemove(id: Int) { // 如果基类的 remove 被（非预期的）外部调用了，我们需要做一致性检查
-        // 任何包含被删 ID 的组，视为被破坏，整组废弃
-        var i = groups.lastIndex
-        while (i >= 0) {
-            val group = groups[i]
-            if (group.mipmapIds.contains(id)) {
-                group.markAsDeleted()
-                groups.removeAt(i)
+    override fun onRemove(id: Int) {
+        var gi = groups.lastIndex
+        while (gi >= 0) {
+            val ids = groups[gi]
+            if (!ids.contains(id)) {
+                gi--
+                continue
             }
-
-            i--
+            val next = ids.filter { it != id }.toIntArray()
+            if (next.isEmpty()) groups.removeAt(gi) else groups[gi] = next
+            gi--
         }
     }
 
     override fun onIdsRemapped(idMap: IntArray) {
-        var i = groups.lastIndex
-        while (i >= 0) {
-            val group = groups[i] // GC 时更新 ID
-            var allValid = true
-            for (j in group.mipmapIds.indices) {
-                val oldId = group.mipmapIds[j]
-                val newId = if (oldId in idMap.indices) idMap[oldId] else -1
-                if (newId == -1) {
-                    allValid = false
-                    break
-                }
-                group.mipmapIds[j] = newId
+        var gi = groups.lastIndex
+        while (gi >= 0) {
+            val src = groups[gi]
+            var kept = 0
+            val mapped = IntArray(src.size)
+            src.forEach { old ->
+                val newId = if (old in idMap.indices) idMap[old] else -1
+                if (newId != -1) mapped[kept++] = newId
             }
-
-            // 如果 Mipmap 链条因 GC 出现了残缺（理应不会发生，除非严重 bug），整组剔除
-            if (!allValid) {
-                group.markAsDeleted()
-                groups.removeAt(i)
-            }
-
-            i--
+            val result = if (kept == mapped.size) mapped else mapped.copyOf(kept)
+            if (result.isEmpty()) groups.removeAt(gi) else groups[gi] = result
+            gi--
         }
     }
 
-    // --- 索引序列化部分保持一致 ---
     override fun readExtraIndex(reader: RyoReader) {
         val count = reader.readInt()
         groups.clear()
         repeat(count) {
-            val levelCount = reader.readInt()
-            val ids = IntArray(levelCount) { reader.readInt() }
-            groups.add(ImageGroup(this, ids))
+            val valueCount = reader.readInt()
+            groups += IntArray(valueCount) { reader.readInt() }
         }
     }
 
@@ -676,45 +678,9 @@ class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
 
     override fun writeExtraIndex(writer: RyoWriter) {
         writer.writeInt(groups.size)
-        for (i in groups.indices) {
-            val g = groups[i]
-            writer.writeInt(g.levelCount)
-            for (j in 0 until g.levelCount) writer.writeInt(g.mipmapIds[j])
-        }
-    }
-
-    // TIPS：这是一个Scoped Facade，不是一个快照！！
-    class ImageGroup internal constructor(private val chamber: TextureChamber, internal var mipmapIds: IntArray) {
-        val levelCount: Int get() = mipmapIds.size
-
-        // 状态感知：是否已经被销毁
-        val isDeleted: Boolean get() = mipmapIds.isEmpty()
-
-        val mainImage: RyoValue
-            get() {
-                check(!isDeleted) { "This ImageGroup has been deleted." }
-                return chamber.get(mipmapIds[0]) // 生成并返回反序列化快照
-            }
-
-
-        fun getMipmapLevel(level: Int): RyoValue {
-            check(!isDeleted) { "This ImageGroup has been deleted." }
-            require(level in mipmapIds.indices) { "Invalid mipmap level: $level. Max level is ${levelCount - 1}." }
-            return chamber.get(mipmapIds[level])
-        }
-
-        // TIPS：联动背后的Chamber
-        fun clone(): ImageGroup {
-            check(!isDeleted) { "Cannot clone a deleted ImageGroup." }
-            val clonedIds = IntArray(levelCount)
-            for (i in mipmapIds.indices) clonedIds[i] = chamber.deepCopy(mipmapIds[i])
-            val newGroup = ImageGroup(chamber, clonedIds)
-            chamber.groups.add(newGroup)
-            return newGroup
-        }
-
-        internal fun markAsDeleted() {
-            mipmapIds = IntArray(0)
+        groups.forEach { ids ->
+            writer.writeInt(ids.size)
+            ids.forEach(writer::writeInt)
         }
     }
 }
