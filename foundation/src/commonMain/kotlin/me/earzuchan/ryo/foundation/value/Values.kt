@@ -1,5 +1,6 @@
 package me.earzuchan.ryo.foundation.value
 
+import me.earzuchan.ryo.foundation.chamber.Chamber
 import me.earzuchan.ryo.foundation.type.ObjectTypeRef
 import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.type.TypeRef
@@ -58,27 +59,34 @@ data class RyoHostedValue(override val typeRef: ObjectTypeRef, val members: Map<
 // CHECK：为啥还要显式的Kind，不能按T分辨吗
 data class RyoSpecialValue<out T : Any>(override val typeRef: TypeRef, val kind: String, val payload: T) : RyoValue
 
-data class RyoMeta(val payload: Int, val type: Int) {
-    fun encode(): Int = (payload shl SHIFT) or (type and MASK)
+@JvmInline // TIPS：给Jvm看的，其它平台忽视之
+value class RyoMeta(val raw: Int) {
+    val payload: Int get() = raw ushr SHIFT
+    val type: Int get() = raw and MASK
 
+    // 替代之前的构造函数
     companion object {
         const val SHIFT = 2
         const val MASK = 3
-        fun decode(raw: Int): RyoMeta = RyoMeta(raw ushr SHIFT, raw and MASK)
+
+        fun create(payload: Int, type: Int): RyoMeta = RyoMeta((payload shl SHIFT) or (type and MASK))
+
+        // 预定义空元数据，避免重复计算
+        val NULL = create(0, Chamber.META_TYPE_NULL)
     }
 }
 
 @Suppress("ArrayInDataClass")
-data class RyoUnknownFrame(val legacyId: Int, val wireTypeId: String, val gloryId: String, val opaquePayload: ByteArray, val metas: List<RyoMeta>)
+data class RyoUnknownFrame(val nodeId: Int, val wireTypeId: String, val gloryId: String, val opaquePayload: ByteArray, val metas: List<RyoMeta>)
 
-data class RyoUnknownGraph(val rootLegacyId: Int, val frames: List<RyoUnknownFrame>) {
+data class RyoUnknownGraph(val rootId: Int, val frames: List<RyoUnknownFrame>) {
     init {
-        val ids = frames.map { it.legacyId }
+        val ids = frames.map { it.nodeId }
         require(ids.toSet().size == ids.size) { "Unknown graph contains duplicate frame ids" }
-        require(ids.contains(rootLegacyId)) { "Unknown graph root frame '$rootLegacyId' not found" }
+        require(ids.contains(rootId)) { "Unknown graph root frame '$rootId' not found" }
     }
 
-    fun frame(legacyId: Int): RyoUnknownFrame = frames.firstOrNull { it.legacyId == legacyId } ?: error("Unknown graph frame '$legacyId' not found")
+    fun frame(legacyId: Int): RyoUnknownFrame = frames.firstOrNull { it.nodeId == legacyId } ?: error("Unknown graph frame '$legacyId' not found")
 }
 
 @Suppress("ArrayInDataClass")

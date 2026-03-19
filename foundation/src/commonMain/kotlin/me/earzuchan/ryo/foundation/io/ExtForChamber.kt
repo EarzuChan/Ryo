@@ -7,7 +7,7 @@ import me.earzuchan.ryo.foundation.chamber.VolumeChamber
 import okio.FileSystem
 import okio.Path
 
-// CHECK：这个有点何意味，我本不想提供
+// TIPS：为了快捷而搞的扩展方法
 fun Chamber.loadFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM): Chamber {
     val bytes = fileSystem.read(path) { readByteArray() }
     return loadFromBytes(bytes)

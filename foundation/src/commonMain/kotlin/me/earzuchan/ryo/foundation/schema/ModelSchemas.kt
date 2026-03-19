@@ -6,7 +6,8 @@ import me.earzuchan.ryo.foundation.type.TypeRef
 import me.earzuchan.ryo.foundation.type.TypeRefs
 
 @Serializable
-data class ModelSchema(
+@ConsistentCopyVisibility
+data class ModelSchema internal constructor(
     val modelId: String,
     val kind: GloryKind,
     val members: List<ModelMember>,
@@ -30,20 +31,19 @@ data class ModelSchema(
     }
 
     fun member(name: String): ModelMember = members.firstOrNull { it.name == name } ?: error("Member $name not found in schema $modelId")
+}
 
-    // TIPS：兜底
-    fun normalized(): ModelSchema {
-        val normalizedCases = if (kind == GloryKind.CTOR && ctorCases.isEmpty()) listOf(CtorCase("default", members.map { it.name })) else ctorCases
-        return copy(ctorCases = normalizedCases)
-    }
+internal object ModelSchemaNormalizer {
+    fun normalize(schema: ModelSchema) = if (schema.kind == ModelSchema.GloryKind.CTOR && schema.ctorCases.isEmpty()) schema.copy(ctorCases = listOf(ModelSchema.CtorCase("default", schema.members.map { it.name }))) else schema
+    fun normalizeAll(schemas: Iterable<ModelSchema>): List<ModelSchema> = schemas.map(::normalize)
 }
 
 object ModelSchemaJson {
     private val json = Json { ignoreUnknownKeys = false; prettyPrint = false; isLenient = false }
-    fun parseOne(content: String): ModelSchema = json.decodeFromString(ModelSchema.serializer(), content).normalized()
-    fun parseList(content: String): List<ModelSchema> = json.decodeFromString(ListSerializer, content).map(ModelSchema::normalized)
-    fun toJson(schema: ModelSchema): String = json.encodeToString(ModelSchema.serializer(), schema.normalized())
-    fun toJson(schemas: List<ModelSchema>): String = json.encodeToString(ListSerializer, schemas.map(ModelSchema::normalized))
+    fun parseOne(content: String): ModelSchema = ModelSchemaNormalizer.normalize(json.decodeFromString(ModelSchema.serializer(), content))
+    fun parseList(content: String): List<ModelSchema> = ModelSchemaNormalizer.normalizeAll(json.decodeFromString(ListSerializer, content))
+    fun toJson(schema: ModelSchema): String = json.encodeToString(ModelSchema.serializer(), ModelSchemaNormalizer.normalize(schema))
+    fun toJson(schemas: List<ModelSchema>): String = json.encodeToString(ListSerializer, ModelSchemaNormalizer.normalizeAll(schemas))
     private val ListSerializer = kotlinx.serialization.builtins.ListSerializer(ModelSchema.serializer())
 }
 
@@ -55,8 +55,7 @@ class ModelSchemaBuilder internal constructor(private val modelId: String, priva
     fun member(name: String, wireTypeId: String, nullable: Boolean = false) = apply { members += ModelSchema.ModelMember(name, wireTypeId, nullable) }
     fun ctorCase(id: String, vararg args: String) = apply { ctorCases += ModelSchema.CtorCase(id, args.toList()) }
     fun customGlory(gloryId: String) = apply { customGloryId = gloryId }
-    fun build(): ModelSchema = ModelSchema(modelId, kind, members.toList(), ctorCases.toList(), customGloryId).normalized()
+    fun build(): ModelSchema = ModelSchemaNormalizer.normalize(ModelSchema(modelId, kind, members.toList(), ctorCases.toList(), customGloryId))
 }
 
-fun modelSchema(modelId: String, kind: ModelSchema.GloryKind, block: ModelSchemaBuilder.() -> Unit): ModelSchema = ModelSchemaBuilder(modelId, kind).apply(block).build()
-fun modelSchemas(block: MutableList<ModelSchema>.() -> Unit): List<ModelSchema> = mutableListOf<ModelSchema>().apply(block).map(ModelSchema::normalized)
+fun modelSchema(modelId: String, kind: ModelSchema.GloryKind, block: ModelSchemaBuilder.() -> Unit) = ModelSchemaBuilder(modelId, kind).apply(block).build()

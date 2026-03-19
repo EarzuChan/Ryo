@@ -148,7 +148,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         val fileMetaHeapEndPositions = IntArray(objCount) { indexReader.readInt() }
 
         val metaCount = if (objCount == 0) 0 else fileMetaHeapEndPositions.last()
-        repeat(metaCount) { metaHeap += RyoMeta.decode(indexReader.readInt()) }
+        repeat(metaCount) { metaHeap += RyoMeta(indexReader.readInt()) }
 
         val bindingCount = indexReader.readInt()
         repeat(bindingCount) {
@@ -239,7 +239,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             indexWriter.writeInt(currentVirtualMetaEnd)
         }
 
-        entryFrames.forEach { for (k in 0 until it.metaHeapCount) indexWriter.writeInt(metaHeap[it.metaHeapOffset + k].encode()) }
+        entryFrames.forEach { for (k in 0 until it.metaHeapCount) indexWriter.writeInt(metaHeap[it.metaHeapOffset + k].raw) }
 
         indexWriter.writeInt(gloryBindings.size)
         gloryBindings.forEachIndexed { index, binding ->
@@ -358,7 +358,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
                 val rewritten = if (m.type == META_TYPE_REFED) {
                     val cOld = m.payload
                     val cNew = if (cOld in idMap.indices) idMap[cOld] else -1
-                    if (cNew == -1) RyoMeta(0, META_TYPE_NULL) else RyoMeta(cNew, META_TYPE_REFED)
+                    if (cNew == -1) RyoMeta.create(0, META_TYPE_NULL) else RyoMeta.create(cNew, META_TYPE_REFED)
                 } else m
                 newMeta += rewritten
             }
@@ -380,39 +380,36 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
     internal fun deepCopy(rootId: Int): Int {
         require(rootId in entryFrames.indices && entryFrames[rootId].data != null) { "Cannot deep copy invalid or dead id: $rootId" }
 
-        // 记录在本次深拷贝中，旧 ID 到新 ID 的映射
-        // 这是为了防止 DAG(有向无环图) 中同一个对象被引用多次时，发生重复拷贝
         val originalFrameCount = entryFrames.size
         val copiedMap = IntArray(originalFrameCount) { -1 }
 
-        fun copyRecursive(currentId: Int): Int { // 如果这个 ID 是在本次拷贝之外新增的，或者是死节点，直接返回
+        fun copyRecursive(currentId: Int): Int {
             if (currentId >= originalFrameCount) return currentId
             val oldFrame = entryFrames[currentId]
             if (oldFrame.data == null) return -1
-
-            // 如果已经拷贝过，直接返回新 ID，维持原始图的引用结构（完美处理 DAG 分支共享）
             if (copiedMap[currentId] != -1) return copiedMap[currentId]
 
-            // 预分配新的占位 ID
             val newId = allocateId()
             copiedMap[currentId] = newId
 
-            val metaStart = metaHeap.size
-            val metaEnd = oldFrame.metaHeapOffset + oldFrame.metaHeapCount
-
-            // 递归深拷贝所有的 Meta 引用
-            for (i in oldFrame.metaHeapOffset until metaEnd) {
-                val m = metaHeap[i]
+            val localMetas = IntArray(oldFrame.metaHeapCount)
+            for (i in 0 until oldFrame.metaHeapCount) {
+                val m = metaHeap[oldFrame.metaHeapOffset + i]
                 if (m.type == META_TYPE_REFED) {
-                    val childOldId = m.payload
-                    val childNewId = copyRecursive(childOldId)
-                    metaHeap += if (childNewId != -1) RyoMeta(childNewId, META_TYPE_REFED) else RyoMeta(0, META_TYPE_NULL)
-                } else metaHeap += m
+                    val childNewId = copyRecursive(m.payload)
+                    localMetas[i] = if (childNewId != -1) RyoMeta.create(childNewId, META_TYPE_REFED).raw else RyoMeta.NULL.raw
+                } else localMetas[i] = m.raw
             }
 
-            // 更新新节点的数据
+            // 统一写入全局堆
+            val metaStart = metaHeap.size
+            for (rawMeta in localMetas) metaHeap += RyoMeta(rawMeta)
+
             entryFrames[newId] = EntryFrame(
-                gloryBindingId = oldFrame.gloryBindingId, metaHeapOffset = metaStart, metaHeapCount = metaHeap.size - metaStart, data = oldFrame.data!!.copyOf() // 【关键】深拷贝二进制 payload
+                gloryBindingId = oldFrame.gloryBindingId,
+                metaHeapOffset = metaStart,
+                metaHeapCount = oldFrame.metaHeapCount,
+                data = oldFrame.data!!.copyOf()
             )
 
             return newId
@@ -423,7 +420,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
 
     internal fun writeChild(ctx: WriteCtx, value: RyoValue) {
         if (value is RyoNullValue) {
-            metaHeap += RyoMeta(0, META_TYPE_NULL)
+            metaHeap += RyoMeta.create(0, META_TYPE_NULL)
             return
         }
 
@@ -431,13 +428,13 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         if (ryo.isInlineWireType(wireTypeId)) {
             val gloryId = ryo.resolveGloryId(value.typeRef)
             val bindingId = ensureBinding(wireTypeId, gloryId)
-            metaHeap += RyoMeta(bindingId, META_TYPE_INLINED)
+            metaHeap += RyoMeta.create(bindingId, META_TYPE_INLINED)
             ryo.requireGlory(gloryId).write(ctx, value, wireTypeId)
             return
         }
 
         val childId = allocateId()
-        metaHeap += RyoMeta(childId, META_TYPE_REFED)
+        metaHeap += RyoMeta.create(childId, META_TYPE_REFED)
         ctx.pendingChildren += (childId to value)
     }
 
@@ -479,7 +476,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             return
         }
 
-        val frames = graph.frames.associateBy { it.legacyId }
+        val frames = graph.frames.associateBy { it.nodeId }
         val imported = mutableMapOf<Int, Int>()
 
         fun importNode(legacyId: Int, forcedId: Int? = null): Int {
@@ -489,36 +486,63 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             imported[legacyId] = newId
 
             val bindingId = ensureBinding(frame.wireTypeId, frame.gloryId)
-            val metaStart = metaHeap.size
-            frame.metas.forEach { meta ->
-                if (meta.type != META_TYPE_REFED) metaHeap += meta
-                else metaHeap += RyoMeta(importNode(meta.payload), META_TYPE_REFED)
+
+            // 【修Bug关键】预先收集子节点的引用，避免递归调用污染全局的 metaHeap
+            val localMetas = IntArray(frame.metas.size)
+            frame.metas.forEachIndexed { index, meta ->
+                if (meta.type != META_TYPE_REFED) localMetas[index] = meta.raw else {
+                    val childNewId = importNode(meta.payload) // 触发递归
+                    localMetas[index] = RyoMeta.create(childNewId, META_TYPE_REFED).raw
+                }
             }
-            entryFrames[newId] = EntryFrame(bindingId, metaStart, metaHeap.size - metaStart, frame.opaquePayload.copyOf())
+
+            // 递归全部回归后，当前节点再安全、连续地推入全局 metaHeap
+            val metaStart = metaHeap.size
+            for (rawMeta in localMetas) metaHeap += RyoMeta(rawMeta)
+
+            entryFrames[newId] = EntryFrame(bindingId, metaStart, localMetas.size, frame.opaquePayload.copyOf())
             return newId
         }
 
-        importNode(graph.rootLegacyId, targetId)
+        importNode(graph.rootId, targetId)
     }
 
     private fun exportUnknownGraph(rootId: Int): RyoUnknownGraph {
-        val visited = linkedSetOf<Int>()
         val stack = ArrayDeque<Int>()
+        stack.addLast(rootId)
+
+        // 【优化】维护一个从原绝对 ID 到相对序号(0 ~ N-1)的映射表
+        val idRemap = linkedMapOf<Int, Int>()
         val frames = mutableListOf<RyoUnknownFrame>()
-        stack += rootId
+
+        fun remap(oldId: Int): Int = idRemap.getOrPut(oldId) { idRemap.size }
 
         while (stack.isNotEmpty()) {
             val id = stack.removeLast()
-            if (!visited.add(id)) continue
+            val relativeId = remap(id)
+
+            // 避免重复遍历
+            if (frames.any { it.nodeId == relativeId }) continue
+
             val frame = entryFrames.getOrNull(id) ?: error("Unknown export frame id out of bounds: $id")
             val payload = requireNotNull(frame.data) { "Unknown export frame id=$id is deleted" }
             val binding = gloryBindings[frame.gloryBindingId]
+
             val metas = if (frame.metaHeapCount <= 0) emptyList() else List(frame.metaHeapCount) { idx -> metaHeap[frame.metaHeapOffset + idx] }
-            frames += RyoUnknownFrame(id, binding.wireTypeId, binding.gloryId, payload.copyOf(), metas)
-            metas.forEach { if (it.type == META_TYPE_REFED && it.payload !in visited) stack += it.payload }
+
+            // 【优雅】将 Meta 中的绝对引用替换为相对引用
+            val relativeMetas = metas.map {
+                if (it.type == META_TYPE_REFED) {
+                    stack.addLast(it.payload) // 顺便压栈
+                    RyoMeta.create(remap(it.payload), META_TYPE_REFED)
+                } else it
+            }
+
+            frames += RyoUnknownFrame(relativeId, binding.wireTypeId, binding.gloryId, payload.copyOf(), relativeMetas)
         }
 
-        return RyoUnknownGraph(rootId, frames)
+        // rootId 的相对序号一定是通过 remap(rootId) 获取的，通常就是 0
+        return RyoUnknownGraph(remap(rootId), frames)
     }
 
     private fun clearAll() {

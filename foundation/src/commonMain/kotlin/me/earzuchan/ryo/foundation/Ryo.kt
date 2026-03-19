@@ -18,6 +18,7 @@ import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.schema.ModelSchemaJson
+import me.earzuchan.ryo.foundation.schema.ModelSchemaNormalizer
 import me.earzuchan.ryo.foundation.type.ArrayTypeRef
 import me.earzuchan.ryo.foundation.type.ObjectTypeRef
 import me.earzuchan.ryo.foundation.type.PrimitiveTypeRef
@@ -86,7 +87,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
 
     fun hosted(modelId: String, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, validateNow, block)
     fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit): RyoHostedValue {
-        // TODO：我觉得应该先init一个值，再通过builder在上面覆写内容
+        // TODO：我觉得应该先init一个值（通过initRyoTypeFor(typeRef)），再通过builder在上面覆写内容
         val b = HostedBuilder()
         b.block()
         val value = RyoHostedValue(typeRef, b.map.toMap(), ctorCaseIndex)
@@ -110,7 +111,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         private val customGlories = linkedMapOf<String, Glory>()
         private val customMappings = linkedMapOf<String, String>()
 
-        private var unknownTypePolicy: UnknownTypePolicy = UnknownTypePolicy.STRICT
+        private var unknownTypePolicy: UnknownTypePolicy = UnknownTypePolicy.OPAQUE
         private var strictSchemaGraph: Boolean = true
         private var validateOnCreate: Boolean = true
 
@@ -119,7 +120,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         fun validateOnCreate(enabled: Boolean) = apply { validateOnCreate = enabled }
 
         fun registerSchema(schema: ModelSchema) = apply {
-            val normalized = schema.normalized()
+            val normalized = ModelSchemaNormalizer.normalize(schema)
             require(normalized.modelId !in schemas) { "Duplicate schema modelId: ${normalized.modelId}" }
             schemas[normalized.modelId] = normalized
         }
@@ -189,7 +190,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
             config.customGlories.forEach(runtime::registerGlory)
             config.customMappings.forEach { (wireTypeId, gloryId) -> runtime.mapWireTypeToGlory(wireTypeId, gloryId) }
-            config.schemas.map(ModelSchema::normalized).forEach(runtime::registerSchema)
+            ModelSchemaNormalizer.normalizeAll(config.schemas).forEach(runtime::registerSchema)
 
             runtime.validateSchemas(config.strictSchemaGraph)
             return runtime
@@ -263,7 +264,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         is RyoUnknownValue -> {
             val graph = value.graph
             if (graph != null) {
-                val root = graph.frame(graph.rootLegacyId)
+                val root = graph.frame(graph.rootId)
                 require(root.wireTypeId == value.wireTypeId) { "Unknown graph root wire mismatch. root=${root.wireTypeId} value=${value.wireTypeId}" }
                 require(root.gloryId == value.gloryId) { "Unknown graph root glory mismatch. root=${root.gloryId} value=${value.gloryId}" }
             }
@@ -291,16 +292,17 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
     }
 
     private fun registerSchema(schema: ModelSchema) {
-        require(schema.modelId !in schemas) { "Duplicate schema modelId: ${schema.modelId}" }
-        schemas[schema.modelId] = schema
+        val normalized = ModelSchemaNormalizer.normalize(schema)
+        require(normalized.modelId !in schemas) { "Duplicate schema modelId: ${normalized.modelId}" }
+        schemas[normalized.modelId] = normalized
 
-        val gloryId = when (schema.kind) {
+        val gloryId = when (normalized.kind) {
             ModelSchema.GloryKind.FIELD -> GloryIds.FIELD
             ModelSchema.GloryKind.CTOR -> GloryIds.CTOR
-            ModelSchema.GloryKind.CUSTOM -> schema.customGloryId ?: error("customGloryId required for ${schema.modelId}")
+            ModelSchema.GloryKind.CUSTOM -> normalized.customGloryId ?: error("customGloryId required for ${normalized.modelId}")
         }
 
-        wireTypeToGlory[schema.modelId] = gloryId
+        wireTypeToGlory[normalized.modelId] = gloryId
     }
 
     private fun registerGlory(glory: Glory) {

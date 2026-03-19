@@ -346,15 +346,16 @@ class RyoFoundationTest {
     @Test
     fun testUnknownGraphShouldMoveAcrossVolumesWithoutDecode() {
         val opaque = Ryo { unknownTypePolicy(UnknownTypePolicy.OPAQUE) }
+
         val unknown = RyoUnknownValue(
             typeRef = TypeRefs.objectType("demo.unknown.Root"),
             gloryId = "demo.UnknownGlory",
             opaquePayload = byteArrayOf(1, 2, 3),
-            metas = listOf(RyoMeta(200, 3)),
+            metas = listOf(RyoMeta.create(200, 3)),
             graph = RyoUnknownGraph(
-                rootLegacyId = 100,
+                rootId = 100,
                 frames = listOf(
-                    RyoUnknownFrame(100, "demo.unknown.Root", "demo.UnknownGlory", byteArrayOf(1, 2, 3), listOf(RyoMeta(200, 3))),
+                    RyoUnknownFrame(100, "demo.unknown.Root", "demo.UnknownGlory", byteArrayOf(1, 2, 3), listOf(RyoMeta.create(200, 3))),
                     RyoUnknownFrame(200, "demo.unknown.Child", "demo.UnknownGloryChild", byteArrayOf(9), emptyList())
                 )
             )
@@ -366,11 +367,16 @@ class RyoFoundationTest {
         val dst = opaque.createVolumeChamber().apply { set("u", exported) }
         val moved = dst.requireAs<RyoUnknownValue>("u")
         val graph = assertNotNull(moved.graph)
+
         assertEquals(2, graph.frames.size)
-        val root = graph.frame(graph.rootLegacyId)
+        val root = graph.frame(graph.rootId)
         val refMeta = root.metas.single()
+
         assertEquals(3, refMeta.type)
-        assertTrue(graph.frames.any { it.legacyId == refMeta.payload })
+        assertTrue(graph.frames.any { it.nodeId == refMeta.payload })
+
+        val remappedIds = graph.frames.map { it.nodeId }.sorted()
+        assertEquals(listOf(0, 1), remappedIds, "Exported graph IDs must be perfectly normalized to 0-based indices!")
     }
 
     @Test
