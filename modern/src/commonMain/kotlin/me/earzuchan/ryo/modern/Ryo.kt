@@ -17,7 +17,7 @@ class ModernizedRyo private constructor(val foundation: FoundationalRyo, interna
     fun newSession(typeRef: TypeRef): EditorSession = newSession(foundation.newValue(typeRef))
     fun newSession(wireTypeId: String): EditorSession = newSession(TypeRefs.fromWireTypeId(wireTypeId))
 
-    // 管理大盘
+    // 管理卷
     fun manage(volume: VolumeChamber): ManagedVolume = ManagedVolume(this, volume)
     fun manage(texture: TextureChamber): ManagedTexture = ManagedTexture(texture)
 

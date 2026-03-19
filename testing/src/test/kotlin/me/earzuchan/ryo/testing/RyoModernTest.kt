@@ -95,7 +95,7 @@ class RyoModernTest {
         root["name"] = "neo"
         root["profile"].asHosted()["title"] = "matrix"
 
-        // 验证隔离性：大盘（Volume）绝对静止，一丝波澜都没有
+        // 验证隔离性：卷绝对静止，一丝波澜都没有
         val rawVolumeData = volume.requireSnapshotAs<RyoHostedValue>("demo")
         assertEquals("senpai", rawVolumeData.members["name"].asScalarOrNull()?.value, "Volume should not be polluted by uncommitted session!")
         assertEquals(0L, volume.entries.value["demo"], "Revision should not increase before commit!")
