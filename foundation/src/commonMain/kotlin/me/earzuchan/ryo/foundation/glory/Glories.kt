@@ -12,6 +12,7 @@ import me.earzuchan.ryo.foundation.type.TypeRef
 import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
+import me.earzuchan.ryo.foundation.value.RyoNullValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
 import me.earzuchan.ryo.foundation.value.RyoValue
 
@@ -55,13 +56,21 @@ internal class ScalarGlory(
 ) : Glory {
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         require(declaredWireTypeId == wireTypeId) { "Declared wire mismatch: $declaredWireTypeId != $wireTypeId" }
-        return RyoScalarValue.of(typeRef, ctx.reader.r())
+        val raw = ctx.reader.r()
+        return if (raw == null) RyoNullValue(typeRef) else RyoScalarValue.of(typeRef, raw)
     }
 
     override fun write(ctx: Chamber.WriteCtx, value: RyoValue, declaredWireTypeId: String) {
         require(declaredWireTypeId == wireTypeId) { "Declared wire mismatch: $declaredWireTypeId != $wireTypeId" }
-        val scalar = value as? RyoScalarValue ?: error("Expect RyoScalarValue for $wireTypeId")
-        ctx.writer.w(scalar.value)
+        when (value) {
+            is RyoNullValue -> {
+                require(wireTypeId == TypeIds.STRING) { "Only String scalar can be null. wireTypeId=$wireTypeId" }
+                ctx.writer.w(null)
+            }
+
+            is RyoScalarValue -> ctx.writer.w(value.value)
+            else -> error("Expect scalar/null scalar for $wireTypeId")
+        }
     }
 }
 
@@ -76,7 +85,7 @@ internal class PrimitiveArrayGlory(
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         require(declaredWireTypeId == arrayWireTypeId)
         val n = ctx.reader.readInt()
-        val items = ArrayList<RyoValue?>(n)
+        val items = ArrayList<RyoValue>(n)
         repeat(n) { items += RyoScalarValue.of(elementTypeRef, ctx.reader.readElem()) }
         return RyoContainerValue(TypeRefs.fromWireTypeId(arrayWireTypeId), items)
     }
@@ -100,8 +109,11 @@ internal class StringArrayGlory : Glory {
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
         require(declaredWireTypeId == stringArrayWireTypeId)
         val n = ctx.reader.readInt()
-        val items = ArrayList<RyoValue?>(n)
-        repeat(n) { items += RyoScalarValue.of(TypeRefs.STRING, ctx.reader.readString()) }
+        val items = ArrayList<RyoValue>(n)
+        repeat(n) {
+            val v = ctx.reader.readString()
+            items += if (v == null) RyoNullValue(TypeRefs.STRING) else RyoScalarValue.of(TypeRefs.STRING, v)
+        }
         return RyoContainerValue(TypeRefs.fromWireTypeId(stringArrayWireTypeId), items)
     }
 
@@ -110,8 +122,11 @@ internal class StringArrayGlory : Glory {
         val arr = value as? RyoContainerValue ?: error("Expect RyoContainerValue for $stringArrayWireTypeId")
         ctx.writer.writeInt(arr.elements.size)
         arr.elements.forEach { e ->
-            val s = e as? RyoScalarValue ?: error("Expect scalar string element")
-            ctx.writer.writeString(s.value as String?)
+            when (e) {
+                is RyoNullValue -> ctx.writer.writeString(null)
+                is RyoScalarValue -> ctx.writer.writeString(e.value as String)
+                else -> error("Expect scalar/null string element")
+            }
         }
     }
 }
@@ -120,9 +135,10 @@ internal class ObjectArrayGlory : Glory {
     override val id: String = GloryIds.ARR_OBJECT
 
     override fun read(ctx: Chamber.ReadCtx, declaredWireTypeId: String): RyoValue {
+        val arrayRef = TypeRefs.fromWireTypeId(declaredWireTypeId) as? me.earzuchan.ryo.foundation.type.ArrayTypeRef ?: error("ObjectArrayGlory requires array declared type. actual=$declaredWireTypeId")
         val n = ctx.reader.readInt()
-        val items = ArrayList<RyoValue?>(n)
-        repeat(n) { items += ctx.chamber.readChild(ctx) }
+        val items = ArrayList<RyoValue>(n)
+        repeat(n) { items += ctx.chamber.readChild(ctx, arrayRef.element) }
         return RyoContainerValue(TypeRefs.fromWireTypeId(declaredWireTypeId), items)
     }
 
@@ -143,10 +159,10 @@ internal class FieldGlory(private val ryo: RyoRuntime) : Glory {
         val schema = ryo.requireSchema(declaredWireTypeId)
         require(schema.kind == ModelSchema.GloryKind.FIELD) { "Schema $declaredWireTypeId is not FIELD" }
 
-        val map = LinkedHashMap<String, RyoValue?>()
+        val map = LinkedHashMap<String, RyoValue>()
         schema.members.forEach { m ->
             val memberWire = m.wireTypeId
-            map[m.name] = if (memberWire in directWireTypes) RyoScalarValue.of(m.typeRef, ryo.readDirectScalar(memberWire, ctx.reader)) else ctx.chamber.readChild(ctx)
+            map[m.name] = if (memberWire in directWireTypes) ryo.readDirectScalar(memberWire, ctx.reader) else ctx.chamber.readChild(ctx, m.typeRef)
         }
 
         return RyoHostedValue(ObjectTypeRef(schema.modelId), map)
@@ -158,13 +174,9 @@ internal class FieldGlory(private val ryo: RyoRuntime) : Glory {
         val hosted = value as? RyoHostedValue ?: error("Expect RyoHostedValue for $declaredWireTypeId")
 
         schema.members.forEach { m ->
-            val mv = hosted.members[m.name]
-            if (mv == null && !m.nullable) error("Member '${m.name}' is not nullable in model ${schema.modelId}")
+            val mv = hosted.members[m.name] ?: if (m.nullable) RyoNullValue(m.typeRef) else error("Member '${m.name}' is required in model ${schema.modelId}")
             val memberWire = m.wireTypeId
-            if (memberWire in directWireTypes) {
-                val s = mv as? RyoScalarValue ?: error("Direct scalar member '${m.name}' cannot be null in FIELD model ${schema.modelId}")
-                ryo.writeDirectScalar(memberWire, s.value, ctx.writer)
-            } else ctx.chamber.writeChild(ctx, mv)
+            if (memberWire in directWireTypes) ryo.writeDirectScalar(memberWire, mv, ctx.writer) else ctx.chamber.writeChild(ctx, mv)
         }
     }
 }
@@ -183,11 +195,11 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
         val caseIndex = if (cases.size > 1) normalizeSignedByteIndex(ctx.reader.readSignedByte(), cases.size) else 0
         val selected = cases[caseIndex]
 
-        val map = LinkedHashMap<String, RyoValue?>()
+        val map = LinkedHashMap<String, RyoValue>()
         selected.args.forEach { name ->
             val m = schema.member(name)
             val memberWire = m.wireTypeId
-            map[name] = if (memberWire in directWireTypes) RyoScalarValue.of(m.typeRef, ryo.readDirectScalar(memberWire, ctx.reader)) else ctx.chamber.readChild(ctx)
+            map[name] = if (memberWire in directWireTypes) ryo.readDirectScalar(memberWire, ctx.reader) else ctx.chamber.readChild(ctx, m.typeRef)
         }
 
         val resolvedCtorCaseIndex = if (cases.size > 1) caseIndex else null
@@ -207,14 +219,9 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
 
         selected.args.forEach { name ->
             val m = schema.member(name)
-            val mv = hosted.members[name]
-            if (mv == null && !m.nullable) error("Ctor arg '$name' is not nullable in model ${schema.modelId}")
+            val mv = hosted.members[name] ?: if (m.nullable) RyoNullValue(m.typeRef) else error("Ctor arg '$name' is required in model ${schema.modelId}")
             val memberWire = m.wireTypeId
-
-            if (memberWire in directWireTypes) {
-                val value = mv?.let { (it as? RyoScalarValue ?: error("Missing direct ctor arg $name")).value }
-                ryo.writeDirectScalar(memberWire, value, ctx.writer)
-            } else ctx.chamber.writeChild(ctx, mv)
+            if (memberWire in directWireTypes) ryo.writeDirectScalar(memberWire, mv, ctx.writer) else ctx.chamber.writeChild(ctx, mv)
         }
     }
 
@@ -227,7 +234,7 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
             provided.all { it in c.args } && c.args.all { arg ->
                 val m = schema.member(arg)
                 val mv = hosted.members[arg]
-                !(mv == null && !m.nullable)
+                !(mv == null && !m.nullable) && !(mv is RyoNullValue && !m.nullable)
             }
         }
 

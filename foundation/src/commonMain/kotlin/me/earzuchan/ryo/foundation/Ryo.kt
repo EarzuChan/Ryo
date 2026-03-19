@@ -17,6 +17,7 @@ import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.schema.ModelSchema
+import me.earzuchan.ryo.foundation.schema.ModelSchemaJson
 import me.earzuchan.ryo.foundation.type.ArrayTypeRef
 import me.earzuchan.ryo.foundation.type.ObjectTypeRef
 import me.earzuchan.ryo.foundation.type.PrimitiveTypeRef
@@ -26,8 +27,11 @@ import me.earzuchan.ryo.foundation.type.TypeRef
 import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
+import me.earzuchan.ryo.foundation.value.RyoMeta
+import me.earzuchan.ryo.foundation.value.RyoNullValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
 import me.earzuchan.ryo.foundation.value.RyoSpecialValue
+import me.earzuchan.ryo.foundation.value.RyoUnknownGraph
 import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
 
@@ -36,13 +40,17 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
     fun createTextureChamber(): TextureChamber = TextureChamber(runtime)
 
     fun requireSchema(modelId: String): ModelSchema = runtime.requireSchema(modelId)
-    fun newValue(typeRef: TypeRef): RyoValue = runtime.newValue(typeRef)
-    fun newValue(wireTypeId: String): RyoValue = newValue(TypeRefs.fromWireTypeId(wireTypeId))
-    fun validate(value: RyoValue) = runtime.validateForWrite(value)
+    fun initRyoTypeFor(typeRef: TypeRef): RyoValue = runtime.initRyoValueFor(typeRef)
+    fun initRyoTypeFor(wireTypeId: String): RyoValue = initRyoTypeFor(TypeRefs.fromWireTypeId(wireTypeId))
+    fun validateRyoValue(value: RyoValue) = runtime.validateRyoValue(value)
 
-    fun scalar(value: Any): RyoScalarValue = RyoScalarValue.infer(value) // 自动推导，不可传Null
-    fun scalar(typeRef: TypeRef, value: Any?): RyoScalarValue = RyoScalarValue.of(typeRef, value)
-    fun scalar(wireTypeId: String, value: Any?): RyoScalarValue = scalar(TypeRefs.fromWireTypeId(wireTypeId), value)
+    fun scalar(value: Any): RyoScalarValue = RyoScalarValue.infer(value) // TIPS：本方法自动推导
+    fun scalar(typeRef: TypeRef, value: Any): RyoScalarValue = RyoScalarValue.of(typeRef, value)
+    fun scalar(wireTypeId: String, value: Any): RyoScalarValue = scalar(TypeRefs.fromWireTypeId(wireTypeId), value)
+    fun nullValue(typeRef: TypeRef): RyoNullValue = RyoNullValue(typeRef)
+    fun nullValue(wireTypeId: String): RyoNullValue = RyoNullValue(TypeRefs.fromWireTypeId(wireTypeId))
+    fun value(typeRef: TypeRef, value: Any?): RyoValue = if (value == null) nullValue(typeRef) else scalar(typeRef, value)
+    fun value(wireTypeId: String, value: Any?): RyoValue = value(TypeRefs.fromWireTypeId(wireTypeId), value)
 
     // HACK：我个人认为下面的有点无意义（已有自动推导、传type和null），但AI说留着也无妨，静态类型约束这一块
     fun bool(value: Boolean): RyoScalarValue = RyoScalarValue.of(TypeRefs.BOOLEAN, value)
@@ -53,15 +61,12 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
     fun short(value: Short): RyoScalarValue = RyoScalarValue.of(TypeRefs.SHORT, value)
     fun byte(value: Byte): RyoScalarValue = RyoScalarValue.of(TypeRefs.BYTE, value)
     fun char(value: Char): RyoScalarValue = RyoScalarValue.of(TypeRefs.CHAR, value)
-    fun str(value: String?): RyoScalarValue = RyoScalarValue.of(TypeRefs.STRING, value)
-
-    fun nullScalar(typeRef: TypeRef): RyoScalarValue = RyoScalarValue.nullOf(typeRef)
-    fun nullScalar(wireTypeId: String): RyoScalarValue = nullScalar(TypeRefs.fromWireTypeId(wireTypeId))
+    fun str(value: String): RyoScalarValue = RyoScalarValue.of(TypeRefs.STRING, value)
 
     class HostedBuilder internal constructor() {
-        internal val map = linkedMapOf<String, RyoValue?>()
+        internal val map = linkedMapOf<String, RyoValue>()
 
-        fun set(name: String, value: RyoValue?) {
+        fun set(name: String, value: RyoValue) {
             map[name] = value
         }
 
@@ -70,58 +75,60 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         }
 
         fun setScalar(name: String, typeRef: TypeRef, value: Any?) {
-            map[name] = RyoScalarValue.of(typeRef, value)
+            map[name] = if (value == null) RyoNullValue(typeRef) else RyoScalarValue.of(typeRef, value)
         }
 
         fun setScalar(name: String, wireTypeId: String, value: Any?) = setScalar(name, TypeRefs.fromWireTypeId(wireTypeId), value)
 
-        fun setNullScalar(name: String, typeRef: TypeRef) {
-            map[name] = RyoScalarValue.nullOf(typeRef)
-        }
-
-        fun setNullScalar(name: String, wireTypeId: String) = setNullScalar(name, TypeRefs.fromWireTypeId(wireTypeId))
+        fun setNull(name: String, typeRef: TypeRef) { map[name] = RyoNullValue(typeRef) }
+        fun setNull(name: String, wireTypeId: String) = setNull(name, TypeRefs.fromWireTypeId(wireTypeId))
     }
 
     fun hosted(modelId: String, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, validateNow, block)
     fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit): RyoHostedValue {
+        // TODO：我觉得应该先init一个值，再通过builder在上面覆写内容
         val b = HostedBuilder()
         b.block()
         val value = RyoHostedValue(typeRef, b.map.toMap(), ctorCaseIndex)
-        if (validateNow) runtime.validateForWrite(value)
+        if (validateNow) runtime.validateRyoValue(value)
         return value
     }
 
-    fun container(typeRef: TypeRef, elements: List<RyoValue?>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue {
+    fun container(typeRef: TypeRef, elements: List<RyoValue>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue {
         require(typeRef is ArrayTypeRef) { "Container typeRef must be array. actual=${typeRef.wireTypeId}" }
         val value = RyoContainerValue(typeRef, elements)
-        if (validateNow) runtime.validateForWrite(value)
+        if (validateNow) runtime.validateRyoValue(value)
         return value
     }
-    fun container(wireTypeId: String, elements: List<RyoValue?>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue = container(TypeRefs.fromWireTypeId(wireTypeId), elements, validateNow)
+    fun container(wireTypeId: String, elements: List<RyoValue>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue = container(TypeRefs.fromWireTypeId(wireTypeId), elements, validateNow)
+
     fun <T : Any> special(typeRef: TypeRef, kind: String, payload: T): RyoSpecialValue<T> = RyoSpecialValue(typeRef, kind, payload)
+    fun <T : Any> special(wireTypeId: String, kind: String, payload: T): RyoSpecialValue<T> = RyoSpecialValue(TypeRefs.fromWireTypeId(wireTypeId), kind, payload)
 
     class Builder internal constructor() {
         private val schemas = linkedMapOf<String, ModelSchema>()
         private val customGlories = linkedMapOf<String, Glory>()
         private val customMappings = linkedMapOf<String, String>()
+
         private var unknownTypePolicy: UnknownTypePolicy = UnknownTypePolicy.STRICT
         private var strictSchemaGraph: Boolean = true
         private var validateOnCreate: Boolean = true
 
         fun unknownTypePolicy(policy: UnknownTypePolicy) = apply { unknownTypePolicy = policy }
-
         fun strictSchemaGraph(enabled: Boolean) = apply { strictSchemaGraph = enabled }
         fun validateOnCreate(enabled: Boolean) = apply { validateOnCreate = enabled }
 
         fun registerSchema(schema: ModelSchema) = apply {
-            require(schema.modelId !in schemas) { "Duplicate schema modelId: ${schema.modelId}" }
-            schemas[schema.modelId] = schema
+            val normalized = schema.normalized()
+            require(normalized.modelId !in schemas) { "Duplicate schema modelId: ${normalized.modelId}" }
+            schemas[normalized.modelId] = normalized
         }
-
         fun registerSchemas(list: Iterable<ModelSchema>) = apply { list.forEach(::registerSchema) }
 
-        internal fun registerGlory(glory: Glory) = apply { customGlories[glory.id] = glory }
+        fun registerSchemaJson(content: String) = apply { registerSchema(ModelSchemaJson.parseOne(content)) }
+        fun registerSchemasJson(content: String) = apply { registerSchemas(ModelSchemaJson.parseList(content)) }
 
+        internal fun registerGlory(glory: Glory) = apply { customGlories[glory.id] = glory }
         internal fun mapWireTypeToGlory(wireTypeId: String, gloryId: String) = apply { customMappings[wireTypeId] = gloryId }
 
         fun build() = Ryo(
@@ -182,7 +189,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
             config.customGlories.forEach(runtime::registerGlory)
             config.customMappings.forEach { (wireTypeId, gloryId) -> runtime.mapWireTypeToGlory(wireTypeId, gloryId) }
-            config.schemas.forEach(runtime::registerSchema)
+            config.schemas.map(ModelSchema::normalized).forEach(runtime::registerSchema)
 
             runtime.validateSchemas(config.strictSchemaGraph)
             return runtime
@@ -207,15 +214,20 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         error("No glory mapping for wireTypeId=$wireTypeId")
     }
 
-    fun unknownValueFor(wireTypeId: String, gloryId: String, payload: ByteArray? = null, metaHeapSlice: IntArray = intArrayOf()) = when (unknownTypePolicy) {
-        UnknownTypePolicy.OPAQUE -> RyoUnknownValue(TypeRefs.fromWireTypeId(wireTypeId), gloryId, payload, metaHeapSlice)
+    fun unknownValueFor(
+        wireTypeId: String,
+        gloryId: String,
+        payload: ByteArray,
+        metas: List<RyoMeta>,
+        graph: RyoUnknownGraph? = null
+    ) = when (unknownTypePolicy) {
+        UnknownTypePolicy.OPAQUE -> RyoUnknownValue(TypeRefs.fromWireTypeId(wireTypeId), gloryId, payload, metas, graph)
         UnknownTypePolicy.STRICT -> throw GloryNotFoundException(gloryId, wireTypeId)
     }
 
     fun isInlineWireType(wireTypeId: String): Boolean = wireTypeId in inlineWireTypes
 
-    // CHECK：就在这初始化会不会太潦草
-    fun newValue(typeRef: TypeRef): RyoValue = when (typeRef) {
+    fun initRyoValueFor(typeRef: TypeRef): RyoValue = when (typeRef) {
         is PrimitiveTypeRef -> when (typeRef.wireTypeId) {
             TypeIds.BOOLEAN -> RyoScalarValue.of(typeRef, false)
             TypeIds.BYTE -> RyoScalarValue.of(typeRef, 0.toByte())
@@ -234,30 +246,48 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
         is ObjectTypeRef -> {
             val schema = requireSchema(typeRef.modelId)
-            require(schema.kind != ModelSchema.GloryKind.CUSTOM) { "Cannot create default value for custom schema ${schema.modelId}" }
-            val members = linkedMapOf<String, RyoValue?>()
-            schema.members.forEach { member -> members[member.name] = if (member.nullable) null else newValue(member.typeRef) }
+            require(schema.kind != ModelSchema.GloryKind.CUSTOM) { "Cannot auto create default value for custom schema ${schema.modelId}" }
+
+            val members = linkedMapOf<String, RyoValue>()
+            schema.members.forEach { member -> members[member.name] = if (member.nullable) RyoNullValue(member.typeRef) else initRyoValueFor(member.typeRef) }
             RyoHostedValue(typeRef, members, if (schema.kind == ModelSchema.GloryKind.CTOR && schema.ctorCases.size > 1) 0 else null)
         }
     }
 
-    fun validateForWrite(value: RyoValue) = when (value) {
+    fun validateRyoValue(value: RyoValue) = when (value) {
+        is RyoNullValue -> Unit
         is RyoScalarValue -> Unit
         is RyoHostedValue -> validateHosted(value)
         is RyoContainerValue -> validateContainer(value)
         is RyoSpecialValue<*> -> Unit
-        is RyoUnknownValue -> requireNotNull(value.opaquePayload) { "Cannot write unknown value without opaque payload. glory=${value.gloryId}" }
+        is RyoUnknownValue -> {
+            val graph = value.graph
+            if (graph != null) {
+                val root = graph.frame(graph.rootLegacyId)
+                require(root.wireTypeId == value.wireTypeId) { "Unknown graph root wire mismatch. root=${root.wireTypeId} value=${value.wireTypeId}" }
+                require(root.gloryId == value.gloryId) { "Unknown graph root glory mismatch. root=${root.gloryId} value=${value.gloryId}" }
+            }
+            Unit
+        }
     }
 
-    fun readDirectScalar(wireTypeId: String, reader: RyoReader): Any? {
+    fun readDirectScalar(wireTypeId: String, reader: RyoReader): RyoValue {
         val builtin = scalarBuiltinsByWireType[wireTypeId] ?: error("Unsupported direct scalar wireTypeId: $wireTypeId")
-        return builtin.read(reader)
+        val raw = builtin.read(reader)
+        return if (raw == null) RyoNullValue(builtin.typeRef) else RyoScalarValue.of(builtin.typeRef, raw)
     }
 
-    fun writeDirectScalar(wireTypeId: String, value: Any?, writer: RyoWriter) {
-        if (value == null) require(wireTypeId == TypeIds.STRING) { "Null direct scalar is only valid for ${TypeIds.STRING}. actual=$wireTypeId" }
+    fun writeDirectScalar(wireTypeId: String, value: RyoValue, writer: RyoWriter) {
         val builtin = scalarBuiltinsByWireType[wireTypeId] ?: error("Unsupported direct scalar wireTypeId: $wireTypeId")
-        builtin.write(writer, value)
+        when (value) {
+            is RyoNullValue -> {
+                require(wireTypeId == TypeIds.STRING) { "Null direct scalar is only valid for ${TypeIds.STRING}. actual=$wireTypeId" }
+                builtin.write(writer, null)
+            }
+
+            is RyoScalarValue -> builtin.write(writer, value.value)
+            else -> error("Direct scalar must be RyoScalarValue or RyoNullValue. actual=${value::class.simpleName}")
+        }
     }
 
     private fun registerSchema(schema: ModelSchema) {
@@ -291,11 +321,11 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
         value.members.forEach { (name, memberValue) ->
             val memberSchema = knownMembers[name] ?: error("Unknown member '$name' for model ${schema.modelId}")
-            if (memberValue == null) {
+            if (memberValue is RyoNullValue) {
                 require(memberSchema.nullable) { "Member '$name' is not nullable in model ${schema.modelId}" }
+                require(memberValue.wireTypeId == memberSchema.wireTypeId || memberSchema.wireTypeId == TypeIds.OBJECT) { "Null member '$name' wire mismatch. expected=${memberSchema.wireTypeId} actual=${memberValue.wireTypeId} model=${schema.modelId}" }
                 return@forEach
             }
-
             val expected = memberSchema.wireTypeId
             require(memberValue.wireTypeId == expected) { "Member '$name' wire mismatch. expected=$expected actual=${memberValue.wireTypeId} model=${schema.modelId}" }
         }
@@ -306,7 +336,11 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         require(ref is ArrayTypeRef) { "Container typeRef must be array. actual=${ref.wireTypeId}" }
         val expectedElementWire = ref.element.wireTypeId
         value.elements.forEach { elem ->
-            if (elem == null) return@forEach
+            if (elem is RyoNullValue) {
+                require(expectedElementWire !in TypeIds.PRIMITIVE_SCALARS) { "Primitive array cannot contain null value. array=${ref.wireTypeId}" }
+                if (expectedElementWire != TypeIds.OBJECT) require(elem.wireTypeId == expectedElementWire) { "Array null element wire mismatch. expected=$expectedElementWire actual=${elem.wireTypeId} array=${ref.wireTypeId}" }
+                return@forEach
+            }
             if (expectedElementWire == TypeIds.OBJECT) return@forEach
             require(elem.wireTypeId == expectedElementWire) { "Array element wire mismatch. expected=$expectedElementWire actual=${elem.wireTypeId} array=${ref.wireTypeId}" }
         }

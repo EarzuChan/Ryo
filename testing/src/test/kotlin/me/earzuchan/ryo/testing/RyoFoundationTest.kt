@@ -1,6 +1,7 @@
 package me.earzuchan.ryo.testing
 
 import me.earzuchan.ryo.foundation.Ryo
+import me.earzuchan.ryo.foundation.UnknownTypePolicy
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.io.loadFrom
@@ -8,12 +9,19 @@ import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.special.fragmentalImageOrNull
 import me.earzuchan.ryo.foundation.schema.ModelSchema
+import me.earzuchan.ryo.foundation.schema.ModelSchemaJson
+import me.earzuchan.ryo.foundation.schema.modelSchema
 import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.io.writeTo
 import me.earzuchan.ryo.foundation.special.specialValue
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
+import me.earzuchan.ryo.foundation.value.RyoMeta
+import me.earzuchan.ryo.foundation.value.RyoNullValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
+import me.earzuchan.ryo.foundation.value.RyoUnknownFrame
+import me.earzuchan.ryo.foundation.value.RyoUnknownGraph
+import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.asHostedOrNull
 import me.earzuchan.ryo.foundation.value.asScalarOrNull
 import okio.FileSystem
@@ -32,6 +40,7 @@ import kotlin.test.assertFailsWith
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RyoFoundationTest {
     private lateinit var ryo: Ryo
+
     private val testEnvDir = "build/testEnv".toPath()
     private val neoFixturePath = testEnvDir / "neoFixture.fs"
     private val legacyFixturePath = testEnvDir / "legacyFixture.fs"
@@ -286,6 +295,82 @@ class RyoFoundationTest {
         val partial = relaxed.hosted(userMessageTypeId) { setScalar("message", "late validate") }
         val writeError = assertFailsWith<IllegalArgumentException> { relaxed.createVolumeChamber().set("x", partial) }
         assertEquals(writeError.message?.contains("Missing required member"), true)
+    }
+
+    @Test
+    fun testSchemaJsonDslAndBuildNormalization() {
+        val json = """
+            [
+              {
+                "modelId":"demo.AutoCtor",
+                "kind":"CTOR",
+                "members":[
+                  {"name":"a","wireTypeId":"java.lang.Integer"},
+                  {"name":"b","wireTypeId":"java.lang.String","nullable":true}
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val parsed = ModelSchemaJson.parseList(json)
+        assertEquals(listOf("a", "b"), parsed.single().ctorCases.single().args)
+
+        val dsl = modelSchema("demo.DslCtor", ModelSchema.GloryKind.CTOR) {
+            member("x", TypeIds.INT)
+            member("y", TypeIds.STRING, nullable = true)
+        }
+        assertEquals(listOf("x", "y"), dsl.ctorCases.single().args)
+
+        val fromBuilder = Ryo {
+            registerSchemasJson(json)
+            registerSchema(dsl)
+        }
+        assertEquals(listOf("a", "b"), fromBuilder.requireSchema("demo.AutoCtor").ctorCases.single().args)
+        assertEquals(listOf("x", "y"), fromBuilder.requireSchema("demo.DslCtor").ctorCases.single().args)
+    }
+
+    @Test
+    fun testNullValueShouldRoundTripAsRyoNullValue() {
+        val local = Ryo {
+            registerSchema(
+                modelSchema("demo.NullableHolder", ModelSchema.GloryKind.FIELD) {
+                    member("name", TypeIds.STRING, nullable = true)
+                }
+            )
+        }
+        val value = local.hosted("demo.NullableHolder") { setNull("name", TypeIds.STRING) }
+        val loaded = local.createVolumeChamber().apply { set("n", value) }.let { chamber -> local.createVolumeChamber().apply { loadFromBytes(chamber.saveToBytes()) }.requireAs<RyoHostedValue>("n") }
+        assertIs<RyoNullValue>(loaded.members["name"])
+    }
+
+    @Test
+    fun testUnknownGraphShouldMoveAcrossVolumesWithoutDecode() {
+        val opaque = Ryo { unknownTypePolicy(UnknownTypePolicy.OPAQUE) }
+        val unknown = RyoUnknownValue(
+            typeRef = TypeRefs.objectType("demo.unknown.Root"),
+            gloryId = "demo.UnknownGlory",
+            opaquePayload = byteArrayOf(1, 2, 3),
+            metas = listOf(RyoMeta(200, 3)),
+            graph = RyoUnknownGraph(
+                rootLegacyId = 100,
+                frames = listOf(
+                    RyoUnknownFrame(100, "demo.unknown.Root", "demo.UnknownGlory", byteArrayOf(1, 2, 3), listOf(RyoMeta(200, 3))),
+                    RyoUnknownFrame(200, "demo.unknown.Child", "demo.UnknownGloryChild", byteArrayOf(9), emptyList())
+                )
+            )
+        )
+
+        val src = opaque.createVolumeChamber().apply { set("u", unknown) }
+        val exported = src.requireAs<RyoUnknownValue>("u")
+
+        val dst = opaque.createVolumeChamber().apply { set("u", exported) }
+        val moved = dst.requireAs<RyoUnknownValue>("u")
+        val graph = assertNotNull(moved.graph)
+        assertEquals(2, graph.frames.size)
+        val root = graph.frame(graph.rootLegacyId)
+        val refMeta = root.metas.single()
+        assertEquals(3, refMeta.type)
+        assertTrue(graph.frames.any { it.legacyId == refMeta.payload })
     }
 
     @Test

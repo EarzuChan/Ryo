@@ -266,12 +266,17 @@ class RyoModernTest {
         assertEquals(rev0 + 1, texture.groups.value[0])
         assertRgbEquals(rgbaImage(1, 1, 44, 55, 66, 255), texture.requireCanonicalMainImage())
     }
+
+    // 测试辅助方法
+
     private fun rgbaImage(width: Int, height: Int, vararg rgba: Int) = RgbImage(width, height, 4, ByteArray(rgba.size) { rgba[it].toByte() })
+
     private fun assertRgbEquals(expected: RgbImage, actual: RgbImage) {
         assertEquals(expected.width, actual.width)
         assertEquals(expected.height, actual.height)
         assertTrue(toRgbaBytes(expected).contentEquals(toRgbaBytes(actual)))
     }
+
     private fun toRgbaBytes(image: RgbImage): ByteArray = when (image.channels) {
         4 -> image.bytes
         3 -> ByteArray(image.width * image.height * 4).also { out ->

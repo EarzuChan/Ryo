@@ -7,7 +7,14 @@ import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.special.requireFragmentalImage
 import me.earzuchan.ryo.foundation.special.specialValue
+import me.earzuchan.ryo.foundation.type.TypeIds
+import me.earzuchan.ryo.foundation.type.TypeRef
+import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.util.CompressionUtils
+import me.earzuchan.ryo.foundation.value.RyoMeta
+import me.earzuchan.ryo.foundation.value.RyoNullValue
+import me.earzuchan.ryo.foundation.value.RyoUnknownFrame
+import me.earzuchan.ryo.foundation.value.RyoUnknownGraph
 import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
 
@@ -24,7 +31,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
     internal class WriteCtx(val chamber: Chamber, val writer: RyoWriter, val pendingChildren: MutableList<Pair<Int, RyoValue>> = mutableListOf())
 
     companion object {
-        internal const val META_SHIFT = 2
+        internal const val META_SHIFT = RyoMeta.SHIFT
         internal const val META_TYPE_NULL = 0
         internal const val META_TYPE_INLINED = 2
         internal const val META_TYPE_REFED = 3
@@ -40,7 +47,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
 
     private val entryFrames = mutableListOf<EntryFrame>()
     private val gloryBindings = mutableListOf<GloryBinding>()
-    private val metaHeap = mutableListOf<Int>()
+    private val metaHeap = mutableListOf<RyoMeta>()
 
     internal fun add(value: RyoValue): Int {
         val id = allocateId()
@@ -60,15 +67,11 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         val frameCountStart = entryFrames.size
 
         if (value is RyoUnknownValue) {
-            val payload = requireNotNull(value.opaquePayload) { "Cannot set unknown value without opaque payload. wireType=${value.wireTypeId}" }
-            val bindingId = ensureBinding(value.wireTypeId, value.gloryId)
-            val metaStart = metaHeap.size
-            value.metaHeapSlice.forEach { metaHeap += it }
-            entryFrames[id] = EntryFrame(bindingId, metaStart, value.metaHeapSlice.size, payload.copyOf())
+            importUnknownValue(id, value)
             return
         }
 
-        ryo.validateForWrite(value)
+        ryo.validateRyoValue(value)
         val wireTypeId = value.wireTypeId
         val gloryId = ryo.resolveGloryId(value.typeRef)
         val bindingId = ensureBinding(wireTypeId, gloryId)
@@ -95,10 +98,8 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
 
         val binding = gloryBindings[frame.gloryBindingId]
         val metaEnd = frame.metaHeapOffset + frame.metaHeapCount
-        val metaSlice = if (frame.metaHeapCount <= 0) intArrayOf() else IntArray(frame.metaHeapCount) { idx -> metaHeap[frame.metaHeapOffset + idx] }
-        val glory = ryo.findGlory(binding.gloryId) ?: return ryo.unknownValueFor(
-            wireTypeId = binding.wireTypeId, gloryId = binding.gloryId, payload = frame.data!!.copyOf(), metaHeapSlice = metaSlice
-        )
+        val metaSlice = if (frame.metaHeapCount <= 0) emptyList() else List(frame.metaHeapCount) { idx -> metaHeap[frame.metaHeapOffset + idx] }
+        val glory = ryo.findGlory(binding.gloryId) ?: return ryo.unknownValueFor(wireTypeId = binding.wireTypeId, gloryId = binding.gloryId, payload = frame.data!!.copyOf(), metas = metaSlice, graph = exportUnknownGraph(id))
         val rctx = ReadCtx(this, RyoReader(frame.data!!), frame.metaHeapOffset, metaEnd)
         return glory.read(rctx, binding.wireTypeId)
     }
@@ -147,7 +148,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         val fileMetaHeapEndPositions = IntArray(objCount) { indexReader.readInt() }
 
         val metaCount = if (objCount == 0) 0 else fileMetaHeapEndPositions.last()
-        repeat(metaCount) { metaHeap += indexReader.readInt() }
+        repeat(metaCount) { metaHeap += RyoMeta.decode(indexReader.readInt()) }
 
         val bindingCount = indexReader.readInt()
         repeat(bindingCount) {
@@ -238,7 +239,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             indexWriter.writeInt(currentVirtualMetaEnd)
         }
 
-        entryFrames.forEach { for (k in 0 until it.metaHeapCount) indexWriter.writeInt(metaHeap[it.metaHeapOffset + k]) }
+        entryFrames.forEach { for (k in 0 until it.metaHeapCount) indexWriter.writeInt(metaHeap[it.metaHeapOffset + k].encode()) }
 
         indexWriter.writeInt(gloryBindings.size)
         gloryBindings.forEachIndexed { index, binding ->
@@ -311,9 +312,8 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             val end = b.metaHeapOffset + b.metaHeapCount
             for (i in b.metaHeapOffset until end) {
                 val m = metaHeap[i]
-                if ((m and 3) != META_TYPE_REFED) continue
-
-                val child = m ushr META_SHIFT
+                if (m.type != META_TYPE_REFED) continue
+                val child = m.payload
                 if (child in 0 until frameCount && entryFrames[child].data != null && !alive[child]) {
                     alive[child] = true
                     push(child)
@@ -344,7 +344,7 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         for (old in 0 until frameCount) if (alive[old]) idMap[old] = nextId++
 
         // 压缩阶段：重建 metaHeap 和 entryFrames
-        val newMeta = mutableListOf<Int>()
+        val newMeta = mutableListOf<RyoMeta>()
         val newFrames = mutableListOf<EntryFrame>()
 
         for (oldId in 0 until frameCount) {
@@ -355,11 +355,10 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             val metaEnd = old.metaHeapOffset + old.metaHeapCount
             for (k in old.metaHeapOffset until metaEnd) {
                 val m = metaHeap[k]
-                val kind = m and 3
-                val rewritten = if (kind == META_TYPE_REFED) {
-                    val cOld = m ushr META_SHIFT
+                val rewritten = if (m.type == META_TYPE_REFED) {
+                    val cOld = m.payload
                     val cNew = if (cOld in idMap.indices) idMap[cOld] else -1
-                    if (cNew == -1) META_TYPE_NULL else (cNew shl META_SHIFT) or META_TYPE_REFED
+                    if (cNew == -1) RyoMeta(0, META_TYPE_NULL) else RyoMeta(cNew, META_TYPE_REFED)
                 } else m
                 newMeta += rewritten
             }
@@ -404,11 +403,10 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
             // 递归深拷贝所有的 Meta 引用
             for (i in oldFrame.metaHeapOffset until metaEnd) {
                 val m = metaHeap[i]
-                val kind = m and 3
-                if (kind == META_TYPE_REFED) {
-                    val childOldId = m ushr META_SHIFT
+                if (m.type == META_TYPE_REFED) {
+                    val childOldId = m.payload
                     val childNewId = copyRecursive(childOldId)
-                    metaHeap += if (childNewId != -1) ((childNewId shl META_SHIFT) or META_TYPE_REFED) else META_TYPE_NULL // 死引用替换为空
+                    metaHeap += if (childNewId != -1) RyoMeta(childNewId, META_TYPE_REFED) else RyoMeta(0, META_TYPE_NULL)
                 } else metaHeap += m
             }
 
@@ -423,9 +421,9 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         return copyRecursive(rootId)
     }
 
-    internal fun writeChild(ctx: WriteCtx, value: RyoValue?) {
-        if (value == null) {
-            metaHeap += META_TYPE_NULL
+    internal fun writeChild(ctx: WriteCtx, value: RyoValue) {
+        if (value is RyoNullValue) {
+            metaHeap += RyoMeta(0, META_TYPE_NULL)
             return
         }
 
@@ -433,24 +431,24 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
         if (ryo.isInlineWireType(wireTypeId)) {
             val gloryId = ryo.resolveGloryId(value.typeRef)
             val bindingId = ensureBinding(wireTypeId, gloryId)
-            metaHeap += (bindingId shl META_SHIFT) or META_TYPE_INLINED
+            metaHeap += RyoMeta(bindingId, META_TYPE_INLINED)
             ryo.requireGlory(gloryId).write(ctx, value, wireTypeId)
             return
         }
 
         val childId = allocateId()
-        metaHeap += (childId shl META_SHIFT) or META_TYPE_REFED
+        metaHeap += RyoMeta(childId, META_TYPE_REFED)
         ctx.pendingChildren += (childId to value)
     }
 
-    internal fun readChild(ctx: ReadCtx): RyoValue? {
+    internal fun readChild(ctx: ReadCtx, expectedTypeRef: TypeRef = TypeRefs.objectType(TypeIds.OBJECT)): RyoValue {
         require(ctx.metaPtr < ctx.metaEnd) { "Read meta out of bounds" }
         val meta = metaHeap[ctx.metaPtr++]
-        val kind = meta and 3
-        val payload = meta ushr META_SHIFT
+        val kind = meta.type
+        val payload = meta.payload
 
         return when (kind) {
-            META_TYPE_NULL -> null
+            META_TYPE_NULL -> RyoNullValue(expectedTypeRef)
             META_TYPE_REFED -> get(payload)
             META_TYPE_INLINED -> {
                 val binding = gloryBindings[payload]
@@ -468,6 +466,59 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
 
         gloryBindings += GloryBinding(wireTypeId, gloryId)
         return gloryBindings.lastIndex
+    }
+
+    private fun importUnknownValue(targetId: Int, value: RyoUnknownValue) {
+        val graph = value.graph
+        if (graph == null) {
+            require(value.metas.none { it.type == META_TYPE_REFED }) { "Unknown value contains referenced metas but has no unknown graph snapshot" }
+            val bindingId = ensureBinding(value.wireTypeId, value.gloryId)
+            val metaStart = metaHeap.size
+            value.metas.forEach { metaHeap += it }
+            entryFrames[targetId] = EntryFrame(bindingId, metaStart, value.metas.size, value.opaquePayload.copyOf())
+            return
+        }
+
+        val frames = graph.frames.associateBy { it.legacyId }
+        val imported = mutableMapOf<Int, Int>()
+
+        fun importNode(legacyId: Int, forcedId: Int? = null): Int {
+            imported[legacyId]?.let { return it }
+            val frame = frames[legacyId] ?: error("Unknown graph missing frame id=$legacyId")
+            val newId = forcedId ?: allocateId()
+            imported[legacyId] = newId
+
+            val bindingId = ensureBinding(frame.wireTypeId, frame.gloryId)
+            val metaStart = metaHeap.size
+            frame.metas.forEach { meta ->
+                if (meta.type != META_TYPE_REFED) metaHeap += meta
+                else metaHeap += RyoMeta(importNode(meta.payload), META_TYPE_REFED)
+            }
+            entryFrames[newId] = EntryFrame(bindingId, metaStart, metaHeap.size - metaStart, frame.opaquePayload.copyOf())
+            return newId
+        }
+
+        importNode(graph.rootLegacyId, targetId)
+    }
+
+    private fun exportUnknownGraph(rootId: Int): RyoUnknownGraph {
+        val visited = linkedSetOf<Int>()
+        val stack = ArrayDeque<Int>()
+        val frames = mutableListOf<RyoUnknownFrame>()
+        stack += rootId
+
+        while (stack.isNotEmpty()) {
+            val id = stack.removeLast()
+            if (!visited.add(id)) continue
+            val frame = entryFrames.getOrNull(id) ?: error("Unknown export frame id out of bounds: $id")
+            val payload = requireNotNull(frame.data) { "Unknown export frame id=$id is deleted" }
+            val binding = gloryBindings[frame.gloryBindingId]
+            val metas = if (frame.metaHeapCount <= 0) emptyList() else List(frame.metaHeapCount) { idx -> metaHeap[frame.metaHeapOffset + idx] }
+            frames += RyoUnknownFrame(id, binding.wireTypeId, binding.gloryId, payload.copyOf(), metas)
+            metas.forEach { if (it.type == META_TYPE_REFED && it.payload !in visited) stack += it.payload }
+        }
+
+        return RyoUnknownGraph(rootId, frames)
     }
 
     private fun clearAll() {

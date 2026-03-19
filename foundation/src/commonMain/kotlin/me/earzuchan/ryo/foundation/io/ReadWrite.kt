@@ -53,6 +53,7 @@ class RyoReader(bytes: ByteArray) {
 
     fun readString(): String? {
         val len = readInt()
+
         return when {
             len < 0 -> null
             len == 0 -> ""

@@ -38,8 +38,11 @@ internal fun extractToImage(fi: FragmentalImage): RgbImage {
 
     return when (level.format) {
         PixelFormat.RGBA8888 -> RgbImage(level.width, level.height, 4, assembled)
+
         PixelFormat.RGB888 -> RgbImage(level.width, level.height, 3, assembled)
+
         PixelFormat.RGB565 -> RgbImage(level.width, level.height, 3, rgb565ToRgb888(assembled))
+
         else -> error("Unsupported main-image format: ${level.format}")
     }
 }
