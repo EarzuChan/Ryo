@@ -18,6 +18,6 @@ fun ManagedTexture.setCanonicalMainImage(image: RgbImage, policy: MipmapPolicy =
 
 fun ModernizedRyo.createCanonicalTexture(image: RgbImage, policy: MipmapPolicy = MipmapPolicy()): ManagedTexture {
     val chamber = foundation.createTextureChamber()
-    chamber.createFiGroup(packToFragmentalImage(image, policy))
+    chamber.createFragmentalImageGroup(packToFragmentalImage(image, policy))
     return manage(chamber)
 }

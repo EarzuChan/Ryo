@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
+import me.earzuchan.ryo.foundation.value.RyoSpecialValue
+import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.RyoValue
 import me.earzuchan.ryo.modern.ModernRuntime
 import kotlin.collections.iterator
@@ -95,11 +97,18 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
         return true
     }
 
-    val rootCursor get() = HostedCursor(this, ValuePath.ROOT)
+    val rootCursor: RyoCursor get() = cursorAt(ValuePath.ROOT)
+    inline fun <reified T : RyoCursor> getRootCursorAs(): T = rootCursor as? T ?: error("Root cursor is ${rootCursor::class.simpleName}, expected ${T::class.simpleName}")
 
     fun extractFinalResult(): RyoValue = currentRoot
 
     private fun broadcastAll() = flowRegistry.forEach { (path, flow) -> flow.value = resolveValue(currentRoot, path) }
+
+    private fun cursorAt(path: ValuePath): RyoCursor = when (resolve(path)) {
+        is RyoHostedValue -> HostedCursor(this, path)
+        is RyoContainerValue -> ContainerCursor(this, path)
+        else -> ScalarCursor(this, path)
+    }
 }
 
 // ==========================================
@@ -130,13 +139,7 @@ class HostedCursor(session: EditorSession, path: ValuePath) : RyoCursor(session,
     // 💥 补上灵魂：单点直接赋值操作符
     operator fun set(name: String, value: Any?) {
         val childPath = path.member(name)
-        val currentChild = session.resolve(childPath)
-
-        // 自动装箱逻辑：优先用旧类型的 TypeRef，其次用 runtime 的全局推导
-        val ryoValue = value as? RyoValue ?: if (currentChild is RyoScalarValue) session.runtime.scalarValue(currentChild.typeRef, value)
-        else if (value != null) session.runtime.inferScalar(value) else null
-
-        session.commitBatch(mapOf(childPath to ryoValue))
+        session.commitBatch(mapOf(childPath to toCommitValue(session, childPath, value)))
     }
 
     // 开启高墙内的事务
@@ -160,12 +163,7 @@ class ContainerCursor(session: EditorSession, path: ValuePath) : RyoCursor(sessi
 
     operator fun set(index: Int, value: Any?) {
         val childPath = path.index(index)
-        val currentChild = session.resolve(childPath)
-
-        val ryoValue = value as? RyoValue ?: if (currentChild is RyoScalarValue) session.runtime.scalarValue(currentChild.typeRef, value)
-        else if (value != null) session.runtime.inferScalar(value) else null
-
-        session.commitBatch(mapOf(childPath to ryoValue))
+        session.commitBatch(mapOf(childPath to toCommitValue(session, childPath, value)))
     }
 
     fun edit(block: EditorTransaction.() -> Unit) {
@@ -195,12 +193,7 @@ class EditorTransaction(
     // 拦截直接赋值，进行动态装箱
     operator fun set(name: String, value: Any?) {
         val childPath = basePath.member(name)
-        val currentChild = session.resolve(childPath)
-
-        val ryoValue = value as? RyoValue ?: if (currentChild is RyoScalarValue) session.runtime.scalarValue(currentChild.typeRef, value)
-        else if (value != null) session.runtime.inferScalar(value) else null
-
-        pendingMutations[childPath] = ryoValue
+        pendingMutations[childPath] = toCommitValue(session, childPath, value)
     }
 
     fun setRyo(name: String, value: RyoValue?) {
@@ -237,7 +230,7 @@ private fun batchReplace(root: RyoValue?, mutations: List<Pair<List<ValuePathSeg
         is RyoHostedValue -> {
             val newMembers = LinkedHashMap(root.members)
             for ((segment, childMutations) in groupedMutations) {
-                val name = (segment as MemberPathSegment).name
+                val name = (segment as? MemberPathSegment)?.name ?: error("Path mismatch: expected member segment but got ${segment::class.simpleName}")
                 val strippedMutations = childMutations.map { it.first.drop(1) to it.second }
                 newMembers[name] = batchReplace(newMembers[name], strippedMutations)
             }
@@ -247,7 +240,8 @@ private fun batchReplace(root: RyoValue?, mutations: List<Pair<List<ValuePathSeg
         is RyoContainerValue -> {
             val newElements = root.elements.toMutableList()
             for ((segment, childMutations) in groupedMutations) {
-                val index = (segment as IndexPathSegment).index
+                val index = (segment as? IndexPathSegment)?.index ?: error("Path mismatch: expected index segment but got ${segment::class.simpleName}")
+                require(index in newElements.indices) { "Container index out of bounds: $index (size=${newElements.size})" }
                 val strippedMutations = childMutations.map { it.first.drop(1) to it.second }
                 newElements[index] = batchReplace(newElements.getOrNull(index), strippedMutations)
             }
@@ -255,7 +249,14 @@ private fun batchReplace(root: RyoValue?, mutations: List<Pair<List<ValuePathSeg
         }
 
         is RyoScalarValue -> error("Mutations went deeper than scalar value. Path mismatch.")
-
-        else -> TODO("还没有实现！")
+        is RyoSpecialValue<*> -> error("Mutations went deeper than special value. Path mismatch.")
+        is RyoUnknownValue -> error("Mutations went deeper than unknown value. Path mismatch.")
     }
+}
+
+private fun toCommitValue(session: EditorSession, path: ValuePath, value: Any?): RyoValue? {
+    if (value is RyoValue) return value
+    val currentChild = session.resolve(path)
+    return if (currentChild is RyoScalarValue) session.runtime.scalarValue(currentChild.typeRef, value)
+    else if (value != null) session.runtime.inferScalar(value) else null
 }

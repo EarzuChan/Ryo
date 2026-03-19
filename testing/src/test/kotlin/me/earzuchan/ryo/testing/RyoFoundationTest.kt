@@ -1,6 +1,8 @@
 package me.earzuchan.ryo.testing
 
 import me.earzuchan.ryo.foundation.Ryo
+import me.earzuchan.ryo.foundation.io.RyoReader
+import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.io.loadFrom
 import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.special.FragmentalImage
@@ -12,6 +14,8 @@ import me.earzuchan.ryo.foundation.special.specialValue
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
 import me.earzuchan.ryo.foundation.value.RyoScalarValue
+import me.earzuchan.ryo.foundation.value.asHostedOrNull
+import me.earzuchan.ryo.foundation.value.asScalarOrNull
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -19,9 +23,11 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RyoFoundationTest {
@@ -243,6 +249,46 @@ class RyoFoundationTest {
     }
 
     @Test
+    fun testTypedGetAndSafeCastExtensions() {
+        val chamber = ryo.createVolumeChamber().apply {
+            set("state", ryo.scalar(true))
+            set("user", ryo.hosted(userMessageTypeId) {
+                setScalar("message", "hello")
+                setScalar("isHidden", false)
+            })
+        }
+
+        val state = chamber.requireAs<RyoScalarValue>("state")
+        assertEquals(true, state.value)
+        assertEquals(null, chamber.getAs<RyoHostedValue>("state"))
+        assertEquals(null, chamber.get("state").asHostedOrNull())
+        assertNotNull(chamber.get("state").asScalarOrNull())
+
+        val ex = assertFailsWith<IllegalStateException> { chamber.requireAs<RyoHostedValue>("state") }
+        assertEquals(ex.message?.contains("state"), true)
+    }
+
+    @Test
+    fun testHostedAndContainerShouldValidateImmediatelyByDefault() {
+        val hostedError = assertFailsWith<IllegalArgumentException> { ryo.hosted(userMessageTypeId) { setScalar("message", "missing required bool") } }
+        assertEquals(hostedError.message?.contains("Missing required member"), true)
+
+        val containerError = assertFailsWith<IllegalArgumentException> { ryo.container(TypeRefs.STRING, listOf(ryo.scalar("a"))) }
+        assertEquals(containerError.message?.contains("must be array"), true)
+    }
+
+    @Test
+    fun testValidateOnCreateCanBeDisabled() {
+        val relaxed = Ryo {
+            validateOnCreate(false)
+            registerSchemas(dialogueTreeSchemas())
+        }
+        val partial = relaxed.hosted(userMessageTypeId) { setScalar("message", "late validate") }
+        val writeError = assertFailsWith<IllegalArgumentException> { relaxed.createVolumeChamber().set("x", partial) }
+        assertEquals(writeError.message?.contains("Missing required member"), true)
+    }
+
+    @Test
     fun testComplexRead() {
         assumeTrue(FileSystem.SYSTEM.exists(complexLegacyFixturePath), "Skip testComplexRead because complexLegacyFixture.fs is missing")
         val loaded = ryo.createVolumeChamber().apply { loadFrom(complexLegacyFixturePath) }
@@ -255,6 +301,46 @@ class RyoFoundationTest {
         val volume = ryo.createVolumeChamber().apply { set("test", expectedComplexDescriptor()) }
         volume.writeTo(complexNeoFixturePath)
         assertTrue(FileSystem.SYSTEM.exists(complexNeoFixturePath))
+    }
+
+    @Test
+    fun testCtorInferShouldPreferCaseThatCoversProvidedMembers() {
+        val typeId = "demo.CtorInfer"
+        val local = Ryo {
+            registerSchema(
+                ModelSchema(
+                    modelId = typeId,
+                    kind = ModelSchema.GloryKind.CTOR,
+                    members = listOf(
+                        ModelSchema.ModelMember("a", TypeIds.INT),
+                        ModelSchema.ModelMember("b", TypeIds.INT)
+                    ),
+                    ctorCases = listOf(
+                        ModelSchema.CtorCase("onlyA", listOf("a")),
+                        ModelSchema.CtorCase("aAndB", listOf("a", "b"))
+                    )
+                )
+            )
+        }
+        val value = local.hosted(typeId) {
+            setScalar("a", 1)
+            setScalar("b", 2)
+        }
+        val loaded = local.createVolumeChamber().apply { set("x", value) }.let { written ->
+            local.createVolumeChamber().apply { loadFromBytes(written.saveToBytes()) }.get("x")
+        }
+        val hosted = assertIs<RyoHostedValue>(loaded)
+        assertEquals(setOf("a", "b"), hosted.members.keys)
+        assertEquals(1, assertIs<RyoScalarValue>(hosted.members["a"]).value)
+        assertEquals(2, assertIs<RyoScalarValue>(hosted.members["b"]).value)
+    }
+
+    @Test
+    fun testFixedStringShouldUseUtf8ByteLength() {
+        val header = "荣🐉"
+        val bytes = RyoWriter().writeFixedString(header).toByteArray()
+        assertTrue(RyoReader(bytes).checkFixedString(header))
+        assertFalse(RyoReader(bytes).checkFixedString("誉🐉"))
     }
 
     @Test

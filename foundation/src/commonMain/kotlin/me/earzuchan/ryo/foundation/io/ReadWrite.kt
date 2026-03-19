@@ -46,8 +46,9 @@ class RyoReader(bytes: ByteArray) {
     fun readAllBytes(): ByteArray = buf.readByteArray()
 
     fun checkFixedString(expected: String): Boolean {
-        val actual = readBytes(expected.length).decodeToString() // 这里可能会有问题，不是expected的bytes长度！虽然expected多为ascii
-        return actual == expected
+        val expectedBytes = expected.encodeToByteArray()
+        val actualBytes = readBytes(expectedBytes.size)
+        return actualBytes.contentEquals(expectedBytes)
     }
 
     fun readString(): String? {

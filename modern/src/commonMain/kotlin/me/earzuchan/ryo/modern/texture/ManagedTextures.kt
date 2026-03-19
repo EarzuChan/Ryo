@@ -34,17 +34,17 @@ class ManagedTexture internal constructor(private val chamber: TextureChamber) {
 
     fun cloneGroup(groupIndex: Int): Int = chamber.cloneGroup(groupIndex).also { revisions += 0L; publish() }
 
-    fun openFi(groupIndex: Int, valueIndex: Int = 0) = FragmentalImageSession(chamber.getFi(groupIndex, valueIndex))
+    fun checkoutFragmentalImage(groupIndex: Int, valueIndex: Int = 0) = FragmentalImageSession(chamber.getFragmentalImage(groupIndex, valueIndex))
 
-    fun setFi(groupIndex: Int, fi: FragmentalImage, valueIndex: Int = 0) {
-        chamber.setFi(groupIndex, fi, valueIndex)
+    fun commitFragmentalImage(groupIndex: Int, fi: FragmentalImage, valueIndex: Int = 0) {
+        chamber.setFragmentalImage(groupIndex, fi, valueIndex)
         bump(groupIndex)
     }
-    fun setFi(groupIndex: Int, handle: FragmentalImageSession, valueIndex: Int = 0) = setFi(groupIndex, handle.rawFi(), valueIndex)
+    fun commitFragmentalImage(groupIndex: Int, handle: FragmentalImageSession, valueIndex: Int = 0) = commitFragmentalImage(groupIndex, handle.rawFi(), valueIndex)
 
-    fun getMainImage(groupIndex: Int, valueIndex: Int = 0): RgbImage = extractToImage(chamber.getFi(groupIndex, valueIndex))
+    fun getMainImage(groupIndex: Int, valueIndex: Int = 0): RgbImage = extractToImage(chamber.getFragmentalImage(groupIndex, valueIndex))
 
-    fun setMainImage(groupIndex: Int, image: RgbImage, valueIndex: Int = 0, policy: MipmapPolicy = MipmapPolicy()) = setFi(groupIndex, packToFragmentalImage(image, policy), valueIndex)
+    fun setMainImage(groupIndex: Int, image: RgbImage, valueIndex: Int = 0, policy: MipmapPolicy = MipmapPolicy()) = commitFragmentalImage(groupIndex, packToFragmentalImage(image, policy), valueIndex)
 
     private fun bump(groupIndex: Int) {
         revisions[groupIndex] = revisions[groupIndex] + 1

@@ -485,8 +485,10 @@ class VolumeChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
 
     fun tokens(): Set<String> = tokenToId.keys.toSet()
     fun contains(token: String): Boolean = token in tokenToId
+
     fun get(token: String): RyoValue? = tokenToId[token]?.let { get(it) }
-    fun tryGet(token: String): Result<RyoValue?> = runCatching { get(token) }
+    inline fun <reified T : RyoValue> getAs(token: String): T? = get(token) as? T
+    inline fun <reified T : RyoValue> requireAs(token: String): T = getAs<T>(token) ?: error("Token '$token' is not ${T::class.simpleName ?: "expected type"}")
 
     fun set(token: String, value: RyoValue) {
         val newId = add(value)
@@ -612,16 +614,16 @@ class TextureChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
         return groups.lastIndex
     }
 
-    fun getFi(groupIndex: Int, valueIndex: Int = 0): FragmentalImage = getGroup(groupIndex)[valueIndex].requireFragmentalImage()
+    fun getFragmentalImage(groupIndex: Int, valueIndex: Int = 0): FragmentalImage = getGroup(groupIndex)[valueIndex].requireFragmentalImage()
 
-    fun setFi(groupIndex: Int, fi: FragmentalImage, valueIndex: Int = 0) {
+    fun setFragmentalImage(groupIndex: Int, fi: FragmentalImage, valueIndex: Int = 0) {
         val group = getGroup(groupIndex).toMutableList()
         require(valueIndex in group.indices) { "Invalid valueIndex=$valueIndex for group=$groupIndex" }
         group[valueIndex] = fi.specialValue()
         setGroup(groupIndex, group)
     }
 
-    fun createFiGroup(fi: FragmentalImage): Int = createGroup(listOf(fi.specialValue()))
+    fun createFragmentalImageGroup(fi: FragmentalImage): Int = createGroup(listOf(fi.specialValue())) // TIPS：便捷方法
 
     override fun rootIds(): IntArray {
         var total = 0

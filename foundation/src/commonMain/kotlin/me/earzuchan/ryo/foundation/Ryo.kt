@@ -82,15 +82,22 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         fun setNullScalar(name: String, wireTypeId: String) = setNullScalar(name, TypeRefs.fromWireTypeId(wireTypeId))
     }
 
-    fun hosted(modelId: String, ctorCaseIndex: Int? = null, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, block)
-    fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, block: HostedBuilder.() -> Unit): RyoHostedValue {
+    fun hosted(modelId: String, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, validateNow, block)
+    fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit): RyoHostedValue {
         val b = HostedBuilder()
         b.block()
-        return RyoHostedValue(typeRef, b.map.toMap(), ctorCaseIndex) // HACK：这样子创建的，Validate了吗
+        val value = RyoHostedValue(typeRef, b.map.toMap(), ctorCaseIndex)
+        if (validateNow) runtime.validateForWrite(value)
+        return value
     }
 
-    fun container(typeRef: TypeRef, elements: List<RyoValue?>): RyoContainerValue = RyoContainerValue(typeRef, elements)
-    fun container(wireTypeId: String, elements: List<RyoValue?>): RyoContainerValue = RyoContainerValue(TypeRefs.fromWireTypeId(wireTypeId), elements)
+    fun container(typeRef: TypeRef, elements: List<RyoValue?>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue {
+        require(typeRef is ArrayTypeRef) { "Container typeRef must be array. actual=${typeRef.wireTypeId}" }
+        val value = RyoContainerValue(typeRef, elements)
+        if (validateNow) runtime.validateForWrite(value)
+        return value
+    }
+    fun container(wireTypeId: String, elements: List<RyoValue?>, validateNow: Boolean = runtime.validateOnCreate): RyoContainerValue = container(TypeRefs.fromWireTypeId(wireTypeId), elements, validateNow)
     fun <T : Any> special(typeRef: TypeRef, kind: String, payload: T): RyoSpecialValue<T> = RyoSpecialValue(typeRef, kind, payload)
 
     class Builder internal constructor() {
@@ -99,10 +106,12 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         private val customMappings = linkedMapOf<String, String>()
         private var unknownTypePolicy: UnknownTypePolicy = UnknownTypePolicy.STRICT
         private var strictSchemaGraph: Boolean = true
+        private var validateOnCreate: Boolean = true
 
         fun unknownTypePolicy(policy: UnknownTypePolicy) = apply { unknownTypePolicy = policy }
 
         fun strictSchemaGraph(enabled: Boolean) = apply { strictSchemaGraph = enabled }
+        fun validateOnCreate(enabled: Boolean) = apply { validateOnCreate = enabled }
 
         fun registerSchema(schema: ModelSchema) = apply {
             require(schema.modelId !in schemas) { "Duplicate schema modelId: ${schema.modelId}" }
@@ -118,7 +127,12 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         fun build() = Ryo(
             RyoRuntime.build(
                 BuildConfig(
-                    schemas = schemas.values.toList(), unknownTypePolicy = unknownTypePolicy, strictSchemaGraph = strictSchemaGraph, customGlories = customGlories.values.toList(), customMappings = customMappings.toMap()
+                    schemas = schemas.values.toList(),
+                    unknownTypePolicy = unknownTypePolicy,
+                    strictSchemaGraph = strictSchemaGraph,
+                    validateOnCreate = validateOnCreate,
+                    customGlories = customGlories.values.toList(),
+                    customMappings = customMappings.toMap()
                 )
             )
         )
@@ -135,10 +149,15 @@ enum class UnknownTypePolicy {
 }
 
 internal data class BuildConfig(
-    val schemas: List<ModelSchema>, val unknownTypePolicy: UnknownTypePolicy, val strictSchemaGraph: Boolean, val customGlories: List<Glory>, val customMappings: Map<String, String>
+    val schemas: List<ModelSchema>,
+    val unknownTypePolicy: UnknownTypePolicy,
+    val strictSchemaGraph: Boolean,
+    val validateOnCreate: Boolean,
+    val customGlories: List<Glory>,
+    val customMappings: Map<String, String>
 )
 
-internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownTypePolicy) {
+internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownTypePolicy, val validateOnCreate: Boolean) {
     private val schemas = linkedMapOf<String, ModelSchema>()
     private val glories = linkedMapOf<String, Glory>()
     private val wireTypeToGlory = linkedMapOf<String, String>()
@@ -158,7 +177,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
     companion object {
         fun build(config: BuildConfig): RyoRuntime {
-            val runtime = RyoRuntime(config.unknownTypePolicy)
+            val runtime = RyoRuntime(config.unknownTypePolicy, config.validateOnCreate)
             runtime.registerBuiltinGlories()
 
             config.customGlories.forEach(runtime::registerGlory)
@@ -265,6 +284,10 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
     private fun validateHosted(value: RyoHostedValue) {
         val schema = requireSchema(value.typeRef.modelId)
         val knownMembers = schema.members.associateBy { it.name }
+        schema.members.forEach { member ->
+            if (member.name in value.members) return@forEach
+            require(member.nullable) { "Missing required member '${member.name}' for model ${schema.modelId}" }
+        }
 
         value.members.forEach { (name, memberValue) ->
             val memberSchema = knownMembers[name] ?: error("Unknown member '$name' for model ${schema.modelId}")
@@ -280,13 +303,12 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
     private fun validateContainer(value: RyoContainerValue) {
         val ref = value.typeRef
-        if (ref is ArrayTypeRef) {
-            val expectedElementWire = ref.element.wireTypeId
-            value.elements.forEach { elem ->
-                if (elem == null) return@forEach
-                if (expectedElementWire == TypeIds.OBJECT) return@forEach
-                require(elem.wireTypeId == expectedElementWire) { "Array element wire mismatch. expected=$expectedElementWire actual=${elem.wireTypeId} array=${ref.wireTypeId}" }
-            }
+        require(ref is ArrayTypeRef) { "Container typeRef must be array. actual=${ref.wireTypeId}" }
+        val expectedElementWire = ref.element.wireTypeId
+        value.elements.forEach { elem ->
+            if (elem == null) return@forEach
+            if (expectedElementWire == TypeIds.OBJECT) return@forEach
+            require(elem.wireTypeId == expectedElementWire) { "Array element wire mismatch. expected=$expectedElementWire actual=${elem.wireTypeId} array=${ref.wireTypeId}" }
         }
     }
 

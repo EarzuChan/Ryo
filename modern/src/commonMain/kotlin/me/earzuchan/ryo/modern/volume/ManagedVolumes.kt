@@ -4,8 +4,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import me.earzuchan.ryo.foundation.chamber.VolumeChamber
-import me.earzuchan.ryo.foundation.type.TypeRef
-import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.value.RyoValue
 import me.earzuchan.ryo.modern.ModernizedRyo
 import me.earzuchan.ryo.modern.session.EditorSession
@@ -19,19 +17,21 @@ class ManagedVolume internal constructor(private val modern: ModernizedRyo, priv
 
     fun contains(token: String): Boolean = token in revisions
     fun snapshot(token: String): RyoValue? = chamber.get(token)
+    inline fun <reified T : RyoValue> snapshotAs(token: String): T? = snapshot(token) as? T
+    inline fun <reified T : RyoValue> requireSnapshotAs(token: String): T = snapshotAs<T>(token) ?: error("Token '$token' is not ${T::class.simpleName ?: "expected type"}")
 
-    fun open(token: String): EditorSession? = chamber.get(token)?.let { modern.newSession(it) }
+    fun checkout(token: String): EditorSession? = chamber.get(token)?.let { modern.newSession(it) }
 
     // 允许将裸值直接写入
-    fun set(token: String, value: RyoValue) {
+    fun commit(token: String, value: RyoValue) {
         chamber.set(token, value)
         revisions[token] = (revisions[token] ?: 0L) + 1
         publish()
     }
 
-    fun set(token: String, session: EditorSession) {
+    fun commit(token: String, session: EditorSession) {
         val value = session.extractFinalResult()
-        set(token, value)
+        commit(token, value)
     }
 
     fun remove(token: String): Boolean {
@@ -57,8 +57,6 @@ class ManagedVolume internal constructor(private val modern: ModernizedRyo, priv
     }
 
     fun collectGarbage() = chamber.collectGarbage()
-
-    fun raw(): VolumeChamber = chamber
 
     private fun publish() {
         _entries.value = revisions.toMap()

@@ -200,7 +200,7 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
         val hosted = value as? RyoHostedValue ?: error("Expect RyoHostedValue for $declaredWireTypeId")
 
         val cases = effectiveCases(schema)
-        val caseIndex = hosted.ctorCaseIndex ?: inferCase(hosted, cases)
+        val caseIndex = hosted.ctorCaseIndex ?: inferCase(schema, hosted, cases)
         val selected = cases.getOrElse(caseIndex) { error("Invalid ctor case index $caseIndex for $declaredWireTypeId") }
 
         if (cases.size > 1) ctx.writer.writeByte(caseIndex.toByte())
@@ -210,6 +210,7 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
             val mv = hosted.members[name]
             if (mv == null && !m.nullable) error("Ctor arg '$name' is not nullable in model ${schema.modelId}")
             val memberWire = m.wireTypeId
+
             if (memberWire in directWireTypes) {
                 val value = mv?.let { (it as? RyoScalarValue ?: error("Missing direct ctor arg $name")).value }
                 ryo.writeDirectScalar(memberWire, value, ctx.writer)
@@ -219,10 +220,27 @@ internal class CtorGlory(private val ryo: RyoRuntime) : Glory {
 
     private fun effectiveCases(schema: ModelSchema): List<ModelSchema.CtorCase> = schema.ctorCases.ifEmpty { listOf(ModelSchema.CtorCase("default", schema.members.map { it.name })) }
 
-    private fun inferCase(hosted: RyoHostedValue, cases: List<ModelSchema.CtorCase>): Int {
-        val keys = hosted.members.keys
-        val idx = cases.indexOfFirst { c -> c.args.all { it in keys } }
-        return if (idx >= 0) idx else 0
+    private fun inferCase(schema: ModelSchema, hosted: RyoHostedValue, cases: List<ModelSchema.CtorCase>): Int {
+        val provided = hosted.members.keys
+
+        val valid = cases.withIndex().filter { (_, c) ->
+            provided.all { it in c.args } && c.args.all { arg ->
+                val m = schema.member(arg)
+                val mv = hosted.members[arg]
+                !(mv == null && !m.nullable)
+            }
+        }
+
+        require(valid.isNotEmpty()) { "Cannot infer ctor case for ${schema.modelId}. provided=$provided cases=${cases.map { it.id to it.args }}" }
+        val exact = valid.filter { it.value.args.size == provided.size }
+        if (exact.size == 1) return exact.first().index
+
+        require(exact.isEmpty()) { "Ambiguous exact ctor cases for ${schema.modelId}. provided=$provided cases=${exact.map { it.value.id }}" }
+        val minArgs = valid.minOf { it.value.args.size }
+        val narrowed = valid.filter { it.value.args.size == minArgs }
+        if (narrowed.size == 1) return narrowed.first().index
+
+        error("Ambiguous ctor cases for ${schema.modelId}. provided=$provided candidates=${narrowed.map { it.value.id }}")
     }
 
     private fun normalizeSignedByteIndex(v: Int, size: Int): Int {

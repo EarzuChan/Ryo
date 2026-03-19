@@ -88,3 +88,9 @@ data class RyoUnknownValue(
     val opaquePayload: ByteArray? = null,
     val metaHeapSlice: IntArray = intArrayOf()
 ) : RyoValue
+
+fun RyoValue?.asScalarOrNull(): RyoScalarValue? = this as? RyoScalarValue
+fun RyoValue?.asHostedOrNull(): RyoHostedValue? = this as? RyoHostedValue
+fun RyoValue?.asContainerOrNull(): RyoContainerValue? = this as? RyoContainerValue
+fun RyoValue?.asSpecialOrNull(): RyoSpecialValue<*>? = this as? RyoSpecialValue<*>
+fun RyoValue?.asUnknownOrNull(): RyoUnknownValue? = this as? RyoUnknownValue
