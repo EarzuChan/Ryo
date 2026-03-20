@@ -15,7 +15,10 @@ import me.earzuchan.ryo.foundation.glory.ScalarGlory
 import me.earzuchan.ryo.foundation.glory.StringArrayGlory
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
+import me.earzuchan.ryo.foundation.path.RyoPath
 import me.earzuchan.ryo.foundation.special.FragmentalImage
+import me.earzuchan.ryo.foundation.schema.CtorCaseRef
+import me.earzuchan.ryo.foundation.schema.CtorPrefs
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.schema.ModelSchemaJson
 import me.earzuchan.ryo.foundation.schema.ModelSchemaNormalizer
@@ -41,8 +44,8 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
     fun createTextureChamber(): TextureChamber = TextureChamber(runtime)
 
     fun requireSchema(modelId: String): ModelSchema = runtime.requireSchema(modelId)
-    fun initRyoTypeFor(typeRef: TypeRef): RyoValue = runtime.initRyoValueFor(typeRef)
-    fun initRyoTypeFor(wireTypeId: String): RyoValue = initRyoTypeFor(TypeRefs.fromWireTypeId(wireTypeId))
+    fun initRyoTypeFor(typeRef: TypeRef, ctorPrefs: CtorPrefs=CtorPrefs.EMPTY): RyoValue = runtime.initRyoValueFor(typeRef, ctorPrefs)
+    fun initRyoTypeFor(wireTypeId: String, ctorPrefs: CtorPrefs=CtorPrefs.EMPTY): RyoValue = initRyoTypeFor(TypeRefs.fromWireTypeId(wireTypeId), ctorPrefs)
     fun validateRyoValue(value: RyoValue) = runtime.validateRyoValue(value)
 
     fun scalar(value: Any): RyoScalarValue = RyoScalarValue.infer(value) // TIPS：本方法自动推导
@@ -85,12 +88,13 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         fun setNull(name: String, wireTypeId: String) = setNull(name, TypeRefs.fromWireTypeId(wireTypeId))
     }
 
-    fun hosted(modelId: String, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, validateNow, block)
-    fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, block: HostedBuilder.() -> Unit): RyoHostedValue {
-        // TODO：我觉得应该先init一个值（通过initRyoTypeFor(typeRef)），再通过builder在上面覆写内容
+    fun hosted(modelId: String, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, ctorPrefs: CtorPrefs = CtorPrefs.EMPTY, block: HostedBuilder.() -> Unit) = hosted(TypeRefs.objectType(modelId), ctorCaseIndex, validateNow, ctorPrefs, block)
+    fun hosted(typeRef: ObjectTypeRef, ctorCaseIndex: Int? = null, validateNow: Boolean = runtime.validateOnCreate, ctorPrefs: CtorPrefs = CtorPrefs.EMPTY, block: HostedBuilder.() -> Unit): RyoHostedValue {
+        val base = runtime.initRyoValueFor(typeRef, ctorPrefs) as? RyoHostedValue ?: error("Cannot init hosted value for ${typeRef.modelId}")
         val b = HostedBuilder()
         b.block()
-        val value = RyoHostedValue(typeRef, b.map.toMap(), ctorCaseIndex)
+        val merged = LinkedHashMap(base.members).apply { putAll(b.map) }
+        val value = RyoHostedValue(typeRef, merged, ctorCaseIndex ?: base.ctorCaseIndex)
         if (validateNow) runtime.validateRyoValue(value)
         return value
     }
@@ -114,10 +118,13 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
         private var unknownTypePolicy: UnknownTypePolicy = UnknownTypePolicy.OPAQUE
         private var strictSchemaGraph: Boolean = true
         private var validateOnCreate: Boolean = true
+        private var persistentCtorPrefs: CtorPrefs = CtorPrefs.EMPTY
 
         fun unknownTypePolicy(policy: UnknownTypePolicy) = apply { unknownTypePolicy = policy }
         fun strictSchemaGraph(enabled: Boolean) = apply { strictSchemaGraph = enabled }
         fun validateOnCreate(enabled: Boolean) = apply { validateOnCreate = enabled }
+        fun ctorPrefs(prefs: CtorPrefs) = apply { persistentCtorPrefs = prefs }
+        fun ctorPrefs(block: CtorPrefs.Builder.() -> Unit) = apply { persistentCtorPrefs = CtorPrefs.build(block) }
 
         fun registerSchema(schema: ModelSchema) = apply {
             val normalized = ModelSchemaNormalizer.normalize(schema)
@@ -139,6 +146,7 @@ class Ryo private constructor(internal val runtime: RyoRuntime) {
                     unknownTypePolicy = unknownTypePolicy,
                     strictSchemaGraph = strictSchemaGraph,
                     validateOnCreate = validateOnCreate,
+                    ctorPrefs = persistentCtorPrefs,
                     customGlories = customGlories.values.toList(),
                     customMappings = customMappings.toMap()
                 )
@@ -161,11 +169,12 @@ internal data class BuildConfig(
     val unknownTypePolicy: UnknownTypePolicy,
     val strictSchemaGraph: Boolean,
     val validateOnCreate: Boolean,
+    val ctorPrefs: CtorPrefs,
     val customGlories: List<Glory>,
     val customMappings: Map<String, String>
 )
 
-internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownTypePolicy, val validateOnCreate: Boolean) {
+internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownTypePolicy, val validateOnCreate: Boolean, private val persistentCtorPrefs: CtorPrefs) {
     private val schemas = linkedMapOf<String, ModelSchema>()
     private val glories = linkedMapOf<String, Glory>()
     private val wireTypeToGlory = linkedMapOf<String, String>()
@@ -185,7 +194,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
     companion object {
         fun build(config: BuildConfig): RyoRuntime {
-            val runtime = RyoRuntime(config.unknownTypePolicy, config.validateOnCreate)
+            val runtime = RyoRuntime(config.unknownTypePolicy, config.validateOnCreate, config.ctorPrefs)
             runtime.registerBuiltinGlories()
 
             config.customGlories.forEach(runtime::registerGlory)
@@ -228,7 +237,7 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
     fun isInlineWireType(wireTypeId: String): Boolean = wireTypeId in inlineWireTypes
 
-    fun initRyoValueFor(typeRef: TypeRef): RyoValue = when (typeRef) {
+    fun initRyoValueFor(typeRef: TypeRef, ctorPrefs: CtorPrefs, path: RyoPath = RyoPath.ROOT): RyoValue = when (typeRef) {
         is PrimitiveTypeRef -> when (typeRef.wireTypeId) {
             TypeIds.BOOLEAN -> RyoScalarValue.of(typeRef, false)
             TypeIds.BYTE -> RyoScalarValue.of(typeRef, 0.toByte())
@@ -248,10 +257,11 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         is ObjectTypeRef -> {
             val schema = requireSchema(typeRef.modelId)
             require(schema.kind != ModelSchema.GloryKind.CUSTOM) { "Cannot auto create default value for custom schema ${schema.modelId}" }
+            val selectedCaseIndex = selectCtorCaseIndex(schema, path, ctorPrefs)
 
             val members = linkedMapOf<String, RyoValue>()
-            schema.members.forEach { member -> members[member.name] = if (member.nullable) RyoNullValue(member.typeRef) else initRyoValueFor(member.typeRef) }
-            RyoHostedValue(typeRef, members, if (schema.kind == ModelSchema.GloryKind.CTOR && schema.ctorCases.size > 1) 0 else null)
+            schema.members.forEach { member -> members[member.name] = if (member.nullable) RyoNullValue(member.typeRef) else initRyoValueFor(member.typeRef, ctorPrefs, path.member(member.name)) }
+            RyoHostedValue(typeRef, members, if (schema.kind == ModelSchema.GloryKind.CTOR && schema.ctorCases.size > 1) selectedCaseIndex else null)
         }
     }
 
@@ -315,6 +325,12 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
 
     private fun validateHosted(value: RyoHostedValue) {
         val schema = requireSchema(value.typeRef.modelId)
+
+        if (schema.kind == ModelSchema.GloryKind.CTOR && schema.ctorCases.size > 1) {
+            val ctor = value.ctorCaseIndex
+            require(ctor != null) { "Missing ctorCaseIndex for model ${schema.modelId} with ${schema.ctorCases.size} ctor cases" }
+            require(ctor in schema.ctorCases.indices) { "Invalid ctorCaseIndex=$ctor for model ${schema.modelId}" }
+        }
         val knownMembers = schema.members.associateBy { it.name }
         schema.members.forEach { member ->
             if (member.name in value.members) return@forEach
@@ -395,6 +411,27 @@ internal class RyoRuntime private constructor(val unknownTypePolicy: UnknownType
         is ObjectTypeRef -> setOf(typeRef.modelId)
         is ArrayTypeRef -> collectObjectTypeIds(typeRef.element)
         else -> emptySet()
+    }
+
+    private fun selectCtorCaseIndex(schema: ModelSchema, path: RyoPath, sessionCtorPrefs: CtorPrefs): Int {
+        if (schema.kind != ModelSchema.GloryKind.CTOR) return 0
+        val cases = schema.ctorCases
+        if (cases.size == 1) return 0
+
+        val selected = resolveCtorRef(sessionCtorPrefs.byPath[path], cases, schema, "session.path:$path")
+            ?: resolveCtorRef(sessionCtorPrefs.byType[schema.modelId], cases, schema, "session.type:${schema.modelId}")
+            ?: resolveCtorRef(persistentCtorPrefs.byPath[path], cases, schema, "persistent.path:$path")
+            ?: resolveCtorRef(persistentCtorPrefs.byType[schema.modelId], cases, schema, "persistent.type:${schema.modelId}")
+            ?: cases.indexOfFirst { it.id == "default" }.takeIf { it != -1 }
+            ?: error("Cannot select ctor case for ${schema.modelId} at path=$path. multiple cases=${cases.map { it.id }}")
+
+        return selected
+    }
+
+    private fun resolveCtorRef(ref: CtorCaseRef?, cases: List<ModelSchema.CtorCase>, schema: ModelSchema, source: String): Int? = when (ref) {
+        null -> null
+        is CtorCaseRef.Index -> ref.index.also { require(it in cases.indices) { "Ctor index out of bounds for ${schema.modelId} from $source: $it / ${cases.size}" } }
+        is CtorCaseRef.Id -> cases.indexOfFirst { it.id == ref.id }.takeIf { it >= 0 } ?: error("Ctor id '${ref.id}' not found for ${schema.modelId} from $source. available=${cases.map { it.id }}")
     }
 
     private fun registerBuiltinGlories() {

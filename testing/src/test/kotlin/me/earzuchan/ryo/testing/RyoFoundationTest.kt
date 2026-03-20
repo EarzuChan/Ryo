@@ -5,9 +5,11 @@ import me.earzuchan.ryo.foundation.UnknownTypePolicy
 import me.earzuchan.ryo.foundation.io.RyoReader
 import me.earzuchan.ryo.foundation.io.RyoWriter
 import me.earzuchan.ryo.foundation.io.loadFrom
+import me.earzuchan.ryo.foundation.path.RyoPath
 import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.special.FragmentalImage
 import me.earzuchan.ryo.foundation.special.fragmentalImageOrNull
+import me.earzuchan.ryo.foundation.schema.CtorPrefs
 import me.earzuchan.ryo.foundation.schema.ModelSchema
 import me.earzuchan.ryo.foundation.schema.ModelSchemaJson
 import me.earzuchan.ryo.foundation.schema.modelSchema
@@ -75,63 +77,38 @@ class RyoFoundationTest {
         val senderMessageArr = TypeRefs.arrayOf(TypeRefs.objectType(senderMessageTypeId)).wireTypeId
 
         return listOf(
-            ModelSchema(
-                modelId = dialogueDescriptorTypeId,
-                kind = ModelSchema.GloryKind.CTOR,
-                members = listOf(ModelSchema.ModelMember("dialogueNameSpace", str), ModelSchema.ModelMember("conversationList", conversationArr)),
-                ctorCases = listOf(ModelSchema.CtorCase("default", listOf("dialogueNameSpace", "conversationList")))
-            ),
-            ModelSchema(
-                modelId = conversationTypeId,
-                kind = ModelSchema.GloryKind.CTOR,
-                members = listOf(
-                    ModelSchema.ModelMember("tags", strArr),
-                    ModelSchema.ModelMember("status", str),
-                    ModelSchema.ModelMember("userMessages", userMessageArr),
-                    ModelSchema.ModelMember("stateOfDiswatch", bool),
-                    ModelSchema.ModelMember("senderMessagers", senderMessageArr),
-                    ModelSchema.ModelMember("tagsToUnlock", strArr),
-                    ModelSchema.ModelMember("tagsToLock", strArr),
-                    ModelSchema.ModelMember("trigger", str)
-                ),
-                ctorCases = listOf(
-                    ModelSchema.CtorCase(
-                        "default",
-                        listOf("tags", "status", "userMessages", "stateOfDiswatch", "senderMessagers", "tagsToUnlock", "tagsToLock", "trigger")
-                    )
-                )
-            ),
-            ModelSchema(
-                modelId = userMessageTypeId,
-                kind = ModelSchema.GloryKind.CTOR,
-                members = listOf(
-                    ModelSchema.ModelMember("message", str),
-                    ModelSchema.ModelMember("isHidden", bool)
-                ),
-                ctorCases = listOf(
-                    ModelSchema.CtorCase("default", listOf("message", "isHidden"))
-                )
-            ),
-            ModelSchema(
-                modelId = senderMessageTypeId,
-                kind = ModelSchema.GloryKind.CTOR,
-                members = listOf(
-                    ModelSchema.ModelMember("message", str),
-                    ModelSchema.ModelMember("origin", str),
-                    ModelSchema.ModelMember("dateText", str),
-                    ModelSchema.ModelMember("timeText", str),
-                    ModelSchema.ModelMember("idleTime", float),
-                    ModelSchema.ModelMember("typingTime", float),
-                    ModelSchema.ModelMember("trigger", str),
-                    ModelSchema.ModelMember("triggerTime", float)
-                ),
-                ctorCases = listOf(
-                    ModelSchema.CtorCase(
-                        "default",
-                        listOf("message", "origin", "dateText", "timeText", "idleTime", "typingTime", "trigger", "triggerTime")
-                    )
-                )
-            )
+            modelSchema(dialogueDescriptorTypeId, ModelSchema.GloryKind.CTOR) {
+                member("dialogueNameSpace", str)
+                member("conversationList", conversationArr)
+                ctorCase("default", "dialogueNameSpace", "conversationList")
+            },
+            modelSchema(conversationTypeId, ModelSchema.GloryKind.CTOR) {
+                member("tags", strArr)
+                member("status", str)
+                member("userMessages", userMessageArr)
+                member("stateOfDiswatch", bool)
+                member("senderMessagers", senderMessageArr)
+                member("tagsToUnlock", strArr)
+                member("tagsToLock", strArr)
+                member("trigger", str)
+                ctorCase("default", "tags", "status", "userMessages", "stateOfDiswatch", "senderMessagers", "tagsToUnlock", "tagsToLock", "trigger")
+            },
+            modelSchema(userMessageTypeId, ModelSchema.GloryKind.CTOR) {
+                member("message", str)
+                member("isHidden", bool)
+                ctorCase("default", "message", "isHidden")
+            },
+            modelSchema(senderMessageTypeId, ModelSchema.GloryKind.CTOR) {
+                member("message", str)
+                member("origin", str)
+                member("dateText", str)
+                member("timeText", str)
+                member("idleTime", float)
+                member("typingTime", float)
+                member("trigger", str)
+                member("triggerTime", float)
+                ctorCase("default", "message", "origin", "dateText", "timeText", "idleTime", "typingTime", "trigger", "triggerTime")
+            }
         )
     }
 
@@ -279,8 +256,8 @@ class RyoFoundationTest {
 
     @Test
     fun testHostedAndContainerShouldValidateImmediatelyByDefault() {
-        val hostedError = assertFailsWith<IllegalArgumentException> { ryo.hosted(userMessageTypeId) { setScalar("message", "missing required bool") } }
-        assertEquals(hostedError.message?.contains("Missing required member"), true)
+        val hosted = ryo.hosted(userMessageTypeId) { setScalar("message", "auto-init") }
+        assertEquals(false, (hosted.members["isHidden"] as RyoScalarValue).value)
 
         val containerError = assertFailsWith<IllegalArgumentException> { ryo.container(TypeRefs.STRING, listOf(ryo.scalar("a"))) }
         assertEquals(containerError.message?.contains("must be array"), true)
@@ -293,8 +270,76 @@ class RyoFoundationTest {
             registerSchemas(dialogueTreeSchemas())
         }
         val partial = relaxed.hosted(userMessageTypeId) { setScalar("message", "late validate") }
-        val writeError = assertFailsWith<IllegalArgumentException> { relaxed.createVolumeChamber().set("x", partial) }
-        assertEquals(writeError.message?.contains("Missing required member"), true)
+        relaxed.createVolumeChamber().set("x", partial)
+    }
+
+    @Test
+    fun testCtorPrefsPersistentAndSessionOverride() {
+        val childId = "demo.ChildMulti"
+        val rootId = "demo.RootSingle"
+
+        val noPrefs = Ryo {
+            registerSchemas(
+                listOf(
+                    modelSchema(childId, ModelSchema.GloryKind.CTOR) {
+                        member("a", TypeIds.INT)
+                        member("b", TypeIds.INT)
+                        ctorCase("first", "a")
+                        ctorCase("second", "b")
+                    },
+                    modelSchema(rootId, ModelSchema.GloryKind.CTOR) {
+                        member("child", childId)
+                        ctorCase("default", "child")
+                    }
+                )
+            )
+        }
+        assertFailsWith<IllegalStateException> { noPrefs.initRyoTypeFor(TypeRefs.objectType(childId)) }
+
+        val persistent = Ryo {
+            ctorPrefs { type(childId, "first") }
+            registerSchemas(
+                listOf(
+                    modelSchema(childId, ModelSchema.GloryKind.CTOR) {
+                        member("a", TypeIds.INT)
+                        member("b", TypeIds.INT)
+                        ctorCase("first", "a")
+                        ctorCase("second", "b")
+                    },
+                    modelSchema(rootId, ModelSchema.GloryKind.CTOR) {
+                        member("child", childId)
+                        ctorCase("default", "child")
+                    }
+                )
+            )
+        }
+
+        val childByPersistent = persistent.initRyoTypeFor(TypeRefs.objectType(childId)) as RyoHostedValue
+        assertEquals(0, childByPersistent.ctorCaseIndex)
+
+        val rootBySession = persistent.initRyoTypeFor(TypeRefs.objectType(rootId), CtorPrefs.build { path(RyoPath.ROOT.member("child"), "second") }) as RyoHostedValue
+        val childBySession = rootBySession.members["child"] as RyoHostedValue
+        assertEquals(1, childBySession.ctorCaseIndex)
+    }
+
+    @Test
+    fun testHostedShouldUseInitAndCtorPrefs() {
+        val typeId = "demo.HostedMultiCtor"
+        val local = Ryo {
+            registerSchema(
+                modelSchema(typeId, ModelSchema.GloryKind.CTOR) {
+                    member("left", TypeIds.INT)
+                    member("right", TypeIds.INT)
+                    ctorCase("leftCase", "left")
+                    ctorCase("rightCase", "right")
+                }
+            )
+        }
+
+        val hosted = local.hosted(typeId, ctorPrefs = CtorPrefs.build { type(typeId, "rightCase") }) { setScalar("left", 7) }
+        assertEquals(1, hosted.ctorCaseIndex)
+        assertEquals(7, (hosted.members["left"] as RyoScalarValue).value)
+        assertEquals(0, (hosted.members["right"] as RyoScalarValue).value)
     }
 
     @Test
@@ -398,22 +443,14 @@ class RyoFoundationTest {
     fun testCtorInferShouldPreferCaseThatCoversProvidedMembers() {
         val typeId = "demo.CtorInfer"
         val local = Ryo {
-            registerSchema(
-                ModelSchema(
-                    modelId = typeId,
-                    kind = ModelSchema.GloryKind.CTOR,
-                    members = listOf(
-                        ModelSchema.ModelMember("a", TypeIds.INT),
-                        ModelSchema.ModelMember("b", TypeIds.INT)
-                    ),
-                    ctorCases = listOf(
-                        ModelSchema.CtorCase("onlyA", listOf("a")),
-                        ModelSchema.CtorCase("aAndB", listOf("a", "b"))
-                    )
-                )
-            )
+            registerSchema(modelSchema(typeId, ModelSchema.GloryKind.CTOR) {
+                member("a", TypeIds.INT)
+                member("b", TypeIds.INT)
+                ctorCase("onlyA", "a")
+                ctorCase("aAndB", "a", "b")
+            })
         }
-        val value = local.hosted(typeId) {
+        val value = local.hosted(typeId, ctorPrefs = CtorPrefs.build { type(typeId, "aAndB") }) {
             setScalar("a", 1)
             setScalar("b", 2)
         }

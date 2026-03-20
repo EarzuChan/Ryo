@@ -3,6 +3,8 @@ package me.earzuchan.ryo.modern.session
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import me.earzuchan.ryo.foundation.path.RyoPath
+import me.earzuchan.ryo.foundation.path.RyoPathSegment
 import me.earzuchan.ryo.foundation.value.RyoContainerValue
 import me.earzuchan.ryo.foundation.value.RyoHostedValue
 import me.earzuchan.ryo.foundation.value.RyoNullValue
@@ -13,41 +15,19 @@ import me.earzuchan.ryo.foundation.value.RyoValue
 import me.earzuchan.ryo.modern.ModernRuntime
 import kotlin.collections.iterator
 
-sealed interface ValuePathSegment
-data class MemberPathSegment(val name: String) : ValuePathSegment
-data class IndexPathSegment(val index: Int) : ValuePathSegment
-
-data class ValuePath(val segments: List<ValuePathSegment> = emptyList()) {
-    fun member(name: String) = ValuePath(segments + MemberPathSegment(name))
-    fun index(index: Int) = ValuePath(segments + IndexPathSegment(index))
-    operator fun plus(other: ValuePath) = ValuePath(segments + other.segments)
-
-    // 判断两个路径是否有交集（父子关系）。用于精准反应流唤醒！
-    fun isAffectedBy(mutatedPath: ValuePath): Boolean = if (this.segments.size <= mutatedPath.segments.size)
-        mutatedPath.segments.take(this.segments.size) == this.segments
-    else this.segments.take(mutatedPath.segments.size) == mutatedPath.segments
-
-    companion object {
-        val ROOT = ValuePath()
-    }
-}
-
 class EditorSession internal constructor(internal val runtime: ModernRuntime, initialSnapshot: RyoValue) {
     private var currentRoot: RyoValue = initialSnapshot
     private val history = mutableListOf<RyoValue>().apply { add(initialSnapshot) }
     private var cursorIndex = 0
 
-    // KMP 轻量级线程安全 Map 替换方案：不可变 Map 交换 (Copy-on-Write)
-    // 读操作完全无锁，性能极高；写操作加锁复制。
+    // KMP 轻量线程安全映射
     private val registryLock = Any()
-    private var flowRegistry: Map<ValuePath, MutableStateFlow<RyoValue?>> = emptyMap()
+    private var flowRegistry: Map<RyoPath, MutableStateFlow<RyoValue?>> = emptyMap()
 
-    // 按需分发 Flow (懒反应)
-    fun observe(path: ValuePath): StateFlow<RyoValue?> {
+    fun observe(path: RyoPath): StateFlow<RyoValue?> {
         flowRegistry[path]?.let { return it.asStateFlow() }
 
         synchronized(registryLock) {
-            // Double check
             flowRegistry[path]?.let { return it.asStateFlow() }
             val newFlow = MutableStateFlow(resolveValue(currentRoot, path))
             flowRegistry = flowRegistry + (path to newFlow)
@@ -55,26 +35,22 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
         }
     }
 
-    fun resolve(path: ValuePath): RyoValue? = resolveValue(currentRoot, path)
+    fun resolve(path: RyoPath): RyoValue? = resolveValue(currentRoot, path)
 
-    // 核心：处理批量事务提交
-    internal fun commitBatch(mutations: Map<ValuePath, RyoValue>) {
+    internal fun commitBatch(mutations: Map<RyoPath, RyoValue>) {
         if (mutations.isEmpty()) return
 
-        // O(N) 批量结构共享，生成新树
         val flattenedMutations = mutations.map { it.key.segments to it.value }
         currentRoot = batchReplace(currentRoot, flattenedMutations)
 
-        // 维护历史栈
         if (cursorIndex < history.lastIndex) history.subList(cursorIndex + 1, history.size).clear()
         history.add(currentRoot)
         cursorIndex = history.lastIndex
-        if (history.size > 128) { // 限制历史记录数量
+        if (history.size > 128) {
             history.removeAt(0)
             cursorIndex--
         }
 
-        // 精准爆破唤醒 UI！
         val currentRegistry = flowRegistry
         currentRegistry.forEach { (registeredPath, stateFlow) ->
             val affected = mutations.keys.any { mutatedPath -> registeredPath.isAffectedBy(mutatedPath) }
@@ -98,35 +74,30 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
         return true
     }
 
-    val rootCursor: RyoCursor get() = cursorAt(ValuePath.ROOT)
+    val rootCursor: RyoCursor get() = cursorAt(RyoPath.ROOT)
     inline fun <reified T : RyoCursor> getRootCursorAs(): T = rootCursor as? T ?: error("Root cursor is ${rootCursor::class.simpleName}, expected ${T::class.simpleName}")
 
     fun extractFinalResult(): RyoValue = currentRoot
 
     private fun broadcastAll() = flowRegistry.forEach { (path, flow) -> flow.value = resolveValue(currentRoot, path) }
 
-    private fun cursorAt(path: ValuePath): RyoCursor = when (resolve(path)) {
+    private fun cursorAt(path: RyoPath): RyoCursor = when (resolve(path)) {
         is RyoHostedValue -> HostedCursor(this, path)
         is RyoContainerValue -> ContainerCursor(this, path)
         else -> ScalarCursor(this, path)
     }
 }
 
-// ==========================================
-// 智能游标系统 (Cursors)
-// ==========================================
-sealed class RyoCursor(val session: EditorSession, val path: ValuePath) {
+sealed class RyoCursor(val session: EditorSession, val path: RyoPath) {
     val stateFlow: StateFlow<RyoValue?> get() = session.observe(path)
     val snapshot: RyoValue? get() = session.resolve(path)
 
-    // 快捷类型转换助手
     fun asHosted() = this as HostedCursor
     fun asContainer() = this as ContainerCursor
     fun asScalar() = this as ScalarCursor
 }
 
-class HostedCursor(session: EditorSession, path: ValuePath) : RyoCursor(session, path) {
-    // 优雅向下寻址
+class HostedCursor(session: EditorSession, path: RyoPath) : RyoCursor(session, path) {
     operator fun get(name: String): RyoCursor {
         val childPath = path.member(name)
         val snapshot = session.resolve(childPath)
@@ -137,13 +108,11 @@ class HostedCursor(session: EditorSession, path: ValuePath) : RyoCursor(session,
         }
     }
 
-    // 补上灵魂：单点直接赋值操作符
     operator fun set(name: String, value: Any?) {
         val childPath = path.member(name)
         session.commitBatch(mapOf(childPath to toCommitValue(session, childPath, value)))
     }
 
-    // 开启高墙内的事务
     fun edit(block: EditorTransaction.() -> Unit) {
         val tx = EditorTransaction(session, path)
         tx.block()
@@ -151,7 +120,7 @@ class HostedCursor(session: EditorSession, path: ValuePath) : RyoCursor(session,
     }
 }
 
-class ContainerCursor(session: EditorSession, path: ValuePath) : RyoCursor(session, path) {
+class ContainerCursor(session: EditorSession, path: RyoPath) : RyoCursor(session, path) {
     operator fun get(index: Int): RyoCursor {
         val childPath = path.index(index)
         val snapshot = session.resolve(childPath)
@@ -174,9 +143,7 @@ class ContainerCursor(session: EditorSession, path: ValuePath) : RyoCursor(sessi
     }
 }
 
-class ScalarCursor(session: EditorSession, path: ValuePath) : RyoCursor(session, path) {
-    // 没有get？？？
-
+class ScalarCursor(session: EditorSession, path: RyoPath) : RyoCursor(session, path) {
     fun set(value: Any?) {
         val current = snapshot as? RyoScalarValue ?: error("Path '$path' is not a scalar")
         val ryoValue = if (value == null) session.runtime.nullValue(current.typeRef) else session.runtime.scalarValue(current.typeRef, value)
@@ -186,12 +153,9 @@ class ScalarCursor(session: EditorSession, path: ValuePath) : RyoCursor(session,
 
 class EditorTransaction(
     private val session: EditorSession,
-    val basePath: ValuePath,
-    // 💥 关键修复：把草稿纸设为构造参数，并且默认创建一个。
-    // 这样 nested 创建的子事务就能共享同一张草稿纸了！
-    internal val pendingMutations: LinkedHashMap<ValuePath, RyoValue> = LinkedHashMap()
+    val basePath: RyoPath,
+    internal val pendingMutations: LinkedHashMap<RyoPath, RyoValue> = LinkedHashMap()
 ) {
-    // 拦截直接赋值，进行动态装箱
     operator fun set(name: String, value: Any?) {
         val childPath = basePath.member(name)
         pendingMutations[childPath] = toCommitValue(session, childPath, value)
@@ -204,20 +168,16 @@ class EditorTransaction(
     fun nested(name: String): EditorTransaction = EditorTransaction(session, basePath.member(name), pendingMutations)
 }
 
-
-// ==========================================
-// 核心算法：批量结构共享合并
-// ==========================================
-private fun resolveValue(root: RyoValue?, path: ValuePath): RyoValue? {
+private fun resolveValue(root: RyoValue?, path: RyoPath): RyoValue? {
     var current = root
     for (segment in path.segments) current = when (segment) {
-        is MemberPathSegment -> (current as? RyoHostedValue)?.members?.get(segment.name)
-        is IndexPathSegment -> (current as? RyoContainerValue)?.elements?.getOrNull(segment.index)
+        is RyoPathSegment.Member -> (current as? RyoHostedValue)?.members?.get(segment.name)
+        is RyoPathSegment.Index -> (current as? RyoContainerValue)?.elements?.getOrNull(segment.index)
     } ?: return null
     return current
 }
 
-private fun batchReplace(root: RyoValue, mutations: List<Pair<List<ValuePathSegment>, RyoValue>>): RyoValue {
+private fun batchReplace(root: RyoValue, mutations: List<Pair<List<RyoPathSegment>, RyoValue>>): RyoValue {
     if (mutations.isEmpty()) return root
 
     val exactMatch = mutations.find { it.first.isEmpty() }
@@ -229,7 +189,7 @@ private fun batchReplace(root: RyoValue, mutations: List<Pair<List<ValuePathSegm
         is RyoHostedValue -> {
             val newMembers = LinkedHashMap(root.members)
             for ((segment, childMutations) in groupedMutations) {
-                val name = (segment as? MemberPathSegment)?.name ?: error("Path mismatch: expected member segment but got ${segment::class.simpleName}")
+                val name = (segment as? RyoPathSegment.Member)?.name ?: error("Path mismatch: expected member segment but got ${segment::class.simpleName}")
                 val strippedMutations = childMutations.map { it.first.drop(1) to it.second }
                 val current = newMembers[name] ?: error("Path mismatch: member '$name' not found")
                 newMembers[name] = batchReplace(current, strippedMutations)
@@ -240,7 +200,7 @@ private fun batchReplace(root: RyoValue, mutations: List<Pair<List<ValuePathSegm
         is RyoContainerValue -> {
             val newElements = root.elements.toMutableList()
             for ((segment, childMutations) in groupedMutations) {
-                val index = (segment as? IndexPathSegment)?.index ?: error("Path mismatch: expected index segment but got ${segment::class.simpleName}")
+                val index = (segment as? RyoPathSegment.Index)?.index ?: error("Path mismatch: expected index segment but got ${segment::class.simpleName}")
                 require(index in newElements.indices) { "Container index out of bounds: $index (size=${newElements.size})" }
                 val strippedMutations = childMutations.map { it.first.drop(1) to it.second }
                 newElements[index] = batchReplace(newElements[index], strippedMutations)
@@ -255,8 +215,7 @@ private fun batchReplace(root: RyoValue, mutations: List<Pair<List<ValuePathSegm
     }
 }
 
-// 从 Any? 智能包装为 RyoValue
-private fun toCommitValue(session: EditorSession, path: ValuePath, value: Any?): RyoValue {
+private fun toCommitValue(session: EditorSession, path: RyoPath, value: Any?): RyoValue {
     if (value is RyoValue) return value
 
     val currentChild = session.resolve(path)

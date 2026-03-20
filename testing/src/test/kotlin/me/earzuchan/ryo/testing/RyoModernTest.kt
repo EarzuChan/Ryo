@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import me.earzuchan.ryo.foundation.Ryo
+import me.earzuchan.ryo.foundation.schema.modelSchema
 import me.earzuchan.ryo.foundation.schema.ModelSchema
+import me.earzuchan.ryo.foundation.path.RyoPath
 import me.earzuchan.ryo.foundation.type.TypeIds
 import me.earzuchan.ryo.foundation.type.TypeRefs
 import me.earzuchan.ryo.foundation.util.RgbImage
@@ -17,7 +19,6 @@ import me.earzuchan.ryo.modern.modernize
 import me.earzuchan.ryo.modern.session.ContainerCursor
 import me.earzuchan.ryo.modern.session.HostedCursor
 import me.earzuchan.ryo.modern.session.ScalarCursor
-import me.earzuchan.ryo.modern.session.ValuePath
 import me.earzuchan.ryo.modern.texture.createCanonicalTexture
 import me.earzuchan.ryo.modern.texture.isCanonical
 import me.earzuchan.ryo.modern.texture.requireCanonicalMainImage
@@ -41,25 +42,17 @@ class RyoModernTest {
         ryo = Ryo {
             registerSchemas(
                 listOf(
-                    ModelSchema(
-                        modelId = PROFILE_TYPE_ID,
-                        kind = ModelSchema.GloryKind.CTOR,
-                        members = listOf(
-                            ModelSchema.ModelMember("title", TypeIds.STRING),
-                            ModelSchema.ModelMember("active", TypeIds.BOOLEAN)
-                        ),
-                        ctorCases = listOf(ModelSchema.CtorCase("default", listOf("title", "active")))
-                    ),
-                    ModelSchema(
-                        modelId = ROOT_TYPE_ID,
-                        kind = ModelSchema.GloryKind.CTOR,
-                        members = listOf(
-                            ModelSchema.ModelMember("name", TypeIds.STRING),
-                            ModelSchema.ModelMember("profile", PROFILE_TYPE_ID),
-                            ModelSchema.ModelMember("tags", TypeRefs.arrayOf(TypeRefs.STRING).wireTypeId)
-                        ),
-                        ctorCases = listOf(ModelSchema.CtorCase("default", listOf("name", "profile", "tags")))
-                    )
+                    modelSchema(PROFILE_TYPE_ID, ModelSchema.GloryKind.CTOR) {
+                        member("title", TypeIds.STRING)
+                        member("active", TypeIds.BOOLEAN)
+                        ctorCase("default", "title", "active")
+                    },
+                    modelSchema(ROOT_TYPE_ID, ModelSchema.GloryKind.CTOR) {
+                        member("name", TypeIds.STRING)
+                        member("profile", PROFILE_TYPE_ID)
+                        member("tags", TypeRefs.arrayOf(TypeRefs.STRING).wireTypeId)
+                        ctorCase("default", "name", "profile", "tags")
+                    }
                 )
             )
         }
@@ -184,14 +177,14 @@ class RyoModernTest {
         profile["active"] = false
 
         // 验证自动装箱和寻址生效
-        assertEquals("kotlin", session.resolve(ValuePath.ROOT.member("name")).asScalarOrNull()?.value)
-        assertEquals("multiplatform", session.resolve(ValuePath.ROOT.member("profile").member("title")).asScalarOrNull()?.value)
-        assertEquals(false, session.resolve(ValuePath.ROOT.member("profile").member("active")).asScalarOrNull()?.value)
+        assertEquals("kotlin", session.resolve(RyoPath.ROOT.member("name")).asScalarOrNull()?.value)
+        assertEquals("multiplatform", session.resolve(RyoPath.ROOT.member("profile").member("title")).asScalarOrNull()?.value)
+        assertEquals(false, session.resolve(RyoPath.ROOT.member("profile").member("active")).asScalarOrNull()?.value)
     }
 
     @Test
-    fun `ValuePath intersection logic must correctly identify relationships`() {
-        val rootPath = ValuePath.ROOT
+    fun `RyoPath intersection logic must correctly identify relationships`() {
+        val rootPath = RyoPath.ROOT
         val profilePath = rootPath.member("profile")
         val titlePath = profilePath.member("title")
         val activePath = profilePath.member("active")
