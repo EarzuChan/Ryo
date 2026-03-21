@@ -1,6 +1,8 @@
 ﻿import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 val appId = "$group.$name"
+val appName = "Ryo"
+val appVer = version.toString()
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -9,6 +11,7 @@ plugins {
     alias(libs.plugins.compose.hotreload)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.buildcfg)
 }
 
 kotlin {
@@ -42,8 +45,18 @@ dependencies {
 
     implementation(libs.decompose)
     implementation(libs.decompose.compose)
+    implementation(libs.reorderable)
 
     implementation(libs.darkmodedetector)
+}
+
+buildConfig {
+    packageName(appId)
+
+    buildConfigField("APP_NAME", appName)
+    buildConfigField("APP_VERSION", appVer)
+    buildConfigField("REPO_URL", "https://github.com/EarzuChan/Ryo")
+    buildConfigField("AUTHOR_URL", "https://github.com/EarzuChan")
 }
 
 compose.desktop {
@@ -53,7 +66,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
             packageName = appId
-            packageVersion = version as String
+            packageVersion = appVer
         }
     }
 }

@@ -1,21 +1,31 @@
-﻿package me.earzuchan.ryo.aiee
+package me.earzuchan.ryo.aiee
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.window.Window
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import me.earzuchan.ryo.aiee.di.appModule
+import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.resources.Res
+import me.earzuchan.ryo.aiee.resources.illu_ryo_lawnchair
+import me.earzuchan.ryo.aiee.ui.window.MainWindowContent
+import me.earzuchan.ryo.aiee.ui.window.RyoWindow
+import me.earzuchan.ryo.aiee.util.ResUtils.paint
+import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.KoinApplication
 
 fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "Ryo AIEE") {
-        App()
-    }
-}
+    KoinApplication(application = { modules(appModule) }) {
+        val lifecycle = remember { LifecycleRegistry() }
+        val windowState = rememberWindowState(size = DpSize(1280.dp, 820.dp))
+        val appDuty = remember { AppDuty(DefaultComponentContext(lifecycle), ::exitApplication) }
 
-@Composable
-private fun App() = MaterialTheme {
-    Surface {
-        Text("AIEE")
+        LifecycleController(lifecycle, windowState)
+
+        RyoWindow(appDuty::requestClose, windowState, appDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = appDuty.windowInterop, forceDarkTheme = appDuty.forceDarkTheme) { MainWindowContent(appDuty, it) }
     }
 }

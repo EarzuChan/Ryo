@@ -18,6 +18,7 @@ object TypeIds {
     const val OBJECT = "java.lang.Object"
 
     val PRIMITIVE_SCALARS: Set<String> = setOf(BOOLEAN, BYTE, CHAR, DOUBLE, FLOAT, INT, LONG, SHORT)
+
     val SCALARS: Set<String> = PRIMITIVE_SCALARS + STRING
 
     val PRIMITIVE_TO_DESCRIPTOR: Map<String, Char> = mapOf(BOOLEAN to 'Z', BYTE to 'B', CHAR to 'C', DOUBLE to 'D', FLOAT to 'F', INT to 'I', LONG to 'J', SHORT to 'S')

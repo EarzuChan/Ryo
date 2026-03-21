@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.compose.hotreload) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.room) apply false
+    alias(libs.plugins.buildcfg) apply false
 }
 
 group = "me.earzuchan.ryo"

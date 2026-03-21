@@ -14,6 +14,8 @@ decompose = "3.4.0"
 darkmodedetector = "0.7.5"
 compose-hotreload = "1.0.0"
 coroutines = "1.10.2"
+reorderable = "3.0.0"
+buildcfg = "6.0.9"
 
 [libraries]
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
@@ -41,6 +43,7 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 
 darkmodedetector = { module = "io.github.kdroidfilter:platformtools.darkmodedetector", version.ref = "darkmodedetector" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -51,3 +54,4 @@ compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 compose-hotreload = { id = "org.jetbrains.compose.hot-reload", version.ref = "compose-hotreload" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+buildcfg = { id = "com.github.gmazzo.buildconfig", version.ref = "buildcfg" }

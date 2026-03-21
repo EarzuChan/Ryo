@@ -4,6 +4,7 @@ import me.earzuchan.ryo.foundation.path.RyoPath
 
 sealed interface CtorCaseRef {
     data class Index(val index: Int) : CtorCaseRef
+
     data class Id(val id: String) : CtorCaseRef
 }
 

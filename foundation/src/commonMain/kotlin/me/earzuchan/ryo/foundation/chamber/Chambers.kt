@@ -31,13 +31,10 @@ abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // T
     internal class WriteCtx(val chamber: Chamber, val writer: RyoWriter, val pendingChildren: MutableList<Pair<Int, RyoValue>> = mutableListOf())
 
     companion object {
-        internal const val META_SHIFT = RyoMeta.SHIFT
         internal const val META_TYPE_NULL = 0
         internal const val META_TYPE_INLINED = 2
         internal const val META_TYPE_REFED = 3
-
         internal const val TOMBSTONE_BINDING_ID = -1
-
         internal const val BLOB_DEFLATE_MIN_BYTES = 64
         internal const val BLOB_DEFLATE_RATIO_THRESHOLD = 0.9
         internal const val INDEX_DEFLATE_RATIO_THRESHOLD = 1.1
