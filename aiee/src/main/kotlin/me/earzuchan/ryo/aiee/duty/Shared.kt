@@ -4,6 +4,7 @@ enum class AppCommand {
     OpenWelcomeTab,
     OpenEditorSessionTab,
     OpenSettingsTab,
+    RestoreClosedTab,
     CloseCurrentTab,
     ToggleSidePanel,
     FocusAssetsPanel,

@@ -50,7 +50,6 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     val windowTitle @Composable get() = BuildConfig.APP_NAME.let { activeTab?.let { t -> "${t.title.resolve()} - $it" } ?: it }
 
     init {
-        workspaceDuty.seedDemoTabs()
         registerCommands()
     }
 
@@ -62,7 +61,10 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     fun requestCloseTab(id: String) {
         val tab = workspaceDuty.findTab(id) ?: return
-        if (!tab.dirty) return workspaceDuty.closeTab(id)
+        if (!tab.dirty) {
+            workspaceDuty.closeTab(id)
+            return
+        }
 
         dialogDuty.orderCommon(
             headline = UiText.Res(Res.string.dialog_close_unsaved_title), description = UiText.Res(Res.string.dialog_close_unsaved_description_format, listOf(tab.title)), actions = listOf(
@@ -112,6 +114,8 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     fun openSettingsTab() = workspaceDuty.openSettingsTab()
 
+    fun restoreLastClosedTab() = workspaceDuty.restoreLastClosedTab()
+
     fun showAboutDialog() = dialogDuty.orderSpecial(closeOnOverlayClick = true) { _ -> AboutDialog() }
 
     fun executeCommand(command: AppCommand) = commandDuty.execute(command)
@@ -145,6 +149,7 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         commandDuty.register(AppCommand.OpenWelcomeTab) { workspaceDuty.openWelcomeTab() }
         commandDuty.register(AppCommand.OpenEditorSessionTab) { workspaceDuty.openEditorSessionTab() }
         commandDuty.register(AppCommand.OpenSettingsTab) { workspaceDuty.openSettingsTab() }
+        commandDuty.register(AppCommand.RestoreClosedTab, canExecute = { workspaceDuty.canRestoreClosedTab }) { workspaceDuty.restoreLastClosedTab() }
         commandDuty.register(AppCommand.CloseCurrentTab, canExecute = { activeTabId != null }) { closeCurrentTab() }
         commandDuty.register(AppCommand.ToggleSidePanel) { sideWorkspaceDuty.toggleExpanded() }
         commandDuty.register(AppCommand.FocusAssetsPanel) { sideWorkspaceDuty.focusPanel("assets") }
@@ -160,6 +165,7 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     private fun defaultShortcutBindings() = mapOf(
         AppCommand.OpenEditorSessionTab to ShortcutDuty.Stroke(ShortcutDuty.Key.N, ctrl = true),
         AppCommand.OpenSettingsTab to ShortcutDuty.Stroke(ShortcutDuty.Key.Comma, ctrl = true),
+        AppCommand.RestoreClosedTab to ShortcutDuty.Stroke(ShortcutDuty.Key.T, ctrl = true, shift = true),
         AppCommand.CloseCurrentTab to ShortcutDuty.Stroke(ShortcutDuty.Key.W, ctrl = true),
         AppCommand.Save to ShortcutDuty.Stroke(ShortcutDuty.Key.S, ctrl = true),
         AppCommand.Undo to ShortcutDuty.Stroke(ShortcutDuty.Key.Z, ctrl = true),

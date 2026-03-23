@@ -54,6 +54,7 @@
     <string name="menu_item_welcome_page">欢迎页</string>
     <string name="menu_item_editor_session_page">编辑会话页</string>
     <string name="menu_item_settings_page">设置页</string>
+    <string name="menu_item_restore_closed_tab">恢复刚关闭的标签页</string>
     <string name="menu_item_close_tab">关闭标签页</string>
     <string name="menu_item_exit">退出</string>
     <string name="menu_item_undo">撤销</string>

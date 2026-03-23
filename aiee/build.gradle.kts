@@ -7,6 +7,7 @@ val appVer = version.toString()
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose)
     alias(libs.plugins.compose.hotreload)
@@ -28,6 +29,7 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
     implementation(libs.coroutines.swing)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.koin.core)
     implementation(libs.koin.compose)

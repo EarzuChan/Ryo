@@ -37,20 +37,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.arkivanov.decompose.extensions.compose.stack.Children
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.duty.AppCommand
 import me.earzuchan.ryo.aiee.duty.AppDuty
 import me.earzuchan.ryo.aiee.duty.SideWorkspaceDuty
 import me.earzuchan.ryo.aiee.duty.TabDuty
+import me.earzuchan.ryo.aiee.duty.WorkspaceTabNavi
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
-import me.earzuchan.ryo.aiee.ui.page.EditorSessionPage
-import me.earzuchan.ryo.aiee.ui.page.EmptyPage
-import me.earzuchan.ryo.aiee.ui.page.SettingsPage
-import me.earzuchan.ryo.aiee.ui.page.WelcomePage
 import me.earzuchan.ryo.aiee.ui.resolve
 import me.earzuchan.ryo.aiee.util.ResUtils.text
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
@@ -70,14 +69,15 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
     @Composable
     fun ActionButton(icon: DrawableResource, hint: String, colors: IconButtonColors = IconButtonDefaults.iconButtonColors(), onClick: () -> Unit) = RyoIconButton(icon = icon, dpSize = 48, hintText = hint, colors = colors, onClick = onClick)
 
-    val activePanel = sideWorkspaceDuty.activePanel
     val density = LocalDensity.current
+    val panelStack by sideWorkspaceDuty.panelStack.subscribeAsState()
+    val activePanelId = panelStack.active.configuration.id
 
     Row(Modifier.fillMaxHeight()) {
         Column(Modifier.fillMaxHeight().width(64.dp).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Column(Modifier.weight(1F), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sideWorkspaceDuty.panels.forEach { panel ->
-                    PanelButton(if (sideWorkspaceDuty.activePanelId == panel.id) panel.selectedIcon else panel.icon, panel.titleRes.text, sideWorkspaceDuty.activePanelId == panel.id) { sideWorkspaceDuty.focusPanel(panel.id) }
+                    PanelButton(if (activePanelId == panel.id) panel.selectedIcon else panel.icon, panel.titleRes.text, activePanelId == panel.id) { sideWorkspaceDuty.focusPanel(panel.id) }
                 }
             }
 
@@ -90,9 +90,11 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
         if (!sideWorkspaceDuty.expanded) return
 
         Box(Modifier.fillMaxHeight().width(sideWorkspaceDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-            Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(activePanel.titleRes.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(Res.string.side_panel_placeholder.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Children(sideWorkspaceDuty.panelStack) { child ->
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(child.instance.titleRes.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(Res.string.side_panel_placeholder.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
 
@@ -108,6 +110,10 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
 fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
+    val tabStack by appDuty.workspaceDuty.tabStack.subscribeAsState()
+    val activeTabId = tabStack.active.configuration.takeIf { it !is WorkspaceTabNavi.Empty }?.id
+    val tabs = appDuty.tabs
+
     @Composable
     fun TabChip(tab: TabDuty.Tab, selected: Boolean, onSelect: () -> Unit, onClose: () -> Unit, onContextMenu: (anchorX: Int, anchorY: Int) -> Unit = { _, _ -> }, modifier: Modifier = Modifier) {
         val textColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -143,7 +149,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
     }
 
     // 以下为Tab Chips
-    if (appDuty.tabs.isNotEmpty()) Column(Modifier.fillMaxWidth()) {
+    if (tabs.isNotEmpty()) Column(Modifier.fillMaxWidth()) {
         val lazyListState = rememberLazyListState()
         val scope = rememberCoroutineScope()
         val reorderState = rememberReorderableLazyListState(lazyListState) { from, to -> appDuty.moveTab(from.index, to.index) }
@@ -156,9 +162,9 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
                 scope.launch { lazyListState.scrollBy(direction * 50F) }
             }, lazyListState
         ) {
-            items(appDuty.tabs, key = { it.id }) { tab ->
-                val hasOtherTabs = appDuty.tabs.size > 1
-                val hasTabs = appDuty.tabs.isNotEmpty()
+            items(tabs, key = { it.id }) { tab ->
+                val hasOtherTabs = tabs.size > 1
+                val hasTabs = tabs.isNotEmpty()
                 val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
                 val tabTitle = tab.title.resolve()
                 val closeText = Res.string.tab_context_close_format.text(tabTitle)
@@ -168,7 +174,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
                 val canOpenEditor = appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)
 
                 ReorderableItem(reorderState, key = tab.id) {
-                    TabChip(tab, appDuty.activeTabId == tab.id, { appDuty.selectTab(tab.id) }, { appDuty.requestCloseTab(tab.id) }, { anchorX, anchorY ->
+                    TabChip(tab, activeTabId == tab.id, { appDuty.selectTab(tab.id) }, { appDuty.requestCloseTab(tab.id) }, { anchorX, anchorY ->
                         appDuty.showContextMenu(
                             anchorX = anchorX,
                             anchorY = anchorY,
@@ -192,15 +198,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
     }
 
-    // TIPS：下面是真渲染Tab内容，以后要接入真实业务
-    Box(Modifier.fillMaxSize()) {
-        val activeTab = appDuty.activeTab
-        if (activeTab == null) EmptyPage() else when (activeTab.spec) {
-            TabDuty.TabSpec.Welcome -> WelcomePage()
-            is TabDuty.TabSpec.EditorSession -> EditorSessionPage()
-            TabDuty.TabSpec.Settings -> SettingsPage(appDuty)
-        }
-    }
+    Box(Modifier.fillMaxSize()) { Children(appDuty.workspaceDuty.tabStack) { child -> child.instance.Render(appDuty) } }
 }
 
 @Composable
@@ -222,6 +220,7 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
                         RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_settings_page.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) }
                     )
                 ),
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_restore_closed_tab.text, AppCommand.RestoreClosedTab), appDuty.commandDuty.canExecute(AppCommand.RestoreClosedTab)) { appDuty.commandDuty.execute(AppCommand.RestoreClosedTab) },
                 RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_close_tab.text, AppCommand.CloseCurrentTab), appDuty.commandDuty.canExecute(AppCommand.CloseCurrentTab)) { appDuty.commandDuty.execute(AppCommand.CloseCurrentTab) },
                 RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_exit.text, AppCommand.RequestWindowClose), appDuty.commandDuty.canExecute(AppCommand.RequestWindowClose)) { appDuty.commandDuty.execute(AppCommand.RequestWindowClose) }

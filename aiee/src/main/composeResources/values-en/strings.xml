@@ -54,6 +54,7 @@
     <string name="menu_item_welcome_page">Welcome page</string>
     <string name="menu_item_editor_session_page">Editor session page</string>
     <string name="menu_item_settings_page">Settings page</string>
+    <string name="menu_item_restore_closed_tab">Reopen closed tab</string>
     <string name="menu_item_close_tab">Close tab</string>
     <string name="menu_item_exit">Exit</string>
     <string name="menu_item_undo">Undo</string>
