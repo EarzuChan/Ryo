@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
-import me.earzuchan.ryo.aiee.resources.Res
-import me.earzuchan.ryo.aiee.resources.ic_arror_right_24px
+import me.earzuchan.ryo.aiee.resources.*
+import me.earzuchan.ryo.aiee.util.ResUtils.text
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
 
 // TIPS：自研黄金级Menu，适用于弹出菜单、右键菜单、选择器菜单
@@ -152,7 +152,7 @@ private fun RyoMenuPanel(entries: List<RyoMenuEntry>, panelWidth: Dp, submenuOve
                                     }.padding(start = 8.dp, end = endPadding).height(28.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(mainText, Modifier.weight(1F), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle ?: MaterialTheme.typography.bodyMedium, color = fg)
-                                    if (hasSubmenu) Icon(Res.drawable.ic_arror_right_24px.vector, "子菜单", Modifier.size(24.dp), sideFg)
+                                    if (hasSubmenu) Icon(Res.drawable.ic_arror_right_24px.vector, Res.string.menu_submenu_cd.text, Modifier.size(24.dp), sideFg)
                                     else if (shortcutText != null) Text(shortcutText, maxLines = 1, style = MaterialTheme.typography.bodySmall, color = sideFg)
                                 }
 

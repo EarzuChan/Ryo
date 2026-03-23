@@ -65,5 +65,15 @@ class TabHostDuty(private val tabDutyFactory: TabDutyFactory) {
         activeTabDuty?.also(block)
     }
 
+    fun updateSingletonTabTitles(welcomeTitle: String, settingsTitle: String) {
+        _tabs.forEach { tab ->
+            when (tab.spec) {
+                TabDuty.TabSpec.Welcome -> tab.title = welcomeTitle
+                TabDuty.TabSpec.Settings -> tab.title = settingsTitle
+                is TabDuty.TabSpec.EditorSession -> Unit
+            }
+        }
+    }
+
     private fun singletonTabId(spec: TabDuty.TabSpec) = spec.singletonId
 }

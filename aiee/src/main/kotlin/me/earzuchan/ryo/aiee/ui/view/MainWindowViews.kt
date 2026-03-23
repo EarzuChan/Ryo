@@ -75,13 +75,13 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
         Column(Modifier.fillMaxHeight().width(64.dp).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Column(Modifier.weight(1F), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 sideWorkspaceDuty.panels.forEach { panel ->
-                    PanelButton(if (sideWorkspaceDuty.activePanelId == panel.id) panel.selectedIcon else panel.icon, panel.title, sideWorkspaceDuty.activePanelId == panel.id) { sideWorkspaceDuty.focusPanel(panel.id) }
+                    PanelButton(if (sideWorkspaceDuty.activePanelId == panel.id) panel.selectedIcon else panel.icon, panel.titleRes.text, sideWorkspaceDuty.activePanelId == panel.id) { sideWorkspaceDuty.focusPanel(panel.id) }
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ActionButton(if (sideWorkspaceDuty.expanded) Res.drawable.ic_panel_narrow_24px else Res.drawable.ic_panel_24px, "展开收起", onClick = sideWorkspaceDuty::toggleExpanded)
-                ActionButton(Res.drawable.ic_settings_24px, "设置", onClick = onOpenSettings)
+                ActionButton(if (sideWorkspaceDuty.expanded) Res.drawable.ic_panel_narrow_24px else Res.drawable.ic_panel_24px, Res.string.side_toggle_panel.text, onClick = sideWorkspaceDuty::toggleExpanded)
+                ActionButton(Res.drawable.ic_settings_24px, Res.string.side_open_settings.text, onClick = onOpenSettings)
             }
         }
 
@@ -89,8 +89,8 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
 
         Box(Modifier.fillMaxHeight().width(sideWorkspaceDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(activePanel.title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("面板内容区待接入", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(activePanel.titleRes.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(Res.string.side_panel_placeholder.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -120,7 +120,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
             val showClose = !tab.dirty || hovered
 
             Box(Modifier.size(24.dp).onPointerEvent(PointerEventType.Enter) { hovered = true }.onPointerEvent(PointerEventType.Exit) { hovered = false }.clip(CircleShape).clickable(onClick = onClose), Alignment.Center) {
-                Icon((if (showClose) Res.drawable.ic_tab_close_24px else Res.drawable.ic_tab_unsaved_24px).vector, "Tab按钮", Modifier.size(24.dp), tint)
+                Icon((if (showClose) Res.drawable.ic_tab_close_24px else Res.drawable.ic_tab_unsaved_24px).vector, Res.string.tab_action_cd.text, Modifier.size(24.dp), tint)
             }
         }
 
@@ -178,6 +178,9 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
 fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
+    val languageTrigger by appDuty.appLanguage.collectAsState()
+    val menuGroups = remember(languageTrigger, appDuty.sideWorkspaceDuty.expanded, appDuty.isMaximized) { appDuty.menuGroups }
+
     val juche: @Composable () -> Unit = {
         val anchors = remember { mutableStateMapOf<String, IntOffset>() }
 
@@ -188,7 +191,7 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
                 // 菜单栏
                 Box(Modifier.weight(1F)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        appDuty.menuGroups.forEach { group ->
+                        menuGroups.forEach { group ->
                             RyoButton(group.label, Modifier.height(36.dp).onGloballyPositioned { coords ->
                                 val b = coords.boundsInWindow()
                                 anchors[group.id] = IntOffset(b.left.roundToInt(), b.bottom.roundToInt())

@@ -9,7 +9,7 @@ object RyoPreferences {
     enum class ThemeMode { SYSTEM, DARK, LIGHT }
 
     val KEY_LANGUAGE = stringPreferencesKey("language")
-    val DEFAULT_LANGUAGE = Language.CHINESE
+    val DEFAULT_LANGUAGE = Language.SYSTEM
 
     val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
     val DEFAULT_THEME_MODE = ThemeMode.SYSTEM

@@ -11,33 +11,36 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.earzuchan.ryo.aiee.data.preference.RyoPreferences
-import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.*
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.DARK
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.LIGHT
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.SYSTEM
 import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
-import me.earzuchan.ryo.aiee.resources.Res
-import me.earzuchan.ryo.aiee.resources.app_name
-import me.earzuchan.ryo.aiee.resources.ic_ryo_24px
+import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.dialog.AboutDialog
 import me.earzuchan.ryo.aiee.ui.window.RyoWindowController
 import me.earzuchan.ryo.aiee.ui.window.RyoWindowInterop
+import me.earzuchan.ryo.aiee.util.AppLocaleUtils
 import me.earzuchan.ryo.aiee.util.ResUtils.text
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import com.arkivanov.decompose.ComponentContext as DutyContext
 import org.koin.core.component.KoinComponent as KoinDuty
 import org.koin.core.component.inject
 
 class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext by ctx, KoinDuty {
-    data class MenuGroup(
-        val id: String, val label: String, val items: List<RyoMenuEntry>
-    )
+    data class MenuGroup(val id: String, val label: String, val items: List<RyoMenuEntry>)
 
     private val tabHostDuty = TabHostDuty(TabDutyFactory())
     private val dutyScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val prefsRepo: RyoPreferencesRepository by inject()
-    private var editorSessionSeed = 2
+    private var editorSessionSeed = 3
 
     val sideWorkspaceDuty = SideWorkspaceDuty(ctx)
     val menuDuty = MenuDuty()
@@ -66,14 +69,11 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     fun setAppLanguage(lang: RyoPreferences.Language) = dutyScope.launch { prefsRepo.setLanguage(lang) }
 
     val tabs: List<TabDuty.Tab> get() = tabHostDuty.tabs
-
     val activeTabId: String? get() = tabHostDuty.activeTabId
-
     val activeTab: TabDuty.Tab? get() = tabHostDuty.activeTab
-
     val hasDirtyTabs: Boolean get() = tabHostDuty.hasDirtyTabs
 
-    val windowTitle: String @Composable get() = Res.string.app_name.text.let { name -> activeTab?.let { "${it.title} - $name" } ?: name }
+    val windowTitle: String; @Composable get() = Res.string.app_name.text.let { name -> activeTab?.let { "${it.title} - $name" } ?: name }
 
     val windowInterop = object : RyoWindowInterop {
         override fun attachWindowController(controller: RyoWindowController) {
@@ -93,59 +93,72 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     }
 
     val menuGroups: List<MenuGroup>
-        get() = listOf(
-            MenuGroup(
-                "file", "文件", listOf(
-                    RyoMenuEntry.MenuItem(
-                        "新建", children = listOf(
-                            RyoMenuEntry.MenuItem(text = menuLabel("欢迎页", AppCommand.OpenWelcomeTab), enabled = commandDuty.canExecute(AppCommand.OpenWelcomeTab), onClick = { commandDuty.execute(AppCommand.OpenWelcomeTab) }),
-                            RyoMenuEntry.MenuItem(
-                                text = menuLabel("编辑会话页", AppCommand.OpenEditorSessionTab), enabled = commandDuty.canExecute(AppCommand.OpenEditorSessionTab), onClick = { commandDuty.execute(AppCommand.OpenEditorSessionTab) }),
-                            RyoMenuEntry.MenuItem(text = menuLabel("设置页", AppCommand.OpenSettingsTab), enabled = commandDuty.canExecute(AppCommand.OpenSettingsTab), onClick = { commandDuty.execute(AppCommand.OpenSettingsTab) })
-                        )
-                    ),
-                    RyoMenuEntry.MenuItem(text = menuLabel("关闭标签页", AppCommand.CloseCurrentTab), enabled = commandDuty.canExecute(AppCommand.CloseCurrentTab), onClick = { commandDuty.execute(AppCommand.CloseCurrentTab) }),
-                    RyoMenuEntry.Divider,
-                    RyoMenuEntry.MenuItem(text = menuLabel("退出", AppCommand.RequestWindowClose), enabled = commandDuty.canExecute(AppCommand.RequestWindowClose), onClick = { commandDuty.execute(AppCommand.RequestWindowClose) })
-                )
-            ), MenuGroup(
-                "edit", "编辑", listOf(
-                    RyoMenuEntry.MenuItem(text = menuLabel("撤销", AppCommand.Undo), enabled = commandDuty.canExecute(AppCommand.Undo), onClick = { commandDuty.execute(AppCommand.Undo) }),
-                    RyoMenuEntry.MenuItem(text = menuLabel("重做", AppCommand.Redo), enabled = commandDuty.canExecute(AppCommand.Redo), onClick = { commandDuty.execute(AppCommand.Redo) }),
-                    RyoMenuEntry.Divider,
-                    RyoMenuEntry.MenuItem(text = menuLabel("保存", AppCommand.Save), enabled = commandDuty.canExecute(AppCommand.Save), onClick = { commandDuty.execute(AppCommand.Save) }),
-                    RyoMenuEntry.MenuItem(text = menuLabel("放弃更改", AppCommand.Discard), enabled = commandDuty.canExecute(AppCommand.Discard), onClick = { commandDuty.execute(AppCommand.Discard) })
-                )
-            ), MenuGroup(
-                "view", "视图", listOf(
-                    RyoMenuEntry.MenuItem(
-                        text = menuLabel(if (sideWorkspaceDuty.expanded) "收起侧栏" else "展开侧栏", AppCommand.ToggleSidePanel),
-                        enabled = commandDuty.canExecute(AppCommand.ToggleSidePanel),
-                        onClick = { commandDuty.execute(AppCommand.ToggleSidePanel) }), RyoMenuEntry.MenuItem(
-                        "切换面板", children = listOf(
-                            RyoMenuEntry.MenuItem(text = "资产管理器", enabled = commandDuty.canExecute(AppCommand.FocusAssetsPanel), onClick = { commandDuty.execute(AppCommand.FocusAssetsPanel) }),
-                            RyoMenuEntry.MenuItem(text = "Schema管理器", enabled = commandDuty.canExecute(AppCommand.FocusSchemasPanel), onClick = { commandDuty.execute(AppCommand.FocusSchemasPanel) })
-                        )
-                    ), RyoMenuEntry.Divider, RyoMenuEntry.MenuItem(
-                        text = menuLabel(if (isMaximized) "退出全屏" else "全屏", AppCommand.ToggleMaximizeWindow),
-                        enabled = commandDuty.canExecute(AppCommand.ToggleMaximizeWindow),
-                        onClick = { commandDuty.execute(AppCommand.ToggleMaximizeWindow) })
-                )
-            ), MenuGroup(
-                "help", "帮助", listOf(
-                    RyoMenuEntry.MenuItem(text = menuLabel("欢迎页", AppCommand.OpenWelcomeTab), enabled = commandDuty.canExecute(AppCommand.OpenWelcomeTab), onClick = { commandDuty.execute(AppCommand.OpenWelcomeTab) }),
-                    RyoMenuEntry.MenuItem(text = menuLabel("设置", AppCommand.OpenSettingsTab), enabled = commandDuty.canExecute(AppCommand.OpenSettingsTab), onClick = { commandDuty.execute(AppCommand.OpenSettingsTab) }),
-                    RyoMenuEntry.Divider,
-                    RyoMenuEntry.MenuItem(text = "关于", onClick = ::showAboutDialog)
+        get() {
+            val welcomePage = tr(Res.string.menu_item_welcome_page)
+            val editorSessionPage = tr(Res.string.menu_item_editor_session_page)
+            val settingsPage = tr(Res.string.menu_item_settings_page)
+
+            return listOf(
+                MenuGroup(
+                    "file", tr(Res.string.menu_group_file), listOf(
+                        RyoMenuEntry.MenuItem(
+                            tr(Res.string.menu_item_new),
+                            children = listOf(
+                                RyoMenuEntry.MenuItem(menuLabel(welcomePage, AppCommand.OpenWelcomeTab), commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                                RyoMenuEntry.MenuItem(
+                                    menuLabel(editorSessionPage, AppCommand.OpenEditorSessionTab), commandDuty.canExecute(AppCommand.OpenEditorSessionTab)
+                                ) { commandDuty.execute(AppCommand.OpenEditorSessionTab) },
+                                RyoMenuEntry.MenuItem(menuLabel(settingsPage, AppCommand.OpenSettingsTab), commandDuty.canExecute(AppCommand.OpenSettingsTab)) { commandDuty.execute(AppCommand.OpenSettingsTab) })
+                        ),
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_close_tab), AppCommand.CloseCurrentTab), commandDuty.canExecute(AppCommand.CloseCurrentTab)) { commandDuty.execute(AppCommand.CloseCurrentTab) },
+                        RyoMenuEntry.Divider,
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_exit), AppCommand.RequestWindowClose), commandDuty.canExecute(AppCommand.RequestWindowClose)) { commandDuty.execute(AppCommand.RequestWindowClose) })
+                ), MenuGroup(
+                    "edit", tr(Res.string.menu_group_edit), listOf(
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_undo), AppCommand.Undo), commandDuty.canExecute(AppCommand.Undo)) { commandDuty.execute(AppCommand.Undo) },
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_redo), AppCommand.Redo), commandDuty.canExecute(AppCommand.Redo)) { commandDuty.execute(AppCommand.Redo) },
+                        RyoMenuEntry.Divider,
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_save), AppCommand.Save), commandDuty.canExecute(AppCommand.Save)) { commandDuty.execute(AppCommand.Save) },
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_discard_changes), AppCommand.Discard), commandDuty.canExecute(AppCommand.Discard)) { commandDuty.execute(AppCommand.Discard) })
+                ), MenuGroup(
+                    "view", tr(Res.string.menu_group_view), listOf(
+                        RyoMenuEntry.MenuItem(
+                            menuLabel(tr(if (sideWorkspaceDuty.expanded) Res.string.menu_item_collapse_sidebar else Res.string.menu_item_expand_sidebar), AppCommand.ToggleSidePanel),
+                            commandDuty.canExecute(AppCommand.ToggleSidePanel),
+                        ) { commandDuty.execute(AppCommand.ToggleSidePanel) }, RyoMenuEntry.MenuItem(
+                            tr(Res.string.menu_item_switch_panel),
+                            children = listOf(
+                                RyoMenuEntry.MenuItem(tr(Res.string.panel_assets_manager), commandDuty.canExecute(AppCommand.FocusAssetsPanel)) { commandDuty.execute(AppCommand.FocusAssetsPanel) },
+                                RyoMenuEntry.MenuItem(tr(Res.string.panel_schemas_manager), commandDuty.canExecute(AppCommand.FocusSchemasPanel)) { commandDuty.execute(AppCommand.FocusSchemasPanel) })
+                        ), RyoMenuEntry.Divider, RyoMenuEntry.MenuItem(
+                            menuLabel(tr(if (isMaximized) Res.string.menu_item_exit_fullscreen else Res.string.menu_item_fullscreen), AppCommand.ToggleMaximizeWindow), commandDuty.canExecute(AppCommand.ToggleMaximizeWindow)
+                        ) { commandDuty.execute(AppCommand.ToggleMaximizeWindow) })
+                ), MenuGroup(
+                    "help",
+                    tr(Res.string.menu_group_help),
+                    listOf(
+                        RyoMenuEntry.MenuItem(menuLabel(welcomePage, AppCommand.OpenWelcomeTab), commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                        RyoMenuEntry.MenuItem(menuLabel(tr(Res.string.menu_item_settings), AppCommand.OpenSettingsTab), commandDuty.canExecute(AppCommand.OpenSettingsTab)) { commandDuty.execute(AppCommand.OpenSettingsTab) },
+                        RyoMenuEntry.Divider,
+                        RyoMenuEntry.MenuItem(tr(Res.string.menu_item_about), onClick = ::showAboutDialog)
+                    )
                 )
             )
-        )
+        }
 
     init {
-        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), "Sometext", true)
-        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), "Sometext")
-        tabHostDuty.open(TabDuty.TabSpec.Settings)
+        AppLocaleUtils.applyAppLanguage(appLanguage.value)
+        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), tabTitleEditorSession(1), true)
+        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), tabTitleEditorSession(2))
+        tabHostDuty.open(TabDuty.TabSpec.Settings, tabTitleSettings())
         registerCommands()
+
+        dutyScope.launch {
+            appLanguage.collect { language ->
+                AppLocaleUtils.applyAppLanguage(language)
+                tabHostDuty.updateSingletonTabTitles(tabTitleWelcome(), tabTitleSettings())
+            }
+        }
     }
 
     fun selectTab(tabId: String) = tabHostDuty.selectTab(tabId)
@@ -155,8 +168,11 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         if (!tab.dirty) return tabHostDuty.closeTab(id)
 
         dialogDuty.orderCommon(
-            headline = "关闭未保存标签页", description = "“${tab.title}” 尚未保存，仍要关闭吗", actions = listOf(
-                DialogDuty.DialogAction("取消"), DialogDuty.DialogAction("关闭标签") { tabHostDuty.closeTab(id); true })
+            headline = tr(Res.string.dialog_close_unsaved_title), description = tr(Res.string.dialog_close_unsaved_description_format, tab.title), actions = listOf(
+                DialogDuty.DialogAction(tr(Res.string.action_cancel)), DialogDuty.DialogAction(tr(Res.string.action_close_tab)) {
+                    tabHostDuty.closeTab(id)
+                    true
+                })
         )
     }
 
@@ -175,9 +191,9 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         lifecycleStage = AppLifecycleStage.Closing
         dialogDuty.orderCommon(
             icon = Res.drawable.ic_ryo_24px,
-            headline = "确认关闭应用",
-            description = if (hasDirtyTabs) "存在未保存的标签页，仍要退出吗" else "确定要退出吗",
-            actions = listOf(DialogDuty.DialogAction("取消") { cancelClose(); true }, DialogDuty.DialogAction("退出") { confirmClose(); true })
+            headline = tr(Res.string.dialog_close_app_title),
+            description = if (hasDirtyTabs) tr(Res.string.dialog_close_app_description_dirty) else tr(Res.string.dialog_close_app_description_clean),
+            actions = listOf(DialogDuty.DialogAction(tr(Res.string.action_cancel)) { cancelClose(); true }, DialogDuty.DialogAction(tr(Res.string.action_exit)) { confirmClose(); true })
         )
     }
 
@@ -198,15 +214,15 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     fun requestWindowClose() = windowController?.requestClose() ?: requestClose()
 
     fun openWelcomeTab() {
-        tabHostDuty.open(TabDuty.TabSpec.Welcome)
+        tabHostDuty.open(TabDuty.TabSpec.Welcome, tabTitleWelcome())
     }
 
     fun openEditorSessionTab() {
-        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), titleOverride = "编辑会话 ${editorSessionSeed++}")
+        tabHostDuty.open(TabDuty.TabSpec.EditorSession(), titleOverride = tabTitleEditorSession(editorSessionSeed++))
     }
 
     fun openSettingsTab() {
-        tabHostDuty.open(TabDuty.TabSpec.Settings)
+        tabHostDuty.open(TabDuty.TabSpec.Settings, tabTitleSettings())
     }
 
     fun showAboutDialog() = dialogDuty.orderSpecial(closeOnOverlayClick = true) { _ -> AboutDialog() }
@@ -249,12 +265,14 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         val hasOtherTabs = tabs.size > 1
         showContextMenu(
             anchorX = anchorX, anchorY = anchorY, entries = listOf(
-                RyoMenuEntry.MenuItem(text = "关闭“${tab.title}”", onClick = { requestCloseTab(tab.id) }),
-                RyoMenuEntry.MenuItem(text = "关闭其他标签页", enabled = hasOtherTabs, onClick = { requestCloseOtherTabs(tab.id) }),
-                RyoMenuEntry.MenuItem(text = "关闭全部标签页", enabled = tabs.isNotEmpty(), onClick = ::requestCloseAllTabs),
+                RyoMenuEntry.MenuItem(text = tr(Res.string.tab_context_close_format, tab.title), onClick = { requestCloseTab(tab.id) }),
+                RyoMenuEntry.MenuItem(text = tr(Res.string.tab_context_close_others), enabled = hasOtherTabs, onClick = { requestCloseOtherTabs(tab.id) }),
+                RyoMenuEntry.MenuItem(text = tr(Res.string.tab_context_close_all), enabled = tabs.isNotEmpty(), onClick = ::requestCloseAllTabs),
                 RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(
-                    text = menuLabel("新建编辑会话页", AppCommand.OpenEditorSessionTab), enabled = commandDuty.canExecute(AppCommand.OpenEditorSessionTab), onClick = { commandDuty.execute(AppCommand.OpenEditorSessionTab) })
+                    text = menuLabel(tr(Res.string.menu_item_new_editor_session_page), AppCommand.OpenEditorSessionTab),
+                    enabled = commandDuty.canExecute(AppCommand.OpenEditorSessionTab),
+                    onClick = { commandDuty.execute(AppCommand.OpenEditorSessionTab) })
             )
         )
     }
@@ -276,6 +294,17 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     }
 
     private fun menuLabel(base: String, command: AppCommand) = shortcutDuty.commandDisplay(command)?.let { "$base\t$it" } ?: base
+
+    private fun tr(resource: StringResource, vararg format: String): String = runBlocking {
+        AppLocaleUtils.applyAppLanguage(appLanguage.value)
+        getString(resource, *format)
+    }
+
+    private fun tabTitleWelcome() = tr(Res.string.tab_title_welcome)
+
+    private fun tabTitleSettings() = tr(Res.string.tab_title_settings)
+
+    private fun tabTitleEditorSession(index: Int) = tr(Res.string.tab_title_editor_session_index_format, index.toString())
 
     private fun defaultShortcutBindings() = mapOf(
         AppCommand.OpenEditorSessionTab to ShortcutDuty.Stroke(ShortcutDuty.Key.N, ctrl = true),

@@ -15,7 +15,7 @@ class CommandDuty {
         bindings[command] = Binding(availability, execute)
     }
 
-    fun availability(command: AppCommand) = bindings[command]?.availability?.invoke() ?: Availability(enabled = false, reason = "命令未注册")
+    fun availability(command: AppCommand) = bindings[command]?.availability?.invoke() ?: Availability(enabled = false)
 
     fun canExecute(command: AppCommand) = availability(command).enabled
 

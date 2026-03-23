@@ -22,13 +22,10 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
 import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
-import me.earzuchan.ryo.aiee.resources.Res
-import me.earzuchan.ryo.aiee.resources.ic_close_24px
-import me.earzuchan.ryo.aiee.resources.ic_fullscreen_24px
-import me.earzuchan.ryo.aiee.resources.ic_leave_fullscreen_24px
-import me.earzuchan.ryo.aiee.resources.ic_minimize_24px
+import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.theme.RyoTheme
+import me.earzuchan.ryo.aiee.util.ResUtils.text
 
 interface RyoWindowInterop {
     fun attachWindowController(controller: RyoWindowController) = Unit
@@ -52,9 +49,14 @@ class RyoWindowController internal constructor(private val windowState: WindowSt
 class RyoWindowScope internal constructor(private val windowController: RyoWindowController) {
     @Composable
     fun WindowControlButtons() = Row {
-        RyoIconButton(Res.drawable.ic_minimize_24px, 48, "最小化", onClick = windowController::minimize)
-        RyoIconButton(if (windowController.isMaximized) Res.drawable.ic_leave_fullscreen_24px else Res.drawable.ic_fullscreen_24px, 48, "最大化", onClick = windowController::toggleMaximize)
-        RyoIconButton(Res.drawable.ic_close_24px, 48, "关闭", onClick = windowController::requestClose)
+        RyoIconButton(Res.drawable.ic_minimize_24px, 48, Res.string.window_action_minimize.text, onClick = windowController::minimize)
+        RyoIconButton(
+            if (windowController.isMaximized) Res.drawable.ic_leave_fullscreen_24px else Res.drawable.ic_fullscreen_24px,
+            48,
+            if (windowController.isMaximized) Res.string.window_action_restore.text else Res.string.window_action_maximize.text,
+            onClick = windowController::toggleMaximize
+        )
+        RyoIconButton(Res.drawable.ic_close_24px, 48, Res.string.window_action_close.text, onClick = windowController::requestClose)
     }
 }
 

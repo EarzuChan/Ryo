@@ -49,9 +49,9 @@ abstract class TabDuty(val tabId: String, val spec: TabSpec, initialTitle: Strin
     open fun discard() {}
 }
 
-class WelcomeTabDuty(tabId: String, title: String = "欢迎") : TabDuty(tabId, TabSpec.Welcome, title)
+class WelcomeTabDuty(tabId: String, title: String) : TabDuty(tabId, TabSpec.Welcome, title)
 
-class SettingsTabDuty(tabId: String, title: String = "设置") : TabDuty(tabId, TabSpec.Settings, title)
+class SettingsTabDuty(tabId: String, title: String) : TabDuty(tabId, TabSpec.Settings, title)
 
 class EditorSessionTabDuty(tabId: String, spec: TabSpec.EditorSession, title: String, initialDirty: Boolean = false) : TabDuty(tabId, spec, title, initialDirty) {
     override fun canSave() = dirty

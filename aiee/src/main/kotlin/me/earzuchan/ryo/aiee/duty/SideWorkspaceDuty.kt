@@ -9,7 +9,10 @@ import me.earzuchan.ryo.aiee.resources.ic_list_24px
 import me.earzuchan.ryo.aiee.resources.ic_list_filled_24px
 import me.earzuchan.ryo.aiee.resources.ic_schemas_24px
 import me.earzuchan.ryo.aiee.resources.ic_schemas_filled_24px
+import me.earzuchan.ryo.aiee.resources.panel_assets_manager
+import me.earzuchan.ryo.aiee.resources.panel_schemas_manager
 import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
 
 class SideWorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
     companion object {
@@ -18,9 +21,12 @@ class SideWorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
         private const val MAX_WIDTH_DP = 560F
     }
 
-    data class Panel(val id: String, val title: String, val icon: DrawableResource, val selectedIcon: DrawableResource = icon)
+    data class Panel(val id: String, val titleRes: StringResource, val icon: DrawableResource, val selectedIcon: DrawableResource = icon)
 
-    val panels = listOf(Panel("assets", "资产管理器", Res.drawable.ic_list_24px, Res.drawable.ic_list_filled_24px), Panel("schemas", "Schema管理器", Res.drawable.ic_schemas_24px, Res.drawable.ic_schemas_filled_24px))
+    val panels = listOf(
+        Panel("assets", Res.string.panel_assets_manager, Res.drawable.ic_list_24px, Res.drawable.ic_list_filled_24px),
+        Panel("schemas", Res.string.panel_schemas_manager, Res.drawable.ic_schemas_24px, Res.drawable.ic_schemas_filled_24px)
+    )
 
     var expanded by mutableStateOf(true)
 

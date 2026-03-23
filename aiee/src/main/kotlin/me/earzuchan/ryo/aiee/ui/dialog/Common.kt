@@ -49,6 +49,8 @@ import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import me.earzuchan.ryo.aiee.resources.*
+import me.earzuchan.ryo.aiee.util.ResUtils.text
 
 @Composable
 fun DialogBase(ctrlShow: Boolean, showOverlay: Boolean = true, onOverlayClick: () -> Unit = {}, onOpened: () -> Unit = {}, onClosed: () -> Unit = {}, content: @Composable BoxScope.() -> Unit) {
@@ -100,7 +102,7 @@ fun CommonDialog(model: DialogDuty.Model.Common, onActionClick: (DialogDuty.Dial
 
     Column(Modifier.fillMaxWidth().padding(horizontal = tFdp).padding(top = tFdp), verticalArrangement = Arrangement.spacedBy(16.dp)) { // 有icon时，居中title
         if (model.icon != null) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp), Alignment.CenterHorizontally) {
-            Icon(model.icon.vector, "Dialog图标", Modifier.size(tFdp), tint = MaterialTheme.colorScheme.secondary)
+            Icon(model.icon.vector, Res.string.dialog_icon_cd.text, Modifier.size(tFdp), tint = MaterialTheme.colorScheme.secondary)
             model.title?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
         } else model.title?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
         model.description?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
