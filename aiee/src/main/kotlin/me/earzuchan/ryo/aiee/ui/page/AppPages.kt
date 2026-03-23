@@ -11,12 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -24,6 +22,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,10 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
+import me.earzuchan.ryo.aiee.BuildConfig
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences
 import me.earzuchan.ryo.aiee.duty.AppDuty
 import me.earzuchan.ryo.aiee.duty.DialogDuty
-import me.earzuchan.ryo.aiee.prefs.ThemeMode
-import me.earzuchan.ryo.aiee.prefs.UiLanguage
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.ic_apps_24px
 import me.earzuchan.ryo.aiee.resources.ic_check_update_24px
@@ -65,28 +65,24 @@ fun SettingsPage(appDuty: AppDuty) {
         Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
     }
 
-    val settings = appDuty.appSettings
     val (languageTextAnchor, setLanguageTextAnchor) = remember { mutableStateOf(IntOffset.Zero) }
     val (themeModeTextAnchor, setThemeModeTextAnchor) = remember { mutableStateOf(IntOffset.Zero) }
     val density = LocalDensity.current
 
-    val resolvedTheme = when (settings.themeMode) {
-        ThemeMode.FollowSystem -> if (isSystemInDarkMode()) "黑暗" else "明亮"
-        ThemeMode.Dark -> "黑暗"
-        ThemeMode.Light -> "明亮"
-    }
+    val themeMode by appDuty.appThemeMode.collectAsState()
+    val language by appDuty.appLanguage.collectAsState()
 
     fun openLanguageSelectMenu() {
-        val options = UiLanguage.entries
-        appDuty.showInPlaceSelectMenu(languageTextAnchor.x, languageTextAnchor.y, options.indexOf(settings.uiLanguage), density, options.map { option ->
-            RyoMenuEntry.MenuItem(option.label, onClick = { appDuty.setUiLanguage(option) })
+        val options = RyoPreferences.Language.entries
+        appDuty.showInPlaceSelectMenu(languageTextAnchor.x, languageTextAnchor.y, options.indexOf(language), density, options.map { option ->
+            RyoMenuEntry.MenuItem(option.name, onClick = { appDuty.setAppLanguage(option) })
         })
     }
 
     fun openThemeModeSelectMenu() {
-        val options = ThemeMode.entries
-        appDuty.showInPlaceSelectMenu(themeModeTextAnchor.x, themeModeTextAnchor.y, options.indexOf(settings.themeMode), density, options.map { option ->
-            RyoMenuEntry.MenuItem(option.label, onClick = { appDuty.setThemeMode(option) })
+        val options = RyoPreferences.ThemeMode.entries
+        appDuty.showInPlaceSelectMenu(themeModeTextAnchor.x, themeModeTextAnchor.y, options.indexOf(themeMode), density, options.map { option ->
+            RyoMenuEntry.MenuItem(option.name, onClick = { appDuty.setAppThemeMode(option) })
         })
     }
 
@@ -105,14 +101,14 @@ fun SettingsPage(appDuty: AppDuty) {
         }
 
         SettingsSection("界面")
-        SettingsItem(Res.drawable.ic_language_24px, "语言", trailing = settings.uiLanguage.label, onTrailingAnchorChanged = setLanguageTextAnchor, onClick = ::openLanguageSelectMenu)
-        SettingsItem(Res.drawable.ic_ui_mode_24px, "模式", subtitle = resolvedTheme, trailing = settings.themeMode.label, onTrailingAnchorChanged = setThemeModeTextAnchor, onClick = ::openThemeModeSelectMenu)
+        SettingsItem(Res.drawable.ic_language_24px, "语言", trailing = language.name, onTrailingAnchorChanged = setLanguageTextAnchor, onClick = ::openLanguageSelectMenu)
+        SettingsItem(Res.drawable.ic_ui_mode_24px, "模式", trailing = themeMode.name, onTrailingAnchorChanged = setThemeModeTextAnchor, onClick = ::openThemeModeSelectMenu)
 
         SettingsItem(Res.drawable.ic_palette_24px, "主题", trailing = "默认", enabled = false) // TODO
 
         SettingsSection("更多")
-        SettingsItem(Res.drawable.ic_info_24px, "关于 Ryo", subtitle = "by Earzu Chan", onClick = appDuty::showAboutDialog)
-        SettingsItem(Res.drawable.ic_check_update_24px, "检查更新", subtitle = "2026.0305", trailing = "当前已为最新", enabled = false) // TODO
+        SettingsItem(Res.drawable.ic_info_24px, "关于 ${BuildConfig.APP_NAME}", subtitle = "by ${BuildConfig.APP_AUTHOR}", onClick = appDuty::showAboutDialog)
+        SettingsItem(Res.drawable.ic_check_update_24px, "检查更新", subtitle = BuildConfig.APP_VER, trailing = "当前已为最新", enabled = false) // TODO
         Spacer(Modifier.fillMaxWidth().height(16.dp))
     }
 }

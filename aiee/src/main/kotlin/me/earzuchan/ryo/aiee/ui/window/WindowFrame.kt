@@ -21,6 +21,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
+import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.ic_close_24px
 import me.earzuchan.ryo.aiee.resources.ic_fullscreen_24px
@@ -58,7 +59,7 @@ class RyoWindowScope internal constructor(private val windowController: RyoWindo
 }
 
 @Composable
-fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: String, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, forceDarkTheme: Boolean? = null, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
+fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: String, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, forceDarkMode: Boolean?, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
     Window(onCloseRequest, windowState, visible, title, icon, undecorated = true, transparent = true) {
         val windowController = remember(windowState, onCloseRequest) { RyoWindowController(windowState, onCloseRequest) }
         val scope = remember(windowController) { RyoWindowScope(windowController) }
@@ -80,6 +81,6 @@ fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: Strin
         val isMaximized = windowController.isMaximized
         LaunchedEffect(isMaximized, ryoWindowInterop) { ryoWindowInterop?.onWindowMaximizedChanged(isMaximized) }
 
-        RyoTheme(useDarkTheme = forceDarkTheme ?: isSystemInDarkMode()) { Surface(frameModifier(isMaximized), color = MaterialTheme.colorScheme.surface) { this@Window.content(scope) } }
+        RyoTheme(forceDarkMode?: isSystemInDarkMode()) { Surface(frameModifier(isMaximized), color = MaterialTheme.colorScheme.surface) { this@Window.content(scope) } }
     }
 }

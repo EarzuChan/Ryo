@@ -20,7 +20,7 @@ fun AboutDialog() = Column(Modifier.padding(24.dp).width(240.dp), verticalArrang
         Box(Modifier.size(48.dp), Alignment.Center) { Image(Res.drawable.illu_ryo_cutehead.paint, "Ryo头像", Modifier.requiredSize(50.dp)) }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(BuildConfig.APP_NAME, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-            Text("by Earzu Chan\n${BuildConfig.APP_VERSION}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text("by Earzu Chan\n${BuildConfig.APP_VER}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 
@@ -37,6 +37,3 @@ fun AboutDialog() = Column(Modifier.padding(24.dp).width(240.dp), verticalArrang
         }
     }
 }
-
-
-

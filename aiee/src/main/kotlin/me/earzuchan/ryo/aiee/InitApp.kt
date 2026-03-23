@@ -1,5 +1,7 @@
-package me.earzuchan.ryo.aiee
+﻿package me.earzuchan.ryo.aiee
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -15,7 +17,6 @@ import me.earzuchan.ryo.aiee.resources.illu_ryo_lawnchair
 import me.earzuchan.ryo.aiee.ui.window.MainWindowContent
 import me.earzuchan.ryo.aiee.ui.window.RyoWindow
 import me.earzuchan.ryo.aiee.util.ResUtils.paint
-import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinApplication
 
 fun main() = application {
@@ -26,6 +27,8 @@ fun main() = application {
 
         LifecycleController(lifecycle, windowState)
 
-        RyoWindow(appDuty::requestClose, windowState, appDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = appDuty.windowInterop, forceDarkTheme = appDuty.forceDarkTheme) { MainWindowContent(appDuty, it) }
+        val forceDarkMode by appDuty.forceDarkMode.collectAsState()
+
+        RyoWindow(appDuty::requestClose, windowState, appDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = appDuty.windowInterop, forceDarkMode = forceDarkMode) { MainWindowContent(appDuty, it) }
     }
 }

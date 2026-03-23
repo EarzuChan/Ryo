@@ -6,13 +6,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.imageResource
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.resources.vectorResource
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import me.earzuchan.ryo.aiee.BuildConfig
+import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
+import okio.Path.Companion.toPath
+import org.jetbrains.compose.resources.*
 import java.awt.Desktop
+import java.io.File
 import java.net.URI
 import javax.swing.SwingUtilities
 
@@ -35,7 +40,32 @@ object RyoLog {
     private fun printLog(level: String, tag: String, messages: Array<out Any?>) = println("[$level] $tag > ${messages.joinToString(" ") { it?.toString() ?: "null" }}")
 }
 
+object MiscUtils {
+    private const val TAG = "MiscUtils"
+
+    // 每次新建
+    /*fun buildAppDatabase(): AppDatabase = PlatformFunctions.getAppDatabaseBuilder()
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(PlatformFunctions.ioDispatcher)
+        .fallbackToDestructiveMigration(true)
+        .build()*/
+
+    fun buildAppPreferences(): DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath(
+        produceFile = { "${PlatformUtils.appFilesPath}/$RYO_PREFERENCES_NAME".toPath() }
+    )
+}
+
 object PlatformUtils {
+    /*fun getAppDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
+        val dbFile = File(appDataPath, "databases/$APP_DATABASE_NAME")
+        dbFile.parentFile?.mkdirs()
+        return Room.databaseBuilder<AppDatabase>(name = dbFile.absolutePath)
+    }*/
+
+    val appFilesPath: String get() = File(appDataPath, "files").also { it.mkdirs() }.absolutePath
+
+    private val appDataPath: File get() = File(System.getProperty("user.home"), BuildConfig.APP_ID)
+
     fun <T> runOnSwingUiThread(block: () -> T): T {
         if (SwingUtilities.isEventDispatchThread()) return block()
 
@@ -56,31 +86,21 @@ object PlatformUtils {
         return result as T
     }
 
+
     fun openLink(url: String) {
         if (!Desktop.isDesktopSupported()) return
         runCatching { Desktop.getDesktop().browse(URI(url)) }
     }
 }
 
-object ComposeUtils {
-    @Composable
-    inline fun Modifier.only(condition: Boolean, elseBlock: @Composable Modifier.() -> Modifier = { this }, ifBlock: @Composable Modifier.() -> Modifier): Modifier = if (condition) ifBlock() else elseBlock()
-
-    inline fun Color.opacity(opacity: Float): Color {
-        val newAlpha = alpha * opacity
-        return this.copy(newAlpha)
-    }
-
-    inline val Int.dpPx: Float @Composable get() = this.dp.px
-
-    inline val Dp.px: Float @Composable get() = LocalDensity.current.run { this@px.toPx() }
-}
-
 object ResUtils {
+    // For XML vector img
     val DrawableResource.vector @Composable get() = vectorResource(this)
 
+    // Only for bitmap
     val DrawableResource.image @Composable get() = imageResource(this)
 
+    // For both vector img and bitmap img
     val DrawableResource.paint @Composable get() = painterResource(this)
 
     @Composable

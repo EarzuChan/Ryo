@@ -10,11 +10,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import me.earzuchan.ryo.aiee.prefs.AppSettings
-import me.earzuchan.ryo.aiee.prefs.DataStorePrefs
-import me.earzuchan.ryo.aiee.prefs.ThemeMode
-import me.earzuchan.ryo.aiee.prefs.UiLanguage
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences
+import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.*
+import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.app_name
 import me.earzuchan.ryo.aiee.resources.ic_ryo_24px
@@ -34,7 +36,7 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     private val tabHostDuty = TabHostDuty(TabDutyFactory())
     private val dutyScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val dataStorePrefs: DataStorePrefs by inject()
+    private val prefsRepo: RyoPreferencesRepository by inject()
     private var editorSessionSeed = 2
 
     val sideWorkspaceDuty = SideWorkspaceDuty(ctx)
@@ -49,14 +51,19 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     var isMaximized by mutableStateOf(false); private set
 
-    var appSettings by mutableStateOf(AppSettings()); private set
-
-    val forceDarkTheme: Boolean?
-        get() = when (appSettings.themeMode) {
-            ThemeMode.FollowSystem -> null
-            ThemeMode.Dark -> true
-            ThemeMode.Light -> false
+    val forceDarkMode = prefsRepo.themeModeFlow().map {
+        when (it) {
+            SYSTEM -> null
+            DARK -> true
+            LIGHT -> false
         }
+    }.stateIn(dutyScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val appThemeMode = prefsRepo.themeModeFlow().stateIn(dutyScope, SharingStarted.WhileSubscribed(5000), RyoPreferences.DEFAULT_THEME_MODE)
+    val appLanguage = prefsRepo.languageFlow().stateIn(dutyScope, SharingStarted.WhileSubscribed(5000), RyoPreferences.DEFAULT_LANGUAGE)
+
+    fun setAppThemeMode(mode: RyoPreferences.ThemeMode) = dutyScope.launch { prefsRepo.setThemeMode(mode) }
+    fun setAppLanguage(lang: RyoPreferences.Language) = dutyScope.launch { prefsRepo.setLanguage(lang) }
 
     val tabs: List<TabDuty.Tab> get() = tabHostDuty.tabs
 
@@ -135,7 +142,6 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         )
 
     init {
-        dutyScope.launch { dataStorePrefs.settingsFlow.collect { appSettings = it } }
         tabHostDuty.open(TabDuty.TabSpec.EditorSession(), "Sometext", true)
         tabHostDuty.open(TabDuty.TabSpec.EditorSession(), "Sometext")
         tabHostDuty.open(TabDuty.TabSpec.Settings)
@@ -183,14 +189,6 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         lifecycleStage = AppLifecycleStage.Closing
         dutyScope.cancel()
         exitApp()
-    }
-
-    fun setUiLanguage(uiLanguage: UiLanguage) {
-        dutyScope.launch { dataStorePrefs.setUiLanguage(uiLanguage) }
-    }
-
-    fun setThemeMode(themeMode: ThemeMode) {
-        dutyScope.launch { dataStorePrefs.setThemeMode(themeMode) }
     }
 
     fun minimizeWindow() = windowController?.minimize()

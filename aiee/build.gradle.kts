@@ -2,6 +2,7 @@
 
 val appId = "$group.$name"
 val appName = "Ryo"
+val appAuthor = "Earzu Chan"
 val appVer = version.toString()
 
 plugins {
@@ -53,8 +54,10 @@ dependencies {
 buildConfig {
     packageName(appId)
 
+    buildConfigField("APP_ID", appId)
+    buildConfigField("APP_AUTHOR", appAuthor)
     buildConfigField("APP_NAME", appName)
-    buildConfigField("APP_VERSION", appVer)
+    buildConfigField("APP_VER", appVer)
     buildConfigField("REPO_URL", "https://github.com/EarzuChan/Ryo")
     buildConfigField("AUTHOR_URL", "https://github.com/EarzuChan")
 }

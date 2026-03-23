@@ -62,7 +62,8 @@ import kotlin.math.roundToInt
 @Composable
 fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -> Unit) {
     @Composable
-    fun PanelButton(icon: DrawableResource, hint: String, selected: Boolean, onClick: () -> Unit) = RyoIconButton(icon, 48, hint, if (selected) IconButtonDefaults.filledTonalIconButtonColors() else IconButtonDefaults.iconButtonColors(), onClick)
+    fun PanelButton(icon: DrawableResource, hint: String, selected: Boolean, onClick: () -> Unit) =
+        RyoIconButton(icon, 48, hint, if (selected) IconButtonDefaults.filledTonalIconButtonColors() else IconButtonDefaults.iconButtonColors(), onClick)
 
     @Composable
     fun ActionButton(icon: DrawableResource, hint: String, colors: IconButtonColors = IconButtonDefaults.iconButtonColors(), onClick: () -> Unit) = RyoIconButton(icon = icon, dpSize = 48, hintText = hint, colors = colors, onClick = onClick)
@@ -176,29 +177,33 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) = WindowDraggableArea {
-    val anchors = remember { mutableStateMapOf<String, IntOffset>() }
+fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
+    val juche: @Composable () -> Unit = {
+        val anchors = remember { mutableStateMapOf<String, IntOffset>() }
 
-    Row(Modifier.fillMaxWidth().height(56.dp)) {
-        Box(Modifier.fillMaxHeight().width(64.dp), Alignment.Center) { Icon(Res.drawable.ic_ryo_24px.vector, Res.string.app_name.text, Modifier.size(24.dp), MaterialTheme.colorScheme.onSurfaceVariant) }
+        Row(Modifier.fillMaxWidth().height(56.dp)) {
+            Box(Modifier.fillMaxHeight().width(64.dp), Alignment.Center) { Icon(Res.drawable.ic_ryo_24px.vector, Res.string.app_name.text, Modifier.size(24.dp), MaterialTheme.colorScheme.onSurfaceVariant) }
 
-        Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // 菜单栏
-            Box(Modifier.weight(1F)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    appDuty.menuGroups.forEach { group ->
-                        RyoButton(group.label, Modifier.height(36.dp).onGloballyPositioned { coords ->
-                            val b = coords.boundsInWindow()
-                            anchors[group.id] = IntOffset(b.left.roundToInt(), b.bottom.roundToInt())
-                        }.onPointerEvent(PointerEventType.Enter) {
-                            anchors[group.id]?.also { appDuty.hoverMenuGroup(group.id, it.x, it.y) }
-                        }) { anchors[group.id]?.also { appDuty.toggleMenuGroup(group.id, it.x, it.y) } }
+            Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                // 菜单栏
+                Box(Modifier.weight(1F)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        appDuty.menuGroups.forEach { group ->
+                            RyoButton(group.label, Modifier.height(36.dp).onGloballyPositioned { coords ->
+                                val b = coords.boundsInWindow()
+                                anchors[group.id] = IntOffset(b.left.roundToInt(), b.bottom.roundToInt())
+                            }.onPointerEvent(PointerEventType.Enter) {
+                                anchors[group.id]?.also { appDuty.hoverMenuGroup(group.id, it.x, it.y) }
+                            }) { anchors[group.id]?.also { appDuty.toggleMenuGroup(group.id, it.x, it.y) } }
+                        }
                     }
                 }
-            }
 
-            // 三键（靠注入）
-            windowControlButtons()
+                // 三键（靠注入）
+                windowControlButtons()
+            }
         }
     }
+
+    if (appDuty.isMaximized) juche() else WindowDraggableArea(content = juche)
 }
