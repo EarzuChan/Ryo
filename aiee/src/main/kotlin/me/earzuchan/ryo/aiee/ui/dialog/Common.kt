@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.duty.DialogDuty
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
+import me.earzuchan.ryo.aiee.ui.resolve
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -103,13 +104,13 @@ fun CommonDialog(model: DialogDuty.Model.Common, onActionClick: (DialogDuty.Dial
     Column(Modifier.fillMaxWidth().padding(horizontal = tFdp).padding(top = tFdp), verticalArrangement = Arrangement.spacedBy(16.dp)) { // 有icon时，居中title
         if (model.icon != null) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp), Alignment.CenterHorizontally) {
             Icon(model.icon.vector, Res.string.dialog_icon_cd.text, Modifier.size(tFdp), tint = MaterialTheme.colorScheme.secondary)
-            model.title?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
-        } else model.title?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
-        model.description?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+            model.title?.resolve()?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
+        } else model.title?.resolve()?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall) }
+        model.description?.resolve()?.takeIf(String::isNotBlank)?.also { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
         model.content?.invoke()
     }
 
     if (model.actions.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = tFdp, vertical = tFdp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-        model.actions.forEach { action -> RyoButton(action.text, type = action.type, enabled = action.enabled) { onActionClick(action) } }
+        model.actions.forEach { action -> RyoButton(action.text.resolve(), type = action.type, enabled = action.enabled) { onActionClick(action) } }
     } else Spacer(Modifier.height(tFdp))
 }

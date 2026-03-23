@@ -3,8 +3,9 @@ package me.earzuchan.ryo.aiee.duty
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import me.earzuchan.ryo.aiee.ui.UiText
 
-abstract class TabDuty(val tabId: String, val spec: TabSpec, initialTitle: String, initialDirty: Boolean = false) {
+abstract class TabDuty(val tabId: String, val spec: TabSpec, initialTitle: UiText, initialDirty: Boolean = false) {
     sealed interface TabSpec {
         val singletonId: String?
         val tabPrefix: String
@@ -32,7 +33,7 @@ abstract class TabDuty(val tabId: String, val spec: TabSpec, initialTitle: Strin
     data class Tab(
         val id: String,
         val spec: TabSpec,
-        val title: String,
+        val title: UiText,
         val dirty: Boolean = false
     )
 
@@ -49,11 +50,11 @@ abstract class TabDuty(val tabId: String, val spec: TabSpec, initialTitle: Strin
     open fun discard() {}
 }
 
-class WelcomeTabDuty(tabId: String, title: String) : TabDuty(tabId, TabSpec.Welcome, title)
+class WelcomeTabDuty(tabId: String, title: UiText) : TabDuty(tabId, TabSpec.Welcome, title)
 
-class SettingsTabDuty(tabId: String, title: String) : TabDuty(tabId, TabSpec.Settings, title)
+class SettingsTabDuty(tabId: String, title: UiText) : TabDuty(tabId, TabSpec.Settings, title)
 
-class EditorSessionTabDuty(tabId: String, spec: TabSpec.EditorSession, title: String, initialDirty: Boolean = false) : TabDuty(tabId, spec, title, initialDirty) {
+class EditorSessionTabDuty(tabId: String, spec: TabSpec.EditorSession, title: UiText, initialDirty: Boolean = false) : TabDuty(tabId, spec, title, initialDirty) {
     override fun canSave() = dirty
 
     override fun save() {

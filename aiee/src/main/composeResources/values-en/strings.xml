@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">Ryo</string>
     <string name="language_option_system">System</string>
     <string name="language_option_chinese">Chinese</string>
     <string name="language_option_english">English</string>

@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import me.earzuchan.ryo.aiee.ui.UiText
 
 class TabHostDuty(private val tabDutyFactory: TabDutyFactory) {
     private val _tabs = mutableStateListOf<TabDuty>()
@@ -19,7 +20,7 @@ class TabHostDuty(private val tabDutyFactory: TabDutyFactory) {
 
     val hasDirtyTabs: Boolean get() = _tabs.any { it.dirty }
 
-    fun open(spec: TabDuty.TabSpec, titleOverride: String? = null, initialDirty: Boolean = false): TabDuty.Tab {
+    fun open(spec: TabDuty.TabSpec, titleOverride: UiText? = null, initialDirty: Boolean = false): TabDuty.Tab {
         singletonTabId(spec)?.let { singletonId ->
             _tabs.firstOrNull { it.tabId == singletonId }?.also {
                 activeTabId = it.tabId
@@ -63,16 +64,6 @@ class TabHostDuty(private val tabDutyFactory: TabDutyFactory) {
 
     fun executeOnActiveTab(block: (TabDuty) -> Unit) {
         activeTabDuty?.also(block)
-    }
-
-    fun updateSingletonTabTitles(welcomeTitle: String, settingsTitle: String) {
-        _tabs.forEach { tab ->
-            when (tab.spec) {
-                TabDuty.TabSpec.Welcome -> tab.title = welcomeTitle
-                TabDuty.TabSpec.Settings -> tab.title = settingsTitle
-                is TabDuty.TabSpec.EditorSession -> Unit
-            }
-        }
     }
 
     private fun singletonTabId(spec: TabDuty.TabSpec) = spec.singletonId

@@ -39,6 +39,7 @@ import me.earzuchan.ryo.aiee.duty.DialogDuty
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.ButtonType
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
+import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
 import me.earzuchan.ryo.aiee.util.ResUtils.text
 import org.jetbrains.compose.resources.DrawableResource
@@ -131,9 +132,9 @@ fun SettingsPage(appDuty: AppDuty) {
         Item(Res.drawable.ic_keyboard_24px, Res.string.settings_item_shortcuts.text) {
             appDuty.dialogDuty.orderCommon(
                 icon = Res.drawable.ic_keyboard_24px,
-                headline = shortcutsDialogTitle,
-                description = shortcutsDialogDescription,
-                actions = listOf(DialogDuty.DialogAction(gotIt, ButtonType.Filled))
+                headline = UiText.Plain(shortcutsDialogTitle),
+                description = UiText.Plain(shortcutsDialogDescription),
+                actions = listOf(DialogDuty.DialogAction(UiText.Plain(gotIt), ButtonType.Filled))
             )
         }
 

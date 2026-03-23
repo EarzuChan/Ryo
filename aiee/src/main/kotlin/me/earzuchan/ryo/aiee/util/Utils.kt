@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
+import me.earzuchan.ryo.aiee.ui.LocalAppLanguage
 import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.*
 import java.awt.Desktop
@@ -104,7 +105,10 @@ object ResUtils {
     val DrawableResource.paint @Composable get() = painterResource(this)
 
     @Composable
-    fun StringResource.text(vararg format: String): String = stringResource(this, *format)
+    fun StringResource.text(vararg format: String): String {
+        LocalAppLanguage.current
+        return stringResource(this, *format)
+    }
 
     val StringResource.text @Composable get() = this.text()
 }

@@ -5,11 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import me.earzuchan.ryo.aiee.ui.component.ButtonType
+import me.earzuchan.ryo.aiee.ui.UiText
 import org.jetbrains.compose.resources.DrawableResource
 
 class DialogDuty {
     data class DialogAction(
-        val text: String, val type: ButtonType = ButtonType.Text, val enabled: Boolean = true, val onClick: (() -> Boolean?)? = null
+        val text: UiText, val type: ButtonType = ButtonType.Text, val enabled: Boolean = true, val onClick: (() -> Boolean?)? = null
     )
 
     sealed interface Model {
@@ -22,8 +23,8 @@ class DialogDuty {
 
         data class Common(
             val icon: DrawableResource? = null,
-            val title: String? = null,
-            val description: String? = null,
+            val title: UiText? = null,
+            val description: UiText? = null,
             val actions: List<DialogAction> = emptyList(),
             val content: (@Composable () -> Unit)? = null,
             override val showOverlay: Boolean = true,
@@ -69,8 +70,8 @@ class DialogDuty {
 
     fun orderCommon(
         icon: DrawableResource? = null,
-        headline: String? = null,
-        description: String? = null,
+        headline: UiText? = null,
+        description: UiText? = null,
         actions: List<DialogAction> = emptyList(),
         content: (@Composable () -> Unit)? = null,
         showOverlay: Boolean = true,

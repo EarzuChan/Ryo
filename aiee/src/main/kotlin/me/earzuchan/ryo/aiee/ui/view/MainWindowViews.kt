@@ -38,18 +38,20 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import kotlinx.coroutines.launch
+import me.earzuchan.ryo.aiee.BuildConfig
+import me.earzuchan.ryo.aiee.duty.AppCommand
 import me.earzuchan.ryo.aiee.duty.AppDuty
-import me.earzuchan.ryo.aiee.duty.MenuDuty
 import me.earzuchan.ryo.aiee.duty.SideWorkspaceDuty
 import me.earzuchan.ryo.aiee.duty.TabDuty
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
-import me.earzuchan.ryo.aiee.ui.component.RyoMenu
+import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.page.EditorSessionPage
 import me.earzuchan.ryo.aiee.ui.page.EmptyPage
 import me.earzuchan.ryo.aiee.ui.page.SettingsPage
 import me.earzuchan.ryo.aiee.ui.page.WelcomePage
+import me.earzuchan.ryo.aiee.ui.resolve
 import me.earzuchan.ryo.aiee.util.ResUtils.text
 import me.earzuchan.ryo.aiee.util.ResUtils.vector
 import org.jetbrains.compose.resources.DrawableResource
@@ -133,7 +135,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
         ) {
             Spacer(Modifier.fillMaxWidth().height(3.dp))
             Row(Modifier.fillMaxWidth().weight(1F).padding(start = 12.dp, end = 6.dp), Arrangement.spacedBy(6.dp), Alignment.CenterVertically) {
-                Text(tab.title, Modifier, textColor, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelLarge)
+                Text(tab.title.resolve(), Modifier, textColor, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelLarge)
                 TabTrailingAction(tab, selected, onClose)
             }
             Box(Modifier.fillMaxWidth().height(2.dp).background(indicatorColor))
@@ -155,8 +157,34 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
             }, lazyListState
         ) {
             items(appDuty.tabs, key = { it.id }) { tab ->
+                val hasOtherTabs = appDuty.tabs.size > 1
+                val hasTabs = appDuty.tabs.isNotEmpty()
+                val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
+                val tabTitle = tab.title.resolve()
+                val closeText = Res.string.tab_context_close_format.text(tabTitle)
+                val closeOthersText = Res.string.tab_context_close_others.text
+                val closeAllText = Res.string.tab_context_close_all.text
+                val newEditorText = menuLabel(Res.string.menu_item_new_editor_session_page.text, AppCommand.OpenEditorSessionTab)
+                val canOpenEditor = appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)
+
                 ReorderableItem(reorderState, key = tab.id) {
-                    TabChip(tab, appDuty.activeTabId == tab.id, { appDuty.selectTab(tab.id) }, { appDuty.requestCloseTab(tab.id) }, { anchorX, anchorY -> appDuty.showTabContextMenu(tab.id, anchorX, anchorY) }, Modifier.draggableHandle())
+                    TabChip(tab, appDuty.activeTabId == tab.id, { appDuty.selectTab(tab.id) }, { appDuty.requestCloseTab(tab.id) }, { anchorX, anchorY ->
+                        appDuty.showContextMenu(
+                            anchorX = anchorX,
+                            anchorY = anchorY,
+                            entries = listOf(
+                                RyoMenuEntry.MenuItem(text = closeText, onClick = { appDuty.requestCloseTab(tab.id) }),
+                                RyoMenuEntry.MenuItem(text = closeOthersText, enabled = hasOtherTabs, onClick = { appDuty.requestCloseOtherTabs(tab.id) }),
+                                RyoMenuEntry.MenuItem(text = closeAllText, enabled = hasTabs, onClick = appDuty::requestCloseAllTabs),
+                                RyoMenuEntry.Divider,
+                                RyoMenuEntry.MenuItem(
+                                    text = newEditorText,
+                                    enabled = canOpenEditor,
+                                    onClick = { appDuty.commandDuty.execute(AppCommand.OpenEditorSessionTab) }
+                                )
+                            )
+                        )
+                    }, Modifier.draggableHandle())
                 }
             }
         }
@@ -178,14 +206,77 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
 fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
-    val languageTrigger by appDuty.appLanguage.collectAsState()
-    val menuGroups = remember(languageTrigger, appDuty.sideWorkspaceDuty.expanded, appDuty.isMaximized) { appDuty.menuGroups }
+    data class MenuGroup(val id: String, val label: String, val entries: List<RyoMenuEntry>)
+
+    val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
+    val menuGroups = listOf(
+        MenuGroup(
+            id = "file",
+            label = Res.string.menu_group_file.text,
+            entries = listOf(
+                RyoMenuEntry.MenuItem(
+                    text = Res.string.menu_item_new.text,
+                    children = listOf(
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_welcome_page.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_editor_session_page.text, AppCommand.OpenEditorSessionTab), appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)) { appDuty.commandDuty.execute(AppCommand.OpenEditorSessionTab) },
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_settings_page.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) }
+                    )
+                ),
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_close_tab.text, AppCommand.CloseCurrentTab), appDuty.commandDuty.canExecute(AppCommand.CloseCurrentTab)) { appDuty.commandDuty.execute(AppCommand.CloseCurrentTab) },
+                RyoMenuEntry.Divider,
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_exit.text, AppCommand.RequestWindowClose), appDuty.commandDuty.canExecute(AppCommand.RequestWindowClose)) { appDuty.commandDuty.execute(AppCommand.RequestWindowClose) }
+            )
+        ),
+        MenuGroup(
+            id = "edit",
+            label = Res.string.menu_group_edit.text,
+            entries = listOf(
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_undo.text, AppCommand.Undo), appDuty.commandDuty.canExecute(AppCommand.Undo)) { appDuty.commandDuty.execute(AppCommand.Undo) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_redo.text, AppCommand.Redo), appDuty.commandDuty.canExecute(AppCommand.Redo)) { appDuty.commandDuty.execute(AppCommand.Redo) },
+                RyoMenuEntry.Divider,
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_save.text, AppCommand.Save), appDuty.commandDuty.canExecute(AppCommand.Save)) { appDuty.commandDuty.execute(AppCommand.Save) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_discard_changes.text, AppCommand.Discard), appDuty.commandDuty.canExecute(AppCommand.Discard)) { appDuty.commandDuty.execute(AppCommand.Discard) }
+            )
+        ),
+        MenuGroup(
+            id = "view",
+            label = Res.string.menu_group_view.text,
+            entries = listOf(
+                RyoMenuEntry.MenuItem(
+                    menuLabel(if (appDuty.sideWorkspaceDuty.expanded) Res.string.menu_item_collapse_sidebar.text else Res.string.menu_item_expand_sidebar.text, AppCommand.ToggleSidePanel),
+                    appDuty.commandDuty.canExecute(AppCommand.ToggleSidePanel)
+                ) { appDuty.commandDuty.execute(AppCommand.ToggleSidePanel) },
+                RyoMenuEntry.MenuItem(
+                    Res.string.menu_item_switch_panel.text,
+                    children = listOf(
+                        RyoMenuEntry.MenuItem(Res.string.panel_assets_manager.text, appDuty.commandDuty.canExecute(AppCommand.FocusAssetsPanel)) { appDuty.commandDuty.execute(AppCommand.FocusAssetsPanel) },
+                        RyoMenuEntry.MenuItem(Res.string.panel_schemas_manager.text, appDuty.commandDuty.canExecute(AppCommand.FocusSchemasPanel)) { appDuty.commandDuty.execute(AppCommand.FocusSchemasPanel) }
+                    )
+                ),
+                RyoMenuEntry.Divider,
+                RyoMenuEntry.MenuItem(
+                    menuLabel(if (appDuty.isMaximized) Res.string.menu_item_exit_fullscreen.text else Res.string.menu_item_fullscreen.text, AppCommand.ToggleMaximizeWindow),
+                    appDuty.commandDuty.canExecute(AppCommand.ToggleMaximizeWindow)
+                ) { appDuty.commandDuty.execute(AppCommand.ToggleMaximizeWindow) }
+            )
+        ),
+        MenuGroup(
+            id = "help",
+            label = Res.string.menu_group_help.text,
+            entries = listOf(
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_welcome_page.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) },
+                RyoMenuEntry.Divider,
+                RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = appDuty::showAboutDialog)
+            )
+        )
+    )
 
     val juche: @Composable () -> Unit = {
         val anchors = remember { mutableStateMapOf<String, IntOffset>() }
 
         Row(Modifier.fillMaxWidth().height(56.dp)) {
-            Box(Modifier.fillMaxHeight().width(64.dp), Alignment.Center) { Icon(Res.drawable.ic_ryo_24px.vector, Res.string.app_name.text, Modifier.size(24.dp), MaterialTheme.colorScheme.onSurfaceVariant) }
+            Box(Modifier.fillMaxHeight().width(64.dp), Alignment.Center) { Icon(Res.drawable.ic_ryo_24px.vector, BuildConfig.APP_NAME, Modifier.size(24.dp), MaterialTheme.colorScheme.onSurfaceVariant) }
 
             Row(Modifier.fillMaxSize().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 // 菜单栏
@@ -196,8 +287,8 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
                                 val b = coords.boundsInWindow()
                                 anchors[group.id] = IntOffset(b.left.roundToInt(), b.bottom.roundToInt())
                             }.onPointerEvent(PointerEventType.Enter) {
-                                anchors[group.id]?.also { appDuty.hoverMenuGroup(group.id, it.x, it.y) }
-                            }) { anchors[group.id]?.also { appDuty.toggleMenuGroup(group.id, it.x, it.y) } }
+                                anchors[group.id]?.also { appDuty.hoverMenuGroup(group.id, it.x, it.y, group.entries) }
+                            }) { anchors[group.id]?.also { appDuty.toggleMenuGroup(group.id, it.x, it.y, group.entries) } }
                         }
                     }
                 }

@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">Ryo</string>
     <string name="language_option_system">跟随系统</string>
     <string name="language_option_chinese">中文</string>
     <string name="language_option_english">English</string>

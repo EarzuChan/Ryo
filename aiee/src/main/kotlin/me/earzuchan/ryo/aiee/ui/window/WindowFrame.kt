@@ -21,7 +21,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
-import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.theme.RyoTheme
