@@ -67,7 +67,7 @@ fun SettingsPage(appDuty: AppDuty) {
         Row(rowModifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Icon(icon.vector, title, Modifier.size(24.dp), sideColor)
 
-            Column(Modifier.weight(1F), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.weight(1F)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
                 if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = sideColor)
             }
@@ -91,7 +91,7 @@ fun SettingsPage(appDuty: AppDuty) {
 
     val themeMode by appDuty.appThemeMode.collectAsState()
     val language by appDuty.appLanguage.collectAsState()
-    val shortcutsDialogTitle = Res.string.settings_shortcuts_dialog_title.text
+    val shortcutsDialogTitle = Res.string.set_shortcuts.text
     val shortcutsDialogDescription = Res.string.settings_shortcuts_dialog_description.text
     val gotIt = Res.string.action_got_it.text
 
@@ -127,14 +127,15 @@ fun SettingsPage(appDuty: AppDuty) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
         Section(Res.string.settings_section_usage.text)
 
-        Item(Res.drawable.ic_apps_24px, Res.string.settings_item_editor_preferences.text, enabled = false) // TODO
+        Item(Res.drawable.ic_apps_24px, Res.string.preferred_editors.text, enabled = false) // TODO
 
-        Item(Res.drawable.ic_keyboard_24px, Res.string.settings_item_shortcuts.text) {
+        Item(Res.drawable.ic_keyboard_24px, Res.string.set_shortcuts.text) {
+            // TODO
             appDuty.dialogDuty.orderCommon(
                 icon = Res.drawable.ic_keyboard_24px,
                 headline = UiText.Plain(shortcutsDialogTitle),
                 description = UiText.Plain(shortcutsDialogDescription),
-                actions = listOf(DialogDuty.DialogAction(UiText.Plain(gotIt), ButtonType.Filled))
+                actions = listOf(DialogDuty.DialogAction(UiText.Plain(gotIt)))
             )
         }
 

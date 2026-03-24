@@ -36,7 +36,7 @@ enum class ButtonType {
 fun RyoButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, icon: DrawableResource? = null, type: ButtonType = ButtonType.Text, minInteractiveSize: Dp = 0.dp, onClick: () -> Unit) = CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides minInteractiveSize) {
     @Composable
     fun ButtonContent(text: String, icon: DrawableResource?) = Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (icon != null) Icon(icon.vector, null, Modifier.size(18.dp))
+        // if (icon != null) RyoIcon(icon, 18, str = text) size18不太对
         Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 

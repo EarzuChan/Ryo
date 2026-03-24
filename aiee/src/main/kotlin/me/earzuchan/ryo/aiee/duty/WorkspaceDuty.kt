@@ -172,8 +172,8 @@ class WorkspaceDuty(ctx: DutyContext) : DutyContext by ctx {
 
     private fun createTabDuty(navi: WorkspaceTabNavis, subCtx: DutyContext): TabDuty = when (navi) {
         WorkspaceTabNavis.Empty -> EmptyTabDuty(subCtx)
-        WorkspaceTabNavis.Welcome -> WelcomeTabDuty(subCtx, UiText.Res(Res.string.tab_title_welcome))
-        WorkspaceTabNavis.Settings -> SettingsTabDuty(subCtx, UiText.Res(Res.string.tab_title_settings))
+        WorkspaceTabNavis.Welcome -> WelcomeTabDuty(subCtx, UiText.Res(Res.string.welcome))
+        WorkspaceTabNavis.Settings -> SettingsTabDuty(subCtx, UiText.Res(Res.string.settings))
         is WorkspaceTabNavis.EditorSession -> EditorSessionTabDuty(subCtx, navi, UiText.Res(Res.string.tab_title_editor_session_index_format, listOf(UiText.Plain(navi.index.toString()))), navi.initialDirty)
     }
 }

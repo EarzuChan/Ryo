@@ -26,6 +26,7 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.components.resources)
     implementation(compose.preview)
+    implementation(compose.animation)
 
     implementation(compose.desktop.currentOs)
     implementation(libs.coroutines.swing)
@@ -41,7 +42,6 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.sqlite.bundled)
-    implementation(libs.animation.core.desktop)
     ksp(libs.room.compiler)
 
     implementation(libs.coil.compose)

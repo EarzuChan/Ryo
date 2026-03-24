@@ -1,79 +1,53 @@
 package me.earzuchan.ryo.aiee.ui.panel
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.duty.AssetsPanelDuty
 import me.earzuchan.ryo.aiee.duty.SchemasPanelDuty
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.ui.component.EditableLabel
-import me.earzuchan.ryo.aiee.util.UiUtils.text
+import me.earzuchan.ryo.aiee.ui.component.TreeNodeModel
+import me.earzuchan.ryo.aiee.ui.component.TreeView
+import me.earzuchan.ryo.aiee.ui.component.TreeViewState.Companion.rememberTreeViewState
+import me.earzuchan.ryo.aiee.util.RyoLog
 import org.jetbrains.compose.resources.StringResource
 
 @Composable
-fun AssetsPanel(duty: AssetsPanelDuty, modifier: Modifier = Modifier) {
-    val state = duty.state
+fun AssetsPanel(duty: AssetsPanelDuty) {
+    val TAG = "AssetsPanelDuty"
 
-    PanelScaffold(Res.string.panel_assets_search_hint, state.keyword, duty::search, Res.string.panel_assets_count_format.text(state.entries.size.toString()), modifier) {
-        if (state.entries.isEmpty()) PanelEmpty(Res.string.panel_assets_empty.text) else LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(state.entries, key = { it.id }) { entry ->
-                PanelEntry(entry.name, entry.kind, state.selectedId == entry.id) { duty.select(entry.id) }
-            }
+    var keyword by remember { mutableStateOf("") }
+
+    PanelScaffold(Res.string.panel_assets_manager, keyword, { keyword = it }) {
+        val sampleNodes = remember {
+            listOf(TreeNodeModel("卷1", listOf(TreeNodeModel("条目xxx"), TreeNodeModel("条目yyy"))), TreeNodeModel("新卷", emptyList()))
         }
+        val treeState = rememberTreeViewState()
+
+        TreeView(sampleNodes, filterText = keyword, state = treeState, onNodeClick = { RyoLog.i(TAG, "Clicked Leaf Path: $it") }, onNodeRightClick = { RyoLog.i(TAG, "Right Clicked Path: $it") })
     }
 }
 
 @Composable
-fun SchemasPanel(duty: SchemasPanelDuty, modifier: Modifier = Modifier) {
-    val state = duty.state
-
-    PanelScaffold(Res.string.panel_schemas_search_hint, state.keyword, duty::search, Res.string.panel_schemas_count_format.text(state.entries.size.toString()), modifier) {
-        if (state.entries.isEmpty()) PanelEmpty(Res.string.panel_schemas_empty.text) else LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(state.entries, key = { it.id }) { entry ->
-                val subtitle = "${entry.kind} · ${Res.string.panel_schema_member_count_format.text(entry.memberCount.toString())}"
-                PanelEntry(entry.modelId, subtitle, state.selectedId == entry.id) { duty.select(entry.id) }
-            }
-        }
-    }
+fun SchemasPanel(duty: SchemasPanelDuty) {
+    // TODO：设计实际Schema管理面板，对接实际逻辑
+    PanelScaffold(Res.string.panel_schemas_manager, "嗯嘛", {}) { }
 }
 
 @Composable
-private fun PanelScaffold(searchHint: StringResource, keyword: String, onKeywordChange: (String) -> Unit, statsText: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) = Column(
-    modifier.fillMaxSize(),
-    verticalArrangement = Arrangement.spacedBy(10.dp)
-) {
+private fun PanelScaffold(searchHint: StringResource, keyword: String, onKeywordChange: (String) -> Unit, content: @Composable () -> Unit) = Column(Modifier.fillMaxSize()) {
     EditableLabel(UiText.Res(searchHint), keyword, onKeywordChange, true, Modifier.fillMaxWidth())
-    Text(statsText, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Box(modifier = Modifier.weight(1F), contentAlignment = Alignment.TopStart) { content() }
-}
-
-@Composable
-private fun PanelEntry(title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) = Column(
-    Modifier.fillMaxWidth().background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
-    verticalArrangement = Arrangement.spacedBy(2.dp)
-) {
-    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface)
-    Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun PanelEmpty(text: String) = Box(Modifier.fillMaxSize().padding(top = 28.dp), Alignment.TopCenter) {
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(Modifier.fillMaxHeight(), Alignment.TopStart) { content() }
 }

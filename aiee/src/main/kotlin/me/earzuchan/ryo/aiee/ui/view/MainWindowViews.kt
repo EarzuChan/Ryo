@@ -82,7 +82,7 @@ fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit) {
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 ActionButton(if (sidePanelDuty.expanded) Res.drawable.ic_panel_narrow_24px else Res.drawable.ic_panel_24px, Res.string.side_toggle_panel.text, onClick = sidePanelDuty::toggleExpanded)
-                ActionButton(Res.drawable.ic_settings_24px, Res.string.side_open_settings.text, onClick = onOpenSettings)
+                ActionButton(Res.drawable.ic_settings_24px, Res.string.settings.text, onClick = onOpenSettings)
             }
         }
 
@@ -90,8 +90,7 @@ fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit) {
 
         Box(Modifier.fillMaxHeight().width(sidePanelDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Children(sidePanelDuty.panelStack) { child ->
-                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(child.instance.titleRes.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxSize().padding(12.dp)) {
                     when (val panel = child.instance) {
                         is SidePanelDuty.PanelChild.Assets -> AssetsPanel(panel.duty)
                         is SidePanelDuty.PanelChild.Schemas -> SchemasPanel(panel.duty)
@@ -217,9 +216,9 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
                 RyoMenuEntry.MenuItem(
                     text = Res.string.menu_item_new.text,
                     children = listOf(
-                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_welcome_page.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
                         RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_editor_session_page.text, AppCommand.OpenEditorSessionTab), appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)) { appDuty.commandDuty.execute(AppCommand.OpenEditorSessionTab) },
-                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_settings_page.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) }
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) }
                     )
                 ),
                 RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_restore_closed_tab.text, AppCommand.RestoreClosedTab), appDuty.commandDuty.canExecute(AppCommand.RestoreClosedTab)) { appDuty.commandDuty.execute(AppCommand.RestoreClosedTab) },
@@ -265,8 +264,8 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
             id = "help",
             label = Res.string.menu_group_help.text,
             entries = listOf(
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_welcome_page.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) },
                 RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = appDuty::showAboutDialog)
             )
