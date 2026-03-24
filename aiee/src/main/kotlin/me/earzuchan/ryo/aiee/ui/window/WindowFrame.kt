@@ -24,7 +24,7 @@ import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.theme.RyoTheme
-import me.earzuchan.ryo.aiee.util.ResUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.text
 
 interface RyoWindowInterop {
     fun attachWindowController(controller: RyoWindowController) = Unit

@@ -1,7 +1,7 @@
 package me.earzuchan.ryo.aiee.ui
 
 import androidx.compose.runtime.Composable
-import me.earzuchan.ryo.aiee.util.ResUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.text
 import org.jetbrains.compose.resources.StringResource
 
 sealed interface UiText {

@@ -46,6 +46,13 @@
     <string name="side_panel_placeholder">Panel content area is not integrated yet</string>
     <string name="panel_assets_manager">Assets Manager</string>
     <string name="panel_schemas_manager">Schema Manager</string>
+    <string name="panel_assets_search_hint">Search asset name or kind</string>
+    <string name="panel_assets_count_format">%1$s assets</string>
+    <string name="panel_assets_empty">No matching assets</string>
+    <string name="panel_schemas_search_hint">Search model id or kind</string>
+    <string name="panel_schemas_count_format">%1$s schemas</string>
+    <string name="panel_schemas_empty">No matching schemas</string>
+    <string name="panel_schema_member_count_format">%1$s members</string>
     <string name="menu_group_file">File</string>
     <string name="menu_group_edit">Edit</string>
     <string name="menu_group_view">View</string>

@@ -37,15 +37,15 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     val appThemeMode get() = preferencesDuty.appThemeMode
     val appLanguage get() = preferencesDuty.appLanguage
 
-    val sideWorkspaceDuty get() = workspaceDuty.sideWorkspaceDuty
+    val sidePanelDuty get() = workspaceDuty.sidePanelDuty
     val windowInterop get() = mainWindowDuty.windowInterop
     val isMaximized get() = mainWindowDuty.isMaximized
     val lifecycleStage get() = mainWindowDuty.lifecycleStage
 
-    val tabs: List<TabDuty.Tab> get() = workspaceDuty.tabs
-    val activeTabId: String? get() = workspaceDuty.activeTabId
-    val activeTab: TabDuty.Tab? get() = workspaceDuty.activeTab
-    val hasDirtyTabs: Boolean get() = workspaceDuty.hasDirtyTabs
+    val tabs get() = workspaceDuty.tabs
+    val activeTabId get() = workspaceDuty.activeTabId
+    val activeTab get() = workspaceDuty.activeTab
+    val hasDirtyTabs get() = workspaceDuty.hasDirtyTabs
 
     val windowTitle @Composable get() = BuildConfig.APP_NAME.let { activeTab?.let { t -> "${t.title.resolve()} - $it" } ?: it }
 
@@ -151,9 +151,9 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
         commandDuty.register(AppCommand.OpenSettingsTab) { workspaceDuty.openSettingsTab() }
         commandDuty.register(AppCommand.RestoreClosedTab, canExecute = { workspaceDuty.canRestoreClosedTab }) { workspaceDuty.restoreLastClosedTab() }
         commandDuty.register(AppCommand.CloseCurrentTab, canExecute = { activeTabId != null }) { closeCurrentTab() }
-        commandDuty.register(AppCommand.ToggleSidePanel) { sideWorkspaceDuty.toggleExpanded() }
-        commandDuty.register(AppCommand.FocusAssetsPanel) { sideWorkspaceDuty.focusPanel("assets") }
-        commandDuty.register(AppCommand.FocusSchemasPanel) { sideWorkspaceDuty.focusPanel("schemas") }
+        commandDuty.register(AppCommand.ToggleSidePanel) { sidePanelDuty.toggleExpanded() }
+        commandDuty.register(AppCommand.FocusAssetsPanel) { sidePanelDuty.focusPanel("assets") }
+        commandDuty.register(AppCommand.FocusSchemasPanel) { sidePanelDuty.focusPanel("schemas") }
         commandDuty.register(AppCommand.ToggleMaximizeWindow) { toggleMaximizeWindow() }
         commandDuty.register(AppCommand.RequestWindowClose) { requestWindowClose() }
         commandDuty.register(AppCommand.Undo, canExecute = { workspaceDuty.activeTabDuty?.canUndo() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::undo) }

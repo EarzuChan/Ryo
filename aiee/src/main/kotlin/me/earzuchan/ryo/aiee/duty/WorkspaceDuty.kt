@@ -2,11 +2,9 @@ package me.earzuchan.ryo.aiee.duty
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.ComponentContext as DutyContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
-import com.arkivanov.decompose.router.stack.active
-import com.arkivanov.decompose.router.stack.backStack
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.navigate
 import com.arkivanov.decompose.value.Value
@@ -14,11 +12,11 @@ import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.UiText
 
-class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
+class WorkspaceDuty(ctx: DutyContext) : DutyContext by ctx {
     data class State(val tabs: List<TabDuty.Tab>, val activeTabId: String?)
 
     sealed interface Intent {
-        data class Open(val navi: WorkspaceTabNavi) : Intent
+        data class Open(val navi: WorkspaceTabNavis) : Intent
         data class Select(val tabId: String) : Intent
         data class Close(val tabId: String) : Intent
         data class Move(val fromIndex: Int, val toIndex: Int) : Intent
@@ -33,26 +31,26 @@ class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
         data object Restored : Effect
     }
 
-    private val navigation = StackNavigation<WorkspaceTabNavi>()
+    private val navigation = StackNavigation<WorkspaceTabNavis>()
     private val tabOrder: SnapshotStateList<String> = mutableStateListOf()
-    private val closedHistory = ArrayDeque<WorkspaceTabNavi>()
+    private val closedHistory = ArrayDeque<WorkspaceTabNavis>()
     private var editorSessionSeed = 3
 
-    val tabStack: Value<ChildStack<WorkspaceTabNavi, TabDuty>> = childStack(
+    val tabStack: Value<ChildStack<WorkspaceTabNavis, TabDuty>> = childStack(
         source = navigation,
-        serializer = WorkspaceTabNavi.serializer(),
-        initialConfiguration = WorkspaceTabNavi.Empty,
+        serializer = WorkspaceTabNavis.serializer(),
+        initialConfiguration = WorkspaceTabNavis.Empty,
         key = "WorkspaceTabStack",
         handleBackButton = false,
         childFactory = ::createTabDuty
     )
 
-    val sideWorkspaceDuty = SideWorkspaceDuty(ctx)
+    val sidePanelDuty = SidePanelDuty(ctx)
 
     val tabs: List<TabDuty.Tab> get() = tabOrder.mapNotNull(::findTab)
-    val activeTabId: String? get() = tabStack.value.active.configuration.takeIf { it !is WorkspaceTabNavi.Empty }?.id
+    val activeTabId: String? get() = tabStack.value.active.configuration.takeIf { it !is WorkspaceTabNavis.Empty }?.id
     val activeTab: TabDuty.Tab? get() = activeTabId?.let(::findTab)
-    val activeTabDuty: TabDuty? get() = tabStack.value.active.instance.takeIf { it.navi !is WorkspaceTabNavi.Empty }
+    val activeTabDuty: TabDuty? get() = tabStack.value.active.instance.takeIf { it.navi !is WorkspaceTabNavis.Empty }
     val hasDirtyTabs: Boolean get() = tabs.any(TabDuty.Tab::dirty)
     val canRestoreClosedTab: Boolean get() = closedHistory.isNotEmpty()
     val state get() = State(tabs, activeTabId)
@@ -83,11 +81,11 @@ class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
 
     fun moveTab(fromIndex: Int, toIndex: Int) = dispatch(Intent.Move(fromIndex, toIndex))
 
-    fun openWelcomeTab() = dispatch(Intent.Open(WorkspaceTabNavi.Welcome))
+    fun openWelcomeTab() = dispatch(Intent.Open(WorkspaceTabNavis.Welcome))
 
-    fun openEditorSessionTab() = dispatch(Intent.Open(WorkspaceTabNavi.EditorSession("editor-${editorSessionSeed - 1}", editorSessionSeed++)))
+    fun openEditorSessionTab() = dispatch(Intent.Open(WorkspaceTabNavis.EditorSession("editor-${editorSessionSeed - 1}", editorSessionSeed++)))
 
-    fun openSettingsTab() = dispatch(Intent.Open(WorkspaceTabNavi.Settings))
+    fun openSettingsTab() = dispatch(Intent.Open(WorkspaceTabNavis.Settings))
 
     fun restoreLastClosedTab() = dispatch(Intent.RestoreLastClosed)
 
@@ -95,12 +93,12 @@ class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
         activeTabDuty?.also(block)
     }
 
-    private fun open(navi: WorkspaceTabNavi): Effect {
-        if (navi is WorkspaceTabNavi.Empty) return Effect.NoOp
+    private fun open(navi: WorkspaceTabNavis): Effect {
+        if (navi is WorkspaceTabNavis.Empty) return Effect.NoOp
 
         val singleton = when (navi) {
-            WorkspaceTabNavi.Welcome -> WorkspaceTabNavi.Welcome.id
-            WorkspaceTabNavi.Settings -> WorkspaceTabNavi.Settings.id
+            WorkspaceTabNavis.Welcome -> WorkspaceTabNavis.Welcome.id
+            WorkspaceTabNavis.Settings -> WorkspaceTabNavis.Settings.id
             else -> null
         }
 
@@ -139,10 +137,10 @@ class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
         tabOrder.add(normalizedTo, moving)
         navigation.navigate { stack ->
             val activeId = withoutEmpty(stack).lastOrNull()?.id
-            val byId = withoutEmpty(stack).associateBy(WorkspaceTabNavi::id)
+            val byId = withoutEmpty(stack).associateBy(WorkspaceTabNavis::id)
             val ordered = tabOrder.mapNotNull(byId::get)
 
-            if (ordered.isEmpty()) listOf(WorkspaceTabNavi.Empty)
+            if (ordered.isEmpty()) listOf(WorkspaceTabNavis.Empty)
             else if (activeId == null) ordered
             else ordered.firstOrNull { it.id == activeId }?.let { active -> ordered.filterNot { it.id == activeId } + active } ?: ordered
         }
@@ -155,27 +153,27 @@ class WorkspaceDuty(ctx: ComponentContext) : ComponentContext by ctx {
         return open(last).let { Effect.Restored }
     }
 
-    private fun findNavi(tabId: String): WorkspaceTabNavi? = allTabNavis().firstOrNull { it.id == tabId }
+    private fun findNavi(tabId: String): WorkspaceTabNavis? = allTabNavis().firstOrNull { it.id == tabId }
 
-    private fun allTabNavis(): List<WorkspaceTabNavi> = tabStack.value.backStack.map { it.configuration } + tabStack.value.active.configuration
+    private fun allTabNavis(): List<WorkspaceTabNavis> = tabStack.value.backStack.map { it.configuration } + tabStack.value.active.configuration
 
     private fun allTabDuties(): List<TabDuty> = tabStack.value.backStack.map { it.instance } + tabStack.value.active.instance
 
-    private fun withoutEmpty(stack: List<WorkspaceTabNavi>) = stack.filterNot { it is WorkspaceTabNavi.Empty }
+    private fun withoutEmpty(stack: List<WorkspaceTabNavis>) = stack.filterNot { it is WorkspaceTabNavis.Empty }
 
-    private fun normalizeStack(stack: List<WorkspaceTabNavi>) = withoutEmpty(stack).ifEmpty { listOf(WorkspaceTabNavi.Empty) }
+    private fun normalizeStack(stack: List<WorkspaceTabNavis>) = withoutEmpty(stack).ifEmpty { listOf(WorkspaceTabNavis.Empty) }
 
     private fun seedDemoTabs() {
-        val demo = listOf(WorkspaceTabNavi.EditorSession("editor-0", 1, true), WorkspaceTabNavi.EditorSession("editor-1", 2), WorkspaceTabNavi.Settings)
+        val demo = listOf(WorkspaceTabNavis.EditorSession("editor-0", 1, true), WorkspaceTabNavis.EditorSession("editor-1", 2), WorkspaceTabNavis.Settings)
         tabOrder.clear()
-        tabOrder.addAll(demo.map(WorkspaceTabNavi::id))
+        tabOrder.addAll(demo.map(WorkspaceTabNavis::id))
         navigation.navigate { normalizeStack(demo) }
     }
 
-    private fun createTabDuty(navi: WorkspaceTabNavi, subCtx: ComponentContext): TabDuty = when (navi) {
-        WorkspaceTabNavi.Empty -> EmptyTabDuty(subCtx)
-        WorkspaceTabNavi.Welcome -> WelcomeTabDuty(subCtx, UiText.Res(Res.string.tab_title_welcome))
-        WorkspaceTabNavi.Settings -> SettingsTabDuty(subCtx, UiText.Res(Res.string.tab_title_settings))
-        is WorkspaceTabNavi.EditorSession -> EditorSessionTabDuty(subCtx, navi, UiText.Res(Res.string.tab_title_editor_session_index_format, listOf(UiText.Plain(navi.index.toString()))), navi.initialDirty)
+    private fun createTabDuty(navi: WorkspaceTabNavis, subCtx: DutyContext): TabDuty = when (navi) {
+        WorkspaceTabNavis.Empty -> EmptyTabDuty(subCtx)
+        WorkspaceTabNavis.Welcome -> WelcomeTabDuty(subCtx, UiText.Res(Res.string.tab_title_welcome))
+        WorkspaceTabNavis.Settings -> SettingsTabDuty(subCtx, UiText.Res(Res.string.tab_title_settings))
+        is WorkspaceTabNavis.EditorSession -> EditorSessionTabDuty(subCtx, navi, UiText.Res(Res.string.tab_title_editor_session_index_format, listOf(UiText.Plain(navi.index.toString()))), navi.initialDirty)
     }
 }

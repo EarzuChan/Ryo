@@ -41,6 +41,7 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.sqlite.bundled)
+    implementation(libs.animation.core.desktop)
     ksp(libs.room.compiler)
 
     implementation(libs.coil.compose)

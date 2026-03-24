@@ -11,8 +11,8 @@ import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.HyperlinkText
-import me.earzuchan.ryo.aiee.util.ResUtils.paint
-import me.earzuchan.ryo.aiee.util.ResUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.paint
+import me.earzuchan.ryo.aiee.util.UiUtils.text
 
 @Composable
 fun AboutDialog() = Column(Modifier.padding(24.dp).width(240.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

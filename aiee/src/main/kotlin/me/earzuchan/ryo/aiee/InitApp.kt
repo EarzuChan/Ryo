@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.decompose.DefaultComponentContext as AncestorDutyContext
 import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import me.earzuchan.ryo.aiee.di.appModule
@@ -17,14 +17,14 @@ import me.earzuchan.ryo.aiee.resources.illu_ryo_lawnchair
 import me.earzuchan.ryo.aiee.ui.AppEnvironment
 import me.earzuchan.ryo.aiee.ui.window.MainWindowContent
 import me.earzuchan.ryo.aiee.ui.window.RyoWindow
-import me.earzuchan.ryo.aiee.util.ResUtils.paint
+import me.earzuchan.ryo.aiee.util.UiUtils.paint
 import org.koin.compose.KoinApplication
 
 fun main() = application {
     KoinApplication(application = { modules(appModule) }) {
         val lifecycle = remember { LifecycleRegistry() }
         val windowState = rememberWindowState(size = DpSize(1280.dp, 820.dp))
-        val appDuty = remember { AppDuty(DefaultComponentContext(lifecycle), ::exitApplication) }
+        val appDuty = remember { AppDuty(AncestorDutyContext(lifecycle), ::exitApplication) }
 
         LifecycleController(lifecycle, windowState)
 

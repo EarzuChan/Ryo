@@ -13,7 +13,7 @@ import me.earzuchan.ryo.aiee.ui.view.AppDialogHostView
 import me.earzuchan.ryo.aiee.ui.view.AppMenuHostView
 import me.earzuchan.ryo.aiee.ui.view.AppTopBarView
 import me.earzuchan.ryo.aiee.ui.view.MainWorkspaceView
-import me.earzuchan.ryo.aiee.ui.view.SideWorkspaceView
+import me.earzuchan.ryo.aiee.ui.view.SidePanelView
 
 
 @Composable
@@ -21,7 +21,7 @@ fun FrameWindowScope.MainWindowContent(appDuty: AppDuty, ryoWindowScope: RyoWind
     Column(Modifier.fillMaxSize()) {
         AppTopBarView(appDuty,ryoWindowScope::WindowControlButtons)
         Row(Modifier.fillMaxSize()) {
-            SideWorkspaceView(appDuty.sideWorkspaceDuty, appDuty::openSettingsTab)
+            SidePanelView(appDuty.sidePanelDuty, appDuty::openSettingsTab)
             MainWorkspaceView(appDuty)
         }
     }

@@ -28,8 +28,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import me.earzuchan.ryo.aiee.resources.*
-import me.earzuchan.ryo.aiee.util.ResUtils.text
-import me.earzuchan.ryo.aiee.util.ResUtils.vector
+import me.earzuchan.ryo.aiee.util.UiUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
 
 // TIPS：自研黄金级Menu，适用于弹出菜单、右键菜单、选择器菜单
 

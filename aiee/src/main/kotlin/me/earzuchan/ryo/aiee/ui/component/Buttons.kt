@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import me.earzuchan.ryo.aiee.util.ResUtils.vector
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
 import org.jetbrains.compose.resources.DrawableResource
 
 enum class ButtonType {

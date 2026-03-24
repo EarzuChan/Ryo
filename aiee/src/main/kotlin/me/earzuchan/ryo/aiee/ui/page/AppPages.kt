@@ -40,8 +40,8 @@ import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.ButtonType
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.UiText
-import me.earzuchan.ryo.aiee.util.ResUtils.vector
-import me.earzuchan.ryo.aiee.util.ResUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
+import me.earzuchan.ryo.aiee.util.UiUtils.text
 import org.jetbrains.compose.resources.DrawableResource
 import kotlin.math.roundToInt
 

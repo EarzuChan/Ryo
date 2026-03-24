@@ -43,16 +43,18 @@ import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.duty.AppCommand
 import me.earzuchan.ryo.aiee.duty.AppDuty
-import me.earzuchan.ryo.aiee.duty.SideWorkspaceDuty
+import me.earzuchan.ryo.aiee.duty.SidePanelDuty
 import me.earzuchan.ryo.aiee.duty.TabDuty
-import me.earzuchan.ryo.aiee.duty.WorkspaceTabNavi
+import me.earzuchan.ryo.aiee.duty.WorkspaceTabNavis
+import me.earzuchan.ryo.aiee.ui.panel.AssetsPanel
+import me.earzuchan.ryo.aiee.ui.panel.SchemasPanel
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.resolve
-import me.earzuchan.ryo.aiee.util.ResUtils.text
-import me.earzuchan.ryo.aiee.util.ResUtils.vector
+import me.earzuchan.ryo.aiee.util.UiUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
 import org.jetbrains.compose.resources.DrawableResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -61,39 +63,39 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -> Unit) {
+fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit) {
     @Composable
-    fun PanelButton(icon: DrawableResource, hint: String, selected: Boolean, onClick: () -> Unit) =
-        RyoIconButton(icon, 48, hint, if (selected) IconButtonDefaults.filledTonalIconButtonColors() else IconButtonDefaults.iconButtonColors(), onClick)
+    fun PanelButton(icon: DrawableResource, hint: String, selected: Boolean, onClick: () -> Unit) = RyoIconButton(icon, 48, hint, if (selected) IconButtonDefaults.filledTonalIconButtonColors() else IconButtonDefaults.iconButtonColors(), onClick)
 
     @Composable
     fun ActionButton(icon: DrawableResource, hint: String, colors: IconButtonColors = IconButtonDefaults.iconButtonColors(), onClick: () -> Unit) = RyoIconButton(icon = icon, dpSize = 48, hintText = hint, colors = colors, onClick = onClick)
 
     val density = LocalDensity.current
-    val panelStack by sideWorkspaceDuty.panelStack.subscribeAsState()
+    val panelStack by sidePanelDuty.panelStack.subscribeAsState()
     val activePanelId = panelStack.active.configuration.id
 
     Row(Modifier.fillMaxHeight()) {
         Column(Modifier.fillMaxHeight().width(64.dp).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(Modifier.weight(1F), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                sideWorkspaceDuty.panels.forEach { panel ->
-                    PanelButton(if (activePanelId == panel.id) panel.selectedIcon else panel.icon, panel.titleRes.text, activePanelId == panel.id) { sideWorkspaceDuty.focusPanel(panel.id) }
-                }
+            Column(Modifier.weight(1F), Arrangement.spacedBy(4.dp)) {
+                sidePanelDuty.panels.forEach { PanelButton(if (activePanelId == it.id) it.selectedIcon else it.icon, it.titleRes.text, activePanelId == it.id) { sidePanelDuty.focusPanel(it.id) } }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ActionButton(if (sideWorkspaceDuty.expanded) Res.drawable.ic_panel_narrow_24px else Res.drawable.ic_panel_24px, Res.string.side_toggle_panel.text, onClick = sideWorkspaceDuty::toggleExpanded)
+                ActionButton(if (sidePanelDuty.expanded) Res.drawable.ic_panel_narrow_24px else Res.drawable.ic_panel_24px, Res.string.side_toggle_panel.text, onClick = sidePanelDuty::toggleExpanded)
                 ActionButton(Res.drawable.ic_settings_24px, Res.string.side_open_settings.text, onClick = onOpenSettings)
             }
         }
 
-        if (!sideWorkspaceDuty.expanded) return
+        if (!sidePanelDuty.expanded) return
 
-        Box(Modifier.fillMaxHeight().width(sideWorkspaceDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-            Children(sideWorkspaceDuty.panelStack) { child ->
+        Box(Modifier.fillMaxHeight().width(sidePanelDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            Children(sidePanelDuty.panelStack) { child ->
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(child.instance.titleRes.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(Res.string.side_panel_placeholder.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    when (val panel = child.instance) {
+                        is SidePanelDuty.PanelChild.Assets -> AssetsPanel(panel.duty)
+                        is SidePanelDuty.PanelChild.Schemas -> SchemasPanel(panel.duty)
+                    }
                 }
             }
         }
@@ -101,7 +103,7 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
         Spacer(Modifier.fillMaxHeight().width(8.dp).padding(end = 4.dp).pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR))).pointerInput(Unit) {
             detectDragGestures { change, dragAmount ->
                 change.consume()
-                sideWorkspaceDuty.resizeBy(with(density) { dragAmount.x.toDp().value })
+                sidePanelDuty.resizeBy(with(density) { dragAmount.x.toDp().value })
             }
         })
     }
@@ -111,7 +113,7 @@ fun SideWorkspaceView(sideWorkspaceDuty: SideWorkspaceDuty, onOpenSettings: () -
 @OptIn(ExperimentalComposeUiApi::class)
 fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
     val tabStack by appDuty.workspaceDuty.tabStack.subscribeAsState()
-    val activeTabId = tabStack.active.configuration.takeIf { it !is WorkspaceTabNavi.Empty }?.id
+    val activeTabId = tabStack.active.configuration.takeIf { it !is WorkspaceTabNavis.Empty }?.id
     val tabs = appDuty.tabs
 
     @Composable
@@ -242,7 +244,7 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
             label = Res.string.menu_group_view.text,
             entries = listOf(
                 RyoMenuEntry.MenuItem(
-                    menuLabel(if (appDuty.sideWorkspaceDuty.expanded) Res.string.menu_item_collapse_sidebar.text else Res.string.menu_item_expand_sidebar.text, AppCommand.ToggleSidePanel),
+                    menuLabel(if (appDuty.sidePanelDuty.expanded) Res.string.menu_item_collapse_sidebar.text else Res.string.menu_item_expand_sidebar.text, AppCommand.ToggleSidePanel),
                     appDuty.commandDuty.canExecute(AppCommand.ToggleSidePanel)
                 ) { appDuty.commandDuty.execute(AppCommand.ToggleSidePanel) },
                 RyoMenuEntry.MenuItem(

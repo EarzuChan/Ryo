@@ -2,16 +2,9 @@ package me.earzuchan.ryo.aiee.util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
 import me.earzuchan.ryo.aiee.ui.LocalAppLanguage
@@ -94,7 +87,14 @@ object PlatformUtils {
     }
 }
 
-object ResUtils {
+object UiUtils {
+    @Composable
+    inline fun Modifier.only(
+        condition: Boolean,
+        elseBlock: @Composable Modifier.() -> Modifier = { this },
+        ifBlock: @Composable Modifier.() -> Modifier
+    ): Modifier = if (condition) ifBlock() else elseBlock()
+
     // For XML vector img
     val DrawableResource.vector @Composable get() = vectorResource(this)
 

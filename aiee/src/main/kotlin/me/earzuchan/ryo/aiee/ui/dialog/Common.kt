@@ -47,11 +47,11 @@ import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.duty.DialogDuty
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.ui.resolve
-import me.earzuchan.ryo.aiee.util.ResUtils.vector
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import me.earzuchan.ryo.aiee.resources.*
-import me.earzuchan.ryo.aiee.util.ResUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.text
 
 @Composable
 fun DialogBase(ctrlShow: Boolean, showOverlay: Boolean = true, onOverlayClick: () -> Unit = {}, onOpened: () -> Unit = {}, onClosed: () -> Unit = {}, content: @Composable BoxScope.() -> Unit) {

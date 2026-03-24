@@ -46,6 +46,13 @@
     <string name="side_panel_placeholder">面板内容区待接入</string>
     <string name="panel_assets_manager">资产管理器</string>
     <string name="panel_schemas_manager">Schema管理器</string>
+    <string name="panel_assets_search_hint">搜索资产名称或类型</string>
+    <string name="panel_assets_count_format">共 %1$s 项资产</string>
+    <string name="panel_assets_empty">没有匹配的资产</string>
+    <string name="panel_schemas_search_hint">搜索模型ID或类型</string>
+    <string name="panel_schemas_count_format">共 %1$s 项Schema</string>
+    <string name="panel_schemas_empty">没有匹配的Schema</string>
+    <string name="panel_schema_member_count_format">%1$s 个成员</string>
     <string name="menu_group_file">文件</string>
     <string name="menu_group_edit">编辑</string>
     <string name="menu_group_view">视图</string>

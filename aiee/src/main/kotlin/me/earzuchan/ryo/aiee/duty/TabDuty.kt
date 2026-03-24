@@ -11,7 +11,7 @@ import me.earzuchan.ryo.aiee.ui.page.EmptyPage
 import me.earzuchan.ryo.aiee.ui.page.SettingsPage
 import me.earzuchan.ryo.aiee.ui.page.WelcomePage
 
-abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavi, initialTitle: UiText, initialDirty: Boolean = false) : DutyContext by ctx {
+abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavis, initialTitle: UiText, initialDirty: Boolean = false) : DutyContext by ctx {
     data class State(val title: UiText, val dirty: Boolean)
 
     sealed interface Intent {
@@ -27,7 +27,7 @@ abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavi, initialTitl
         data object Discarded : Effect
     }
 
-    data class Tab(val id: String, val navi: WorkspaceTabNavi, val title: UiText, val dirty: Boolean = false)
+    data class Tab(val id: String, val navi: WorkspaceTabNavis, val title: UiText, val dirty: Boolean = false)
 
     var title by mutableStateOf(initialTitle)
     var dirty by mutableStateOf(initialDirty)
@@ -69,22 +69,22 @@ abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavi, initialTitl
     abstract fun Render(appDuty: AppDuty)
 }
 
-class EmptyTabDuty(ctx: DutyContext) : TabDuty(ctx, WorkspaceTabNavi.Empty, UiText.Plain("__empty__")) {
+class EmptyTabDuty(ctx: DutyContext) : TabDuty(ctx, WorkspaceTabNavis.Empty, UiText.Plain("__empty__")) {
     @Composable
     override fun Render(appDuty: AppDuty) = EmptyPage()
 }
 
-class WelcomeTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavi.Welcome, title) {
+class WelcomeTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavis.Welcome, title) {
     @Composable
     override fun Render(appDuty: AppDuty) = WelcomePage()
 }
 
-class SettingsTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavi.Settings, title) {
+class SettingsTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavis.Settings, title) {
     @Composable
     override fun Render(appDuty: AppDuty) = SettingsPage(appDuty)
 }
 
-class EditorSessionTabDuty(ctx: DutyContext, navi: WorkspaceTabNavi.EditorSession, title: UiText, initialDirty: Boolean = false) : TabDuty(ctx, navi, title, initialDirty) {
+class EditorSessionTabDuty(ctx: DutyContext, navi: WorkspaceTabNavis.EditorSession, title: UiText, initialDirty: Boolean = false) : TabDuty(ctx, navi, title, initialDirty) {
     override fun canSave() = dirty
 
     override fun save() {
