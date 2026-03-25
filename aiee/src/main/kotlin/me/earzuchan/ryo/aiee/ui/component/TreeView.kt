@@ -18,13 +18,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.resources.Res
@@ -37,6 +44,7 @@ import me.earzuchan.ryo.aiee.resources.matches
 import me.earzuchan.ryo.aiee.ui.component.TreeViewState.Companion.rememberTreeViewState
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import me.earzuchan.ryo.aiee.util.UiUtils.vector
+import kotlin.math.roundToInt
 
 // TIPS：叫做View，实际上这是个不可分的最小单位，即视为组件，Vamos！
 
@@ -67,9 +75,9 @@ class TreeViewState(val lazyListState: LazyListState) {
 
 private data class InternalTreeNode(val name: String, val level: Int, val isStem: Boolean, val indexPath: List<Int>, val expanded: Boolean, val childrenCount: Int, val stableKey: String) // 预计算 Key
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun TreeView(nodes: List<TreeNodeModel>, modifier: Modifier = Modifier, filterText: String = "", indent: Int = 24, state: TreeViewState = rememberTreeViewState(), onNodeClick: (path: List<Int>) -> Unit = {}, onNodeRightClick: (path: List<Int>) -> Unit = {}) { // 将过滤逻辑提取出来，并优化计算
+fun TreeView(nodes: List<TreeNodeModel>, modifier: Modifier = Modifier, filterText: String = "", indent: Int = 24, state: TreeViewState = rememberTreeViewState(), onNodeClick: (path: List<Int>) -> Unit = {}, onNodeRightClick: (path: List<Int>, anchorX: Int, anchorY: Int) -> Unit = { _, _, _ -> }) {
     val searched by derivedStateOf { filterText.isNotBlank() }
 
     val processedTree by remember(nodes, filterText, state.nonExpandedNodePaths) {
@@ -129,6 +137,7 @@ fun TreeView(nodes: List<TreeNodeModel>, modifier: Modifier = Modifier, filterTe
             val isSelected = state.pathOfLastClickedNode == node.indexPath
             val hoverSource = remember { MutableInteractionSource() }
             val isHovered by hoverSource.collectIsHoveredAsState()
+            var topLeftInWindow by remember(node.stableKey) { mutableStateOf(Offset.Zero) }
 
             // 动画部分
             val animatedRadius by animateDpAsState(if (isSelected || isHovered) 18.dp else 0.dp, tween(300, easing = FastOutSlowInEasing))
@@ -140,14 +149,20 @@ fun TreeView(nodes: List<TreeNodeModel>, modifier: Modifier = Modifier, filterTe
             val animatedColor by animateColorAsState(targetColor, tween(300, easing = FastOutSlowInEasing))
             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
-            Row(Modifier.fillMaxWidth().height(36.dp).clip(RoundedCornerShape(animatedRadius)).background(animatedColor).hoverable(hoverSource).pointerHoverIcon(PointerIcon.Hand).onClick(matcher = PointerMatcher.mouse(PointerButton.Primary)) {
+            Row(Modifier.fillMaxWidth().onGloballyPositioned { topLeftInWindow = it.positionInWindow() }.height(36.dp).clip(RoundedCornerShape(animatedRadius)).background(animatedColor).hoverable(hoverSource).pointerHoverIcon(PointerIcon.Hand).onPointerEvent(PointerEventType.Press) { event ->
+                if (!event.buttons.isSecondaryPressed) return@onPointerEvent
+                val localPress = event.changes.firstOrNull()?.position ?: return@onPointerEvent
                 state.pathOfLastClickedNode = node.indexPath
+                onNodeRightClick(node.indexPath, (topLeftInWindow.x + localPress.x).roundToInt(), (topLeftInWindow.y + localPress.y).roundToInt())
+            }.onClick(matcher = PointerMatcher.mouse(PointerButton.Primary)) {
+                state.pathOfLastClickedNode = node.indexPath
+                onNodeClick(node.indexPath)
                 if (node.isStem) {
                     val set = state.nonExpandedNodePaths.toMutableSet()
                     if (node.expanded) set.add(node.indexPath) else set.remove(node.indexPath)
                     state.nonExpandedNodePaths = set
-                } else onNodeClick(node.indexPath)
-            }.onClick(matcher = PointerMatcher.mouse(PointerButton.Secondary)) { onNodeRightClick(node.indexPath) }.padding(start = (node.level * indent + 12).dp, end = 24.dp), Arrangement.spacedBy(12.dp), Alignment.CenterVertically) {
+                }
+            }.padding(start = (node.level * indent + 12).dp, end = 24.dp), Arrangement.spacedBy(12.dp), Alignment.CenterVertically) {
                 val iconRotation by animateFloatAsState(if (node.expanded) 90f else 0f, tween(300))
 
                 Icon((if (node.isStem) Res.drawable.ic_chevron_24px else if (isSelected) Res.drawable.ic_file_filled_24px else Res.drawable.ic_file_24px).vector, null, Modifier.rotate(iconRotation), contentColor)

@@ -3,18 +3,26 @@ package me.earzuchan.ryo.aiee.duty
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.arkivanov.decompose.ComponentContext as DutyContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.value.Value
-import me.earzuchan.ryo.aiee.resources.Res
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.path
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
+import me.earzuchan.ryo.aiee.data.repository.WorkspaceRepository
 import me.earzuchan.ryo.aiee.resources.*
+import okio.Path
+import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
+import com.arkivanov.decompose.ComponentContext as DutyContext
 
-class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx {
+class SidePanelDuty(ctx: DutyContext, private val workspaceRepo: WorkspaceRepository) : DutyContext by ctx {
     companion object {
         private const val DEFAULT_WIDTH_DP = 280F
         private const val COLLAPSE_THRESHOLD_DP = 80F
@@ -80,6 +88,12 @@ class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx {
     fun toggleExpanded() = dispatch(Intent.ToggleExpanded)
 
     fun resizeBy(deltaDp: Float) = dispatch(Intent.Resize(deltaDp))
+    fun openVolumeByDialog() = pickVolumePathToOpen()?.let(workspaceRepo::openVolume)
+    fun saveActiveVolume() = workspaceRepo.saveActiveVolume()
+    fun closeActiveVolume() = workspaceRepo.closeActiveVolume()
+
+    val workspaceState: StateFlow<WorkspaceRepository.State> get() = workspaceRepo.state
+    val hasActiveVolume: Boolean get() = workspaceRepo.state.value.activeVolumeId != null
 
     private fun focus(id: String): Effect {
         val panel = panels.firstOrNull { it.id == id } ?: return Effect.NoOp
@@ -117,12 +131,32 @@ class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx {
     }
 
     private fun mapPanelChild(navi: SidePanelNavis, subCtx: DutyContext): PanelChild = when (navi) {
-        SidePanelNavis.Assets -> PanelChild.Assets(AssetsPanelDuty(subCtx))
-        SidePanelNavis.Schemas -> PanelChild.Schemas(SchemasPanelDuty(subCtx))
+        SidePanelNavis.Assets -> PanelChild.Assets(AssetsPanelDuty(subCtx, workspaceRepo))
+        SidePanelNavis.Schemas -> PanelChild.Schemas(SchemasPanelDuty(subCtx, workspaceRepo))
     }
 }
 
-class AssetsPanelDuty(ctx: DutyContext) : DutyContext by ctx {
+class AssetsPanelDuty(ctx: DutyContext, private val workspaceRepo: WorkspaceRepository) : DutyContext by ctx {
+    val state: StateFlow<WorkspaceRepository.State> = workspaceRepo.state
+
+    fun volumeByPath(path: List<Int>): WorkspaceRepository.VolumeState? = path.firstOrNull()?.let { state.value.volumes.getOrNull(it) }
+
+    fun saveVolume(volumeId: String) = workspaceRepo.saveVolume(volumeId)
+
+    fun closeVolume(volumeId: String) = workspaceRepo.closeVolume(volumeId)
+
+    fun onTreeNodeClick(path: List<Int>) {
+        val volume = volumeByPath(path) ?: return
+        workspaceRepo.selectVolume(volume.id)
+    }
 }
 
-class SchemasPanelDuty(ctx: DutyContext) : DutyContext by ctx
+class SchemasPanelDuty(ctx: DutyContext, private val workspaceRepo: WorkspaceRepository) : DutyContext by ctx {
+    val state: StateFlow<WorkspaceRepository.State> = workspaceRepo.state
+}
+
+// TODO：tmd，标题、预设扩展名什么的都没安排上
+private fun pickVolumePathToOpen(): Path? = runBlocking {
+    val file = FileKit.openFilePicker(mode = FileKitMode.Single)
+    file?.path?.toPath()
+}

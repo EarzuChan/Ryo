@@ -8,11 +8,12 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.navigate
 import com.arkivanov.decompose.value.Value
+import me.earzuchan.ryo.aiee.data.repository.WorkspaceRepository
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.UiText
 
-class WorkspaceDuty(ctx: DutyContext) : DutyContext by ctx {
+class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : DutyContext by ctx {
     data class State(val tabs: List<TabDuty.Tab>, val activeTabId: String?)
 
     sealed interface Intent {
@@ -45,7 +46,7 @@ class WorkspaceDuty(ctx: DutyContext) : DutyContext by ctx {
         childFactory = ::createTabDuty
     )
 
-    val sidePanelDuty = SidePanelDuty(ctx)
+    val sidePanelDuty = SidePanelDuty(ctx, workspaceRepo)
 
     val tabs: List<TabDuty.Tab> get() = tabOrder.mapNotNull(::findTab)
     val activeTabId: String? get() = tabStack.value.active.configuration.takeIf { it !is WorkspaceTabNavis.Empty }?.id

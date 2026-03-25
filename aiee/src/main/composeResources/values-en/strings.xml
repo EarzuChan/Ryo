@@ -42,13 +42,18 @@
     <string name="window_action_close">Close</string>
     <string name="side_toggle_panel">Expand/collapse side panel</string>
     <string name="settings">Preferences</string>
-    <string name="side_panel_placeholder">Panel content area is not integrated yet</string>
     <string name="panel_assets_manager">Assets Manager</string>
     <string name="panel_schemas_manager">Schema Manager</string>
     <string name="menu_group_file">File</string>
     <string name="menu_group_edit">Edit</string>
     <string name="menu_group_view">View</string>
     <string name="menu_group_help">Help</string>
+    <string name="menu_item_open_volume">Open volume</string>
+    <string name="menu_item_save_volume_format">Save %1$s</string>
+    <string name="menu_item_close_volume_format">Close %1$s</string>
+    <string name="menu_item_save_active_volume">Save active volume</string>
+    <string name="menu_item_close_active_volume">Close active volume</string>
+    <string name="menu_item_volume_info">Volume info</string>
     <string name="menu_item_new">New</string>
     <string name="menu_item_editor_session_page">Editor session page</string>
     <string name="menu_item_restore_closed_tab">Reopen closed tab</string>
@@ -68,6 +73,7 @@
     <string name="dialog_close_unsaved_title">Close unsaved tab</string>
     <string name="dialog_close_unsaved_description_format">“%1$s” is not saved. Close anyway?</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
     <string name="action_close_tab">Close tab</string>
     <string name="dialog_close_app_title">Confirm app exit</string>
     <string name="dialog_close_app_description_dirty">There are unsaved tabs. Exit anyway?</string>
@@ -77,10 +83,10 @@
     <string name="tab_context_close_others">Close other tabs</string>
     <string name="tab_context_close_all">Close all tabs</string>
     <string name="welcome">Welcome</string>
-    <string name="tab_title_editor_session">Editor Session</string>
     <string name="tab_title_editor_session_index_format">Editor Session %1$s</string>
-    <string name="command_not_registered">Command is not registered</string>
     <string name="entry">Entry</string>
     <string name="entries">%1$s Entries</string>
     <string name="matches">%1$s Matches</string>
+    <string name="panel_assets_empty">No volume is opened yet</string>
+    <string name="panel_schemas_empty">No schema has been registered</string>
 </resources>

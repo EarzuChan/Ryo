@@ -1,0 +1,45 @@
+The Covenant of Ryo: AIEE Final User Manifesto
+
+Code Name: Ryo - Asset Integrated Editing Environment
+The Architect: Earzu Chan
+Source Code Sanctuary: https://github.com/EarzuChan/Ryo
+
+0. Foreword: Crafted with Pure Love
+
+Ryo is not just a tool; it is a labor of love, a bridge between dimensions, and a testament to the pursuit of the perfect workflow. By invoking (installing) this software, you agree to the following sacred decrees.
+
+1. The Oath of Absolute Privacy
+
+The Local Sanctuary: Your data is your soul. Ryo respects the sanctity of your workspace. No engineering data, no user metadata, and no machine identities shall ever be harvested or ascended to the "Cloud".
+
+No Chains, No Accounts: We despise the shackles of modern account systems. Ryo is "Instant-Access"—no login, no registration, no tethering.
+
+The Lone Watcher: The only time Ryo shall peer into the digital void is to check for its own evolution. We may pull the latest Release info from GitHub solely to compare version numbers. That is all.
+
+2. The Sengine Legacy & The Kt Ascendance
+
+The Shadow of the Past: Ryo is engineered to be compatible with the legacy of the Simulacra series and the Sengine assets.
+
+The Dimensional Strike: Though we honor the old ways, be warned: Not a single line of Sengine code exists within Ryo.
+
+Kotlin Multiplatform Supremacy: Ryo has been rebuilt from the primordial atoms using Kotlin Multiplatform. This is a Final Strike against traditional implementations—bringing unmatched cross-platform elegance and raw power that the old world could only dream of. Kotlin Multiplatform is the Supreme Truth.
+
+3. The Great VAMOS Decree
+
+Open Source Sovereignty: This software is released under the VAMOS License. The blueprints are laid bare for all who seek the truth on GitHub. You are free to study and fork, as long as you respect the core tenets of the VAMOS.
+
+4. Covenant of Responsibility (Disclaimer)
+
+As-Is Reality: Ryo is provided "As-Is." While we strive for perfection, we are not responsible for any digital collapses, data ripples, or hardware fatigue caused by the sheer intensity of its power.
+
+Backup Commandment: Even a Higher-Dimensional tool requires a cautious pilot. Always back up your assets before performing complex transmutations.
+
+5. Final Acceptance
+
+By proceeding with the installation, you acknowledge that you are now part of the AIEE revolution.
+
+"In Kotlin we trust. In Ryo we create."
+
+Dominator: Earzu Chan
+Framework: Kotlin Multiplatform (The One Above All)
+License: VAMOS

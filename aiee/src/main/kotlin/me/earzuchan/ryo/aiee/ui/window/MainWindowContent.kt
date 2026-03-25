@@ -21,7 +21,7 @@ fun FrameWindowScope.MainWindowContent(appDuty: AppDuty, ryoWindowScope: RyoWind
     Column(Modifier.fillMaxSize()) {
         AppTopBarView(appDuty,ryoWindowScope::WindowControlButtons)
         Row(Modifier.fillMaxSize()) {
-            SidePanelView(appDuty.sidePanelDuty, appDuty::openSettingsTab)
+            SidePanelView(appDuty.sidePanelDuty, appDuty::openSettingsTab, appDuty::showContextMenu)
             MainWorkspaceView(appDuty)
         }
     }

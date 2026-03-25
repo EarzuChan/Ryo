@@ -2,16 +2,20 @@ package me.earzuchan.ryo.aiee.util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
 import me.earzuchan.ryo.aiee.BuildConfig
+import me.earzuchan.ryo.aiee.data.RYO_DATABASE_NAME
 import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
+import me.earzuchan.ryo.aiee.data.database.AppDatabase
 import me.earzuchan.ryo.aiee.ui.LocalAppLanguage
+import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.*
 import java.awt.Desktop
-import java.io.File
 import java.net.URI
 import javax.swing.SwingUtilities
 
@@ -37,28 +41,19 @@ object RyoLog {
 object MiscUtils {
     private const val TAG = "MiscUtils"
 
-    // 每次新建
-    /*fun buildAppDatabase(): AppDatabase = PlatformFunctions.getAppDatabaseBuilder()
-        .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(PlatformFunctions.ioDispatcher)
-        .fallbackToDestructiveMigration(true)
-        .build()*/
+    fun buildAppDatabase() = Room.databaseBuilder<AppDatabase>((PlatformUtils.appDatabasePath / RYO_DATABASE_NAME).toString()).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).fallbackToDestructiveMigration(true).build()
 
-    fun buildAppPreferences(): DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath(
-        produceFile = { "${PlatformUtils.appFilesPath}/$RYO_PREFERENCES_NAME".toPath() }
-    )
+    fun buildAppPreferences() = PreferenceDataStoreFactory.createWithPath(produceFile = { PlatformUtils.appFilesPath / RYO_PREFERENCES_NAME })
 }
 
 object PlatformUtils {
-    /*fun getAppDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
-        val dbFile = File(appDataPath, "databases/$APP_DATABASE_NAME")
-        dbFile.parentFile?.mkdirs()
-        return Room.databaseBuilder<AppDatabase>(name = dbFile.absolutePath)
-    }*/
+    private val fs = FileSystem.SYSTEM
 
-    val appFilesPath: String get() = File(appDataPath, "files").also { it.mkdirs() }.absolutePath
+    private val appDataPath: Path = System.getProperty("user.home").toPath() / BuildConfig.APP_ID
 
-    private val appDataPath: File get() = File(System.getProperty("user.home"), BuildConfig.APP_ID)
+    val appFilesPath: Path by lazy { (appDataPath / "files").also { fs.createDirectories(it) } }
+
+    val appDatabasePath: Path by lazy { (appDataPath / "databases").also { fs.createDirectories(it) } }
 
     fun <T> runOnSwingUiThread(block: () -> T): T {
         if (SwingUtilities.isEventDispatchThread()) return block()
@@ -76,8 +71,7 @@ object PlatformUtils {
 
         error?.also { throw it }
 
-        @Suppress("UNCHECKED_CAST")
-        return result as T
+        @Suppress("UNCHECKED_CAST") return result as T
     }
 
 
@@ -90,9 +84,7 @@ object PlatformUtils {
 object UiUtils {
     @Composable
     inline fun Modifier.only(
-        condition: Boolean,
-        elseBlock: @Composable Modifier.() -> Modifier = { this },
-        ifBlock: @Composable Modifier.() -> Modifier
+        condition: Boolean, elseBlock: @Composable Modifier.() -> Modifier = { this }, ifBlock: @Composable Modifier.() -> Modifier
     ): Modifier = if (condition) ifBlock() else elseBlock()
 
     // For XML vector img

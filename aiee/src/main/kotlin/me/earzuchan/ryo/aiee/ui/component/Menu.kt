@@ -101,7 +101,7 @@ private fun RyoMenuPanel(entries: List<RyoMenuEntry>, panelWidth: Dp, submenuOve
     val dummyInteraction = remember { MutableInteractionSource() }
     val density = LocalDensity.current
     val overlapPx = with(density) { submenuOverlap.roundToPx() }
-    val panelPaddingPx = with(density) { 8.dp.roundToPx() } // 与下方的 padding(vertical = 8.dp) 对应
+    val panelPaddingPx = with(density) { 8.dp.roundToPx() } // 与下方的 padding(vert = 8) 对应
     val edgePaddingPx = panelPaddingPx
 
     val windowHeightPx = LocalWindowInfo.current.containerSize.height

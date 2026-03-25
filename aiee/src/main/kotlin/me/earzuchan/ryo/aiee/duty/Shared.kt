@@ -3,6 +3,9 @@ package me.earzuchan.ryo.aiee.duty
 import kotlinx.serialization.Serializable
 
 enum class AppCommand {
+    OpenVolume,
+    SaveActiveVolume,
+    CloseActiveVolume,
     OpenWelcomeTab,
     OpenEditorSessionTab,
     OpenSettingsTab,

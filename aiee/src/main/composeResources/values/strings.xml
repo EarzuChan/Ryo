@@ -42,13 +42,18 @@
     <string name="window_action_close">关闭</string>
     <string name="side_toggle_panel">展开/收起侧栏</string>
     <string name="settings">偏好设置</string>
-    <string name="side_panel_placeholder">面板内容区待接入</string>
     <string name="panel_assets_manager">资产管理器</string>
     <string name="panel_schemas_manager">Schema管理器</string>
     <string name="menu_group_file">文件</string>
     <string name="menu_group_edit">编辑</string>
     <string name="menu_group_view">视图</string>
     <string name="menu_group_help">帮助</string>
+    <string name="menu_item_open_volume">打开卷</string>
+    <string name="menu_item_save_volume_format">保存%1$s</string>
+    <string name="menu_item_close_volume_format">关闭%1$s</string>
+    <string name="menu_item_save_active_volume">保存当前卷</string>
+    <string name="menu_item_close_active_volume">关闭当前卷</string>
+    <string name="menu_item_volume_info">卷信息</string>
     <string name="menu_item_new">新建</string>
     <string name="menu_item_editor_session_page">编辑会话页</string>
     <string name="menu_item_restore_closed_tab">恢复刚关闭的标签页</string>
@@ -68,6 +73,7 @@
     <string name="dialog_close_unsaved_title">关闭未保存标签页</string>
     <string name="dialog_close_unsaved_description_format">“%1$s” 尚未保存，仍要关闭吗</string>
     <string name="action_cancel">取消</string>
+    <string name="action_close">关闭</string>
     <string name="action_close_tab">关闭标签</string>
     <string name="dialog_close_app_title">确认关闭应用</string>
     <string name="dialog_close_app_description_dirty">存在未保存的标签页，仍要退出吗</string>
@@ -77,10 +83,10 @@
     <string name="tab_context_close_others">关闭其他标签页</string>
     <string name="tab_context_close_all">关闭全部标签页</string>
     <string name="welcome">欢迎</string>
-    <string name="tab_title_editor_session">编辑会话</string>
     <string name="tab_title_editor_session_index_format">编辑会话 %1$s</string>
-    <string name="command_not_registered">命令未注册</string>
     <string name="entry">条目</string>
     <string name="entries">%1$s个条目</string>
     <string name="matches">%1$s个匹配的</string>
+    <string name="panel_assets_empty">还没有打开任何卷</string>
+    <string name="panel_schemas_empty">当前没有已注册Schema</string>
 </resources>

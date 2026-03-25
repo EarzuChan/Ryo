@@ -106,19 +106,31 @@ class ShortcutDuty(defaultBindings: Map<AppCommand, Stroke>) {
     }
 
     private val defaults = defaultBindings.toMap()
-    private val overrides = mutableStateMapOf<AppCommand, Stroke?>()
+    private val overrides = mutableStateMapOf<AppCommand, Stroke>()
 
     val effectiveBindings: Map<AppCommand, Stroke>
-        get() = defaults.mapValues { (command, defaultStroke) -> overrides[command] ?: defaultStroke }
+        get() {
+            val merged = mutableMapOf<AppCommand, Stroke>()
+            defaults.forEach { (command, stroke) -> merged[command] = overrides[command] ?: stroke }
+            overrides.forEach { (command, stroke) -> if (command !in merged) merged[command] = stroke }
+            return merged.toMap()
+        }
 
     fun effectiveStroke(command: AppCommand) = effectiveBindings[command]
 
     fun commandDisplay(command: AppCommand) = effectiveStroke(command)?.displayText()
 
+    fun applyOverrideSnapshot(snapshot: Map<AppCommand, Stroke>) {
+        overrides.clear()
+        overrides.putAll(snapshot)
+    }
+
+    fun overrideOf(command: AppCommand): Stroke? = overrides[command]
+
     fun setOverride(command: AppCommand, stroke: Stroke?): OverrideResult {
         val conflicts = findConflicts(command, stroke)
         if (conflicts.isNotEmpty()) return OverrideResult.Rejected(conflicts)
-        overrides[command] = stroke
+        if (stroke == null) overrides.remove(command) else overrides[command] = stroke
         return OverrideResult.Accepted
     }
 

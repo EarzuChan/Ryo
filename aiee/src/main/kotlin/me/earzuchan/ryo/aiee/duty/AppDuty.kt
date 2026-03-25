@@ -8,8 +8,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.data.preference.RyoPreferences
 import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
+import me.earzuchan.ryo.aiee.data.repository.ShortcutOverrideRepository
+import me.earzuchan.ryo.aiee.data.repository.WorkspaceRepository
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
@@ -23,15 +26,17 @@ import org.koin.core.component.inject
 class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext by ctx, KoinDuty {
     private val dutyScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val prefsRepo: RyoPreferencesRepository by inject()
+    private val shortcutOverrideRepo: ShortcutOverrideRepository by inject()
+    private val workspaceRepo: WorkspaceRepository by inject()
 
     val preferencesDuty = PreferencesDuty(dutyScope, prefsRepo)
-    val workspaceDuty = WorkspaceDuty(ctx)
+    val workspaceDuty = WorkspaceDuty(ctx, workspaceRepo)
     val mainWindowDuty = MainWindowDuty()
     val menuDuty = MenuDuty()
     val dialogDuty = DialogDuty()
 
     val commandDuty = CommandDuty()
-    val shortcutDuty = ShortcutDuty(defaultShortcutBindings())
+    val shortcutDuty: ShortcutDuty
 
     val forceDarkMode get() = preferencesDuty.forceDarkMode
     val appThemeMode get() = preferencesDuty.appThemeMode
@@ -51,6 +56,9 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     init {
         registerCommands()
+        ensureCommandCoverage()
+        shortcutDuty = ShortcutDuty(commandDuty.defaultShortcutsSnapshot())
+        restoreShortcutOverrides()
     }
 
     fun setAppThemeMode(mode: RyoPreferences.ThemeMode) = preferencesDuty.setAppThemeMode(mode)
@@ -119,12 +127,22 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     fun showAboutDialog() = dialogDuty.orderSpecial(closeOnOverlayClick = true) { _ -> AboutDialog() }
 
     fun executeCommand(command: AppCommand) = commandDuty.execute(command)
+    fun commandAvailability(command: AppCommand) = commandDuty.availability(command)
 
     fun shortcutFor(command: AppCommand) = shortcutDuty.effectiveStroke(command)
 
-    fun setShortcutOverride(command: AppCommand, stroke: ShortcutDuty.Stroke?) = shortcutDuty.setOverride(command, stroke)
+    fun setShortcutOverride(command: AppCommand, stroke: ShortcutDuty.Stroke?): ShortcutDuty.OverrideResult {
+        val result = shortcutDuty.setOverride(command, stroke)
+        if (result is ShortcutDuty.OverrideResult.Accepted) dutyScope.launch {
+            if (stroke == null) shortcutOverrideRepo.delete(command) else shortcutOverrideRepo.upsert(command, stroke)
+        }
+        return result
+    }
 
-    fun clearShortcutOverride(command: AppCommand) = shortcutDuty.clearOverride(command)
+    fun clearShortcutOverride(command: AppCommand) {
+        shortcutDuty.clearOverride(command)
+        dutyScope.launch { shortcutOverrideRepo.delete(command) }
+    }
 
     fun shortcutOverrideSnapshot() = shortcutDuty.overrideSnapshot()
 
@@ -146,31 +164,32 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
     fun showInPlaceSelectMenu(textX: Int, textCenterY: Int, selectedIndex: Int, density: Density, entries: List<RyoMenuEntry>) = menuDuty.showInPlaceSelectMenu(textX, textCenterY, selectedIndex, density, entries)
 
     private fun registerCommands() {
+        commandDuty.register(AppCommand.OpenVolume, defaultShortcut = ShortcutDuty.Stroke(ShortcutDuty.Key.O, ctrl = true)) { sidePanelDuty.openVolumeByDialog() }
+        commandDuty.register(AppCommand.SaveActiveVolume, { sidePanelDuty.hasActiveVolume }) { sidePanelDuty.saveActiveVolume() }
+        commandDuty.register(AppCommand.CloseActiveVolume, { sidePanelDuty.hasActiveVolume }) { sidePanelDuty.closeActiveVolume() }
         commandDuty.register(AppCommand.OpenWelcomeTab) { workspaceDuty.openWelcomeTab() }
-        commandDuty.register(AppCommand.OpenEditorSessionTab) { workspaceDuty.openEditorSessionTab() }
-        commandDuty.register(AppCommand.OpenSettingsTab) { workspaceDuty.openSettingsTab() }
-        commandDuty.register(AppCommand.RestoreClosedTab, canExecute = { workspaceDuty.canRestoreClosedTab }) { workspaceDuty.restoreLastClosedTab() }
-        commandDuty.register(AppCommand.CloseCurrentTab, canExecute = { activeTabId != null }) { closeCurrentTab() }
-        commandDuty.register(AppCommand.ToggleSidePanel) { sidePanelDuty.toggleExpanded() }
+        commandDuty.register(AppCommand.OpenEditorSessionTab, defaultShortcut = ShortcutDuty.Stroke(ShortcutDuty.Key.N, ctrl = true)) { workspaceDuty.openEditorSessionTab() }
+        commandDuty.register(AppCommand.OpenSettingsTab, defaultShortcut = ShortcutDuty.Stroke(ShortcutDuty.Key.Comma, ctrl = true)) { workspaceDuty.openSettingsTab() }
+        commandDuty.register(AppCommand.RestoreClosedTab, { workspaceDuty.canRestoreClosedTab }, ShortcutDuty.Stroke(ShortcutDuty.Key.T, ctrl = true, shift = true)) { workspaceDuty.restoreLastClosedTab() }
+        commandDuty.register(AppCommand.CloseCurrentTab, { activeTabId != null }, ShortcutDuty.Stroke(ShortcutDuty.Key.W, ctrl = true)) { closeCurrentTab() }
+        commandDuty.register(AppCommand.ToggleSidePanel, defaultShortcut = ShortcutDuty.Stroke(ShortcutDuty.Key.B, ctrl = true)) { sidePanelDuty.toggleExpanded() }
         commandDuty.register(AppCommand.FocusAssetsPanel) { sidePanelDuty.focusPanel("assets") }
         commandDuty.register(AppCommand.FocusSchemasPanel) { sidePanelDuty.focusPanel("schemas") }
-        commandDuty.register(AppCommand.ToggleMaximizeWindow) { toggleMaximizeWindow() }
+        commandDuty.register(AppCommand.ToggleMaximizeWindow, defaultShortcut = ShortcutDuty.Stroke(ShortcutDuty.Key.F11)) { toggleMaximizeWindow() }
         commandDuty.register(AppCommand.RequestWindowClose) { requestWindowClose() }
-        commandDuty.register(AppCommand.Undo, canExecute = { workspaceDuty.activeTabDuty?.canUndo() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::undo) }
-        commandDuty.register(AppCommand.Redo, canExecute = { workspaceDuty.activeTabDuty?.canRedo() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::redo) }
-        commandDuty.register(AppCommand.Save, canExecute = { workspaceDuty.activeTabDuty?.canSave() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::save) }
-        commandDuty.register(AppCommand.Discard, canExecute = { workspaceDuty.activeTabDuty?.canDiscard() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::discard) }
+        commandDuty.register(AppCommand.Undo, { workspaceDuty.activeTabDuty?.canUndo() == true }, ShortcutDuty.Stroke(ShortcutDuty.Key.Z, ctrl = true)) { workspaceDuty.executeOnActiveTab(TabDuty::undo) }
+        commandDuty.register(AppCommand.Redo, { workspaceDuty.activeTabDuty?.canRedo() == true }, ShortcutDuty.Stroke(ShortcutDuty.Key.Y, ctrl = true)) { workspaceDuty.executeOnActiveTab(TabDuty::redo) }
+        commandDuty.register(AppCommand.Save, { workspaceDuty.activeTabDuty?.canSave() == true }, ShortcutDuty.Stroke(ShortcutDuty.Key.S, ctrl = true)) { workspaceDuty.executeOnActiveTab(TabDuty::save) }
+        commandDuty.register(AppCommand.Discard, { workspaceDuty.activeTabDuty?.canDiscard() == true }) { workspaceDuty.executeOnActiveTab(TabDuty::discard) }
     }
 
-    private fun defaultShortcutBindings() = mapOf(
-        AppCommand.OpenEditorSessionTab to ShortcutDuty.Stroke(ShortcutDuty.Key.N, ctrl = true),
-        AppCommand.OpenSettingsTab to ShortcutDuty.Stroke(ShortcutDuty.Key.Comma, ctrl = true),
-        AppCommand.RestoreClosedTab to ShortcutDuty.Stroke(ShortcutDuty.Key.T, ctrl = true, shift = true),
-        AppCommand.CloseCurrentTab to ShortcutDuty.Stroke(ShortcutDuty.Key.W, ctrl = true),
-        AppCommand.Save to ShortcutDuty.Stroke(ShortcutDuty.Key.S, ctrl = true),
-        AppCommand.Undo to ShortcutDuty.Stroke(ShortcutDuty.Key.Z, ctrl = true),
-        AppCommand.Redo to ShortcutDuty.Stroke(ShortcutDuty.Key.Y, ctrl = true),
-        AppCommand.ToggleSidePanel to ShortcutDuty.Stroke(ShortcutDuty.Key.B, ctrl = true),
-        AppCommand.ToggleMaximizeWindow to ShortcutDuty.Stroke(ShortcutDuty.Key.F11)
-    )
+    private fun restoreShortcutOverrides() = dutyScope.launch {
+        val snapshot = shortcutOverrideRepo.getSnapshot()
+        shortcutDuty.applyOverrideSnapshot(snapshot)
+    }
+
+    private fun ensureCommandCoverage() {
+        val missing = commandDuty.missingCommands()
+        check(missing.isEmpty()) { "Command bindings missing: $missing" }
+    }
 }

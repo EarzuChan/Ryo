@@ -7,3 +7,4 @@ out/
 *.iml
 .DS_Store
 AGENTS.md
+roomSchemas/

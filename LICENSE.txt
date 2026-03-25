@@ -12,7 +12,7 @@ TRANSPARENCY: You shall not "steal" this code by rebranding it as your own witho
 THE VAMOS CLAUSE (DIMENSIONALITY REDUCTION STRIKE):
 In the event that you violate the terms of this License—specifically through non-attribution, plagiarism, or secretly closing the source for deceptive commercial gain—the Author reserves the absolute right to initiate a "Dimensionality Reduction Strike" (降维打击) against you. This includes, but is not limited to:
 a. Publicly exposing the theft to the global developer community.
-b. Absolute technical or legal retaliation that collapses your project's multi-dimensional complexity into a single, non-functional line of code.
+b. Absolute technical or legal retaliation.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 

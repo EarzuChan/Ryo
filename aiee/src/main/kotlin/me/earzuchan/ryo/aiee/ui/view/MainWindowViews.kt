@@ -63,7 +63,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
-fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit) {
+fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit, onShowContextMenu: (anchorX: Int, anchorY: Int, entries: List<RyoMenuEntry>) -> Unit) {
     @Composable
     fun PanelButton(icon: DrawableResource, hint: String, selected: Boolean, onClick: () -> Unit) = RyoIconButton(icon, 48, hint, if (selected) IconButtonDefaults.filledTonalIconButtonColors() else IconButtonDefaults.iconButtonColors(), onClick)
 
@@ -90,9 +90,9 @@ fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit) {
 
         Box(Modifier.fillMaxHeight().width(sidePanelDuty.panelWidthDp.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Children(sidePanelDuty.panelStack) { child ->
-                Column(Modifier.fillMaxSize().padding(12.dp)) {
+                Column(Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
                     when (val panel = child.instance) {
-                        is SidePanelDuty.PanelChild.Assets -> AssetsPanel(panel.duty)
+                        is SidePanelDuty.PanelChild.Assets -> AssetsPanel(panel.duty, onShowContextMenu)
                         is SidePanelDuty.PanelChild.Schemas -> SchemasPanel(panel.duty)
                     }
                 }
@@ -207,12 +207,27 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
 fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
     data class MenuGroup(val id: String, val label: String, val entries: List<RyoMenuEntry>)
 
+    val workspaceState by appDuty.sidePanelDuty.workspaceState.collectAsState()
+    val hasActiveVolume = workspaceState.activeVolumeId != null
+    val activeVolumeName = workspaceState.volumes.firstOrNull { it.id == workspaceState.activeVolumeId }?.name // TODO：以后activeVol，是根据在TreeView的选择呢，还是根据前台的Tab呢？决策下
+    val saveActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_save_volume_format.text(it) } ?: Res.string.menu_item_save_active_volume.text
+    val closeActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_close_volume_format.text(it) } ?: Res.string.menu_item_close_active_volume.text
     val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
     val menuGroups = listOf(
         MenuGroup(
             id = "file",
             label = Res.string.menu_group_file.text,
             entries = listOf(
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_open_volume.text, AppCommand.OpenVolume), appDuty.commandDuty.canExecute(AppCommand.OpenVolume)) { appDuty.commandDuty.execute(AppCommand.OpenVolume) },
+                RyoMenuEntry.MenuItem(
+                    menuLabel(saveActiveVolumeText, AppCommand.SaveActiveVolume),
+                    hasActiveVolume
+                ) { appDuty.commandDuty.execute(AppCommand.SaveActiveVolume) },
+                RyoMenuEntry.MenuItem(
+                    menuLabel(closeActiveVolumeText, AppCommand.CloseActiveVolume),
+                    hasActiveVolume
+                ) { appDuty.commandDuty.execute(AppCommand.CloseActiveVolume) },
+                RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(
                     text = Res.string.menu_item_new.text,
                     children = listOf(

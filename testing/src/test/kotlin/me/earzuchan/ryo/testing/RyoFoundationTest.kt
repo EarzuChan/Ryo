@@ -27,6 +27,7 @@ import me.earzuchan.ryo.foundation.value.RyoUnknownValue
 import me.earzuchan.ryo.foundation.value.asHostedOrNull
 import me.earzuchan.ryo.foundation.value.asScalarOrNull
 import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toPath
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -656,7 +657,7 @@ class RyoFoundationTest {
         assertTrue(sb.isNotEmpty())
     }
 
-    private fun dumpTextureBindings(path: okio.Path, label: String, sb: StringBuilder) {
+    private fun dumpTextureBindings(path: Path, label: String, sb: StringBuilder) {
         if (!FileSystem.SYSTEM.exists(path)) {
             sb.appendLine("$label:missing")
             return

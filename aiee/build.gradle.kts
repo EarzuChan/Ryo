@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.reorderable)
 
     implementation(libs.darkmodedetector)
+    implementation(libs.filekit)
 }
 
 buildConfig {
@@ -71,8 +72,40 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Dmg)
-            packageName = appId
+
+            packageName = appName
             packageVersion = appVer
+            vendor = appAuthor
+            description = "$appName - Asset Integrated Editing Environment by $appAuthor"
+            licenseFile.set(project.file("packaging/EULA.txt"))
+
+            // TODO：配置modules和proguard
+
+            windows {
+                iconFile.set(project.file("packaging/icons/win.ico"))
+                shortcut = true
+                menu = true
+                menuGroup = appAuthor
+                dirChooser = true
+                // TODO：暂无upgradeUuid
+            }
+
+            macOS {
+                iconFile.set(project.file("packaging/icons/mac.icns"))
+                packageName = appName
+                dockName = appName
+                bundleID = appId
+            }
+
+            linux {
+                iconFile.set(project.file("packaging/icons/app.png"))
+                shortcut = true
+                packageName = appName
+                menuGroup = appAuthor
+                debMaintainer = "huascq@gmail.com"
+                appCategory = "Utility"
+                rpmLicenseType = "VAMOS"
+            }
         }
     }
 }
