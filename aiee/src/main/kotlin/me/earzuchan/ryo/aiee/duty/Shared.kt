@@ -2,26 +2,6 @@ package me.earzuchan.ryo.aiee.duty
 
 import kotlinx.serialization.Serializable
 
-enum class AppCommand {
-    OpenVolume,
-    SaveActiveVolume,
-    CloseActiveVolume,
-    OpenWelcomeTab,
-    OpenEditorSessionTab,
-    OpenSettingsTab,
-    RestoreClosedTab,
-    CloseCurrentTab,
-    ToggleSidePanel,
-    FocusAssetsPanel,
-    FocusSchemasPanel,
-    ToggleMaximizeWindow,
-    RequestWindowClose,
-    Undo,
-    Redo,
-    Save,
-    Discard
-}
-
 enum class AppLifecycleStage {
     Running,
     Closing

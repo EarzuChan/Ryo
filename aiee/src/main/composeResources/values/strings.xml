@@ -50,8 +50,10 @@
     <string name="menu_group_help">帮助</string>
     <string name="menu_item_open_volume">打开卷</string>
     <string name="menu_item_save_volume_format">保存%1$s</string>
+    <string name="menu_item_save_volume_as_format">另存%1$s为</string>
     <string name="menu_item_close_volume_format">关闭%1$s</string>
     <string name="menu_item_save_active_volume">保存当前卷</string>
+    <string name="menu_item_save_active_volume_as">当前卷另存为</string>
     <string name="menu_item_close_active_volume">关闭当前卷</string>
     <string name="menu_item_volume_info">卷信息</string>
     <string name="menu_item_new">新建</string>
@@ -62,6 +64,7 @@
     <string name="menu_item_undo">撤销</string>
     <string name="menu_item_redo">重做</string>
     <string name="menu_item_save">保存</string>
+    <string name="menu_item_save_as">另存为</string>
     <string name="menu_item_discard_changes">放弃更改</string>
     <string name="menu_item_expand_sidebar">展开侧栏</string>
     <string name="menu_item_collapse_sidebar">收起侧栏</string>

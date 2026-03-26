@@ -8,13 +8,15 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.navigate
 import com.arkivanov.decompose.value.Value
-import me.earzuchan.ryo.aiee.data.repository.WorkspaceRepository
+import kotlinx.coroutines.CoroutineScope
+import me.earzuchan.ryo.aiee.app.OldWorkspaceService
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.UiText
 
-class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : DutyContext by ctx {
-    data class State(val tabs: List<TabDuty.Tab>, val activeTabId: String?)
+// CHECK：这个和WorkspaceService的权责会不会有冲突？
+class OldWorkspaceDuty(ctx: DutyContext, dutyScope: CoroutineScope, oldWorkspaceService: OldWorkspaceService) : DutyContext by ctx {
+    data class State(val tabs: List<OldTabDuty.Tab>, val activeTabId: String?)
 
     sealed interface Intent {
         data class Open(val navi: WorkspaceTabNavis) : Intent
@@ -37,7 +39,7 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
     private val closedHistory = ArrayDeque<WorkspaceTabNavis>()
     private var editorSessionSeed = 3
 
-    val tabStack: Value<ChildStack<WorkspaceTabNavis, TabDuty>> = childStack(
+    val tabStack: Value<ChildStack<WorkspaceTabNavis, OldTabDuty>> = childStack(
         source = navigation,
         serializer = WorkspaceTabNavis.serializer(),
         initialConfiguration = WorkspaceTabNavis.Empty,
@@ -46,13 +48,13 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
         childFactory = ::createTabDuty
     )
 
-    val sidePanelDuty = SidePanelDuty(ctx, workspaceRepo)
+    val sidePanelDuty = SidePanelDuty(ctx, dutyScope, oldWorkspaceService)
 
-    val tabs: List<TabDuty.Tab> get() = tabOrder.mapNotNull(::findTab)
+    val tabs: List<OldTabDuty.Tab> get() = tabOrder.mapNotNull(::findTab)
     val activeTabId: String? get() = tabStack.value.active.configuration.takeIf { it !is WorkspaceTabNavis.Empty }?.id
-    val activeTab: TabDuty.Tab? get() = activeTabId?.let(::findTab)
-    val activeTabDuty: TabDuty? get() = tabStack.value.active.instance.takeIf { it.navi !is WorkspaceTabNavis.Empty }
-    val hasDirtyTabs: Boolean get() = tabs.any(TabDuty.Tab::dirty)
+    val activeTab: OldTabDuty.Tab? get() = activeTabId?.let(::findTab)
+    val activeOldTabDuty: OldTabDuty? get() = tabStack.value.active.instance.takeIf { it.navi !is WorkspaceTabNavis.Empty }
+    val hasDirtyTabs: Boolean get() = tabs.any(OldTabDuty.Tab::dirty)
     val canRestoreClosedTab: Boolean get() = closedHistory.isNotEmpty()
     val state get() = State(tabs, activeTabId)
 
@@ -70,15 +72,13 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
 
     fun selectTab(tabId: String) = dispatch(Intent.Select(tabId))
 
-    fun findTab(tabId: String): TabDuty.Tab? = allTabDuties().firstOrNull { it.navi.id == tabId }?.let { TabDuty.Tab(it.navi.id, it.navi, it.title, it.dirty) }
+    fun findTab(tabId: String): OldTabDuty.Tab? = allTabDuties().firstOrNull { it.navi.id == tabId }?.let { OldTabDuty.Tab(it.navi.id, it.navi, it.title, it.dirty) }
 
     fun closeTab(id: String) = dispatch(Intent.Close(id))
 
-    fun closeCurrentTab() = activeTabId?.also(::closeTab)
+    fun requestCloseOtherTabs(tabId: String, onEach: (String) -> Unit) = tabs.map(OldTabDuty.Tab::id).filter { it != tabId }.forEach(onEach)
 
-    fun requestCloseOtherTabs(tabId: String, onEach: (String) -> Unit) = tabs.map(TabDuty.Tab::id).filter { it != tabId }.forEach(onEach)
-
-    fun requestCloseAllTabs(onEach: (String) -> Unit) = tabs.map(TabDuty.Tab::id).forEach(onEach)
+    fun requestCloseAllTabs(onEach: (String) -> Unit) = tabs.map(OldTabDuty.Tab::id).forEach(onEach)
 
     fun moveTab(fromIndex: Int, toIndex: Int) = dispatch(Intent.Move(fromIndex, toIndex))
 
@@ -90,8 +90,8 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
 
     fun restoreLastClosedTab() = dispatch(Intent.RestoreLastClosed)
 
-    fun executeOnActiveTab(block: (TabDuty) -> Unit) {
-        activeTabDuty?.also(block)
+    fun executeOnActiveTab(block: (OldTabDuty) -> Unit) {
+        activeOldTabDuty?.also(block)
     }
 
     private fun open(navi: WorkspaceTabNavis): Effect {
@@ -158,7 +158,7 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
 
     private fun allTabNavis(): List<WorkspaceTabNavis> = tabStack.value.backStack.map { it.configuration } + tabStack.value.active.configuration
 
-    private fun allTabDuties(): List<TabDuty> = tabStack.value.backStack.map { it.instance } + tabStack.value.active.instance
+    private fun allTabDuties(): List<OldTabDuty> = tabStack.value.backStack.map { it.instance } + tabStack.value.active.instance
 
     private fun withoutEmpty(stack: List<WorkspaceTabNavis>) = stack.filterNot { it is WorkspaceTabNavis.Empty }
 
@@ -171,10 +171,10 @@ class WorkspaceDuty(ctx: DutyContext, workspaceRepo: WorkspaceRepository) : Duty
         navigation.navigate { normalizeStack(demo) }
     }
 
-    private fun createTabDuty(navi: WorkspaceTabNavis, subCtx: DutyContext): TabDuty = when (navi) {
-        WorkspaceTabNavis.Empty -> EmptyTabDuty(subCtx)
-        WorkspaceTabNavis.Welcome -> WelcomeTabDuty(subCtx, UiText.Res(Res.string.welcome))
-        WorkspaceTabNavis.Settings -> SettingsTabDuty(subCtx, UiText.Res(Res.string.settings))
-        is WorkspaceTabNavis.EditorSession -> EditorSessionTabDuty(subCtx, navi, UiText.Res(Res.string.tab_title_editor_session_index_format, listOf(UiText.Plain(navi.index.toString()))), navi.initialDirty)
+    private fun createTabDuty(navi: WorkspaceTabNavis, subCtx: DutyContext): OldTabDuty = when (navi) {
+        WorkspaceTabNavis.Empty -> EmptyOldTabDuty(subCtx)
+        WorkspaceTabNavis.Welcome -> WelcomeOldTabDuty(subCtx, UiText.Res(Res.string.welcome))
+        WorkspaceTabNavis.Settings -> SettingsOldTabDuty(subCtx, UiText.Res(Res.string.settings))
+        is WorkspaceTabNavis.EditorSession -> EditorSessionOldTabDuty(subCtx, navi, UiText.Res(Res.string.tab_title_editor_session_index_format, listOf(UiText.Plain(navi.index.toString()))), navi.initialDirty)
     }
 }

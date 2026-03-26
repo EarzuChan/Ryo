@@ -34,10 +34,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.data.preference.RyoPreferences
-import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.duty.DialogDuty
 import me.earzuchan.ryo.aiee.resources.*
-import me.earzuchan.ryo.aiee.ui.component.ButtonType
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.util.UiUtils.vector
@@ -52,7 +51,7 @@ fun WelcomePage() = PlaceholderPage(Res.string.page_welcome_title.text, Res.stri
 fun EditorSessionPage() = PlaceholderPage(Res.string.page_editor_session_title.text, Res.string.page_editor_session_subtitle.text)
 
 @Composable
-fun SettingsPage(appDuty: AppDuty) {
+fun SettingsPage(oldAppDuty: OldAppDuty) {
     @Composable
     fun Section(title: String) = Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp, vertical = 4.dp), Alignment.BottomStart) {
         Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
@@ -89,8 +88,8 @@ fun SettingsPage(appDuty: AppDuty) {
     val (themeModeTextAnchor, setThemeModeTextAnchor) = remember { mutableStateOf(IntOffset.Zero) }
     val density = LocalDensity.current
 
-    val themeMode by appDuty.appThemeMode.collectAsState()
-    val language by appDuty.appLanguage.collectAsState()
+    val themeMode by oldAppDuty.appThemeMode.collectAsState()
+    val language by oldAppDuty.appLanguage.collectAsState()
     val shortcutsDialogTitle = Res.string.set_shortcuts.text
     val shortcutsDialogDescription = Res.string.settings_shortcuts_dialog_description.text
     val gotIt = Res.string.action_got_it.text
@@ -112,15 +111,15 @@ fun SettingsPage(appDuty: AppDuty) {
 
     fun openLanguageSelectMenu() {
         val options = RyoPreferences.Language.entries
-        appDuty.showInPlaceSelectMenu(languageTextAnchor.x, languageTextAnchor.y, options.indexOf(language), density, options.map { option ->
-            RyoMenuEntry.MenuItem(languageOptionLabels.getValue(option), onClick = { appDuty.setAppLanguage(option) })
+        oldAppDuty.showInPlaceSelectMenu(languageTextAnchor.x, languageTextAnchor.y, options.indexOf(language), density, options.map { option ->
+            RyoMenuEntry.MenuItem(languageOptionLabels.getValue(option), onClick = { oldAppDuty.setAppLanguage(option) })
         })
     }
 
     fun openThemeModeSelectMenu() {
         val options = RyoPreferences.ThemeMode.entries
-        appDuty.showInPlaceSelectMenu(themeModeTextAnchor.x, themeModeTextAnchor.y, options.indexOf(themeMode), density, options.map { option ->
-            RyoMenuEntry.MenuItem(themeModeOptionLabels.getValue(option), onClick = { appDuty.setAppThemeMode(option) })
+        oldAppDuty.showInPlaceSelectMenu(themeModeTextAnchor.x, themeModeTextAnchor.y, options.indexOf(themeMode), density, options.map { option ->
+            RyoMenuEntry.MenuItem(themeModeOptionLabels.getValue(option), onClick = { oldAppDuty.setAppThemeMode(option) })
         })
     }
 
@@ -131,7 +130,7 @@ fun SettingsPage(appDuty: AppDuty) {
 
         Item(Res.drawable.ic_keyboard_24px, Res.string.set_shortcuts.text) {
             // TODO
-            appDuty.dialogDuty.orderCommon(
+            oldAppDuty.dialogDuty.orderCommon(
                 icon = Res.drawable.ic_keyboard_24px,
                 headline = UiText.Plain(shortcutsDialogTitle),
                 description = UiText.Plain(shortcutsDialogDescription),
@@ -146,7 +145,7 @@ fun SettingsPage(appDuty: AppDuty) {
         Item(Res.drawable.ic_palette_24px, Res.string.settings_item_theme.text, trailing = Res.string.settings_theme_default.text, enabled = false) // TODO
 
         Section(Res.string.settings_section_more.text)
-        Item(Res.drawable.ic_info_24px, Res.string.settings_item_about_format.text(BuildConfig.APP_NAME), subtitle = Res.string.settings_item_about_subtitle_format.text(BuildConfig.APP_AUTHOR), onClick = appDuty::showAboutDialog)
+        Item(Res.drawable.ic_info_24px, Res.string.settings_item_about_format.text(BuildConfig.APP_NAME), subtitle = Res.string.settings_item_about_subtitle_format.text(BuildConfig.APP_AUTHOR), onClick = oldAppDuty::showAboutDialog)
         Item(Res.drawable.ic_check_update_24px, Res.string.settings_item_check_update.text, subtitle = BuildConfig.APP_VER, trailing = Res.string.settings_update_latest.text, enabled = false) // TODO
         Spacer(Modifier.fillMaxWidth().height(16.dp))
     }

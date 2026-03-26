@@ -1,6 +1,9 @@
-package me.earzuchan.ryo.aiee.duty
+package me.earzuchan.ryo.aiee.app
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +18,11 @@ import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.LIGHT
 import me.earzuchan.ryo.aiee.data.preference.RyoPreferences.ThemeMode.SYSTEM
 import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
 
-class PreferencesDuty(private val dutyScope: CoroutineScope, private val prefsRepo: RyoPreferencesRepository) {
+// CHECK：应让本玩意管理：偏好设置（快捷键、语言、偏好编辑器等；这个管理的意思是，你到时App要获取编辑器什么的，也要通过这个中枢）、Ryo实例和Schema
+
+class OldAppService(private val prefsRepo: RyoPreferencesRepository, val oldWorkspaceService: OldWorkspaceService) {
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     private val _appThemeMode = MutableStateFlow(RyoPreferences.DEFAULT_THEME_MODE)
     private val _appLanguage = MutableStateFlow(RyoPreferences.DEFAULT_LANGUAGE)
 
@@ -28,20 +35,25 @@ class PreferencesDuty(private val dutyScope: CoroutineScope, private val prefsRe
             DARK -> true
             LIGHT -> false
         }
-    }.stateIn(dutyScope, SharingStarted.WhileSubscribed(5000), null)
+    }.stateIn(serviceScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
-        dutyScope.launch { prefsRepo.themeModeFlow().distinctUntilChanged().collect(_appThemeMode::emit) }
-        dutyScope.launch { prefsRepo.languageFlow().distinctUntilChanged().collect(_appLanguage::emit) }
+        serviceScope.launch { prefsRepo.themeModeFlow().distinctUntilChanged().collect(_appThemeMode::emit) }
+        serviceScope.launch { prefsRepo.languageFlow().distinctUntilChanged().collect(_appLanguage::emit) }
     }
 
-    fun setAppThemeMode(mode: RyoPreferences.ThemeMode) = dutyScope.launch {
+    fun setAppThemeMode(mode: RyoPreferences.ThemeMode) = serviceScope.launch {
         if (_appThemeMode.value != mode) _appThemeMode.emit(mode)
         prefsRepo.setThemeMode(mode)
     }
 
-    fun setAppLanguage(lang: RyoPreferences.Language) = dutyScope.launch {
+    fun setAppLanguage(lang: RyoPreferences.Language) = serviceScope.launch {
         if (_appLanguage.value != lang) _appLanguage.emit(lang)
         prefsRepo.setLanguage(lang)
+    }
+
+    fun close() {
+        serviceScope.cancel()
+        oldWorkspaceService.close()
     }
 }

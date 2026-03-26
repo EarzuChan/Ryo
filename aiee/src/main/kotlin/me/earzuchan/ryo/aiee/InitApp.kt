@@ -12,7 +12,7 @@ import com.arkivanov.decompose.extensions.compose.lifecycle.LifecycleController
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import io.github.vinceglb.filekit.FileKit
 import me.earzuchan.ryo.aiee.di.appModule
-import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.illu_ryo_lawnchair
 import me.earzuchan.ryo.aiee.ui.AppEnvironment
@@ -28,15 +28,15 @@ fun main() {
         KoinApplication(application = { modules(appModule) }) {
             val lifecycle = remember { LifecycleRegistry() }
             val windowState = rememberWindowState(size = DpSize(1280.dp, 820.dp))
-            val appDuty = remember { AppDuty(AncestorDutyContext(lifecycle), ::exitApplication) }
+            val oldAppDuty = remember { OldAppDuty(AncestorDutyContext(lifecycle), ::exitApplication) }
 
             LifecycleController(lifecycle, windowState)
 
-            val forceDarkMode by appDuty.forceDarkMode.collectAsState()
-            val appLanguage by appDuty.appLanguage.collectAsState()
+            val forceDarkMode by oldAppDuty.forceDarkMode.collectAsState()
+            val appLanguage by oldAppDuty.appLanguage.collectAsState()
 
             AppEnvironment(appLanguage) {
-                RyoWindow(appDuty::requestClose, windowState, appDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = appDuty.windowInterop, forceDarkMode = forceDarkMode) { MainWindowContent(appDuty, it) }
+                RyoWindow(oldAppDuty::requestClose, windowState, oldAppDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = oldAppDuty.windowInterop, forceDarkMode = forceDarkMode) { MainWindowContent(oldAppDuty, it) }
             }
         }
     }

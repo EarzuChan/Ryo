@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.window.FrameWindowScope
-import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.ui.view.AppDialogHostView
 import me.earzuchan.ryo.aiee.ui.view.AppMenuHostView
 import me.earzuchan.ryo.aiee.ui.view.AppTopBarView
@@ -17,15 +17,15 @@ import me.earzuchan.ryo.aiee.ui.view.SidePanelView
 
 
 @Composable
-fun FrameWindowScope.MainWindowContent(appDuty: AppDuty, ryoWindowScope: RyoWindowScope) = Box(Modifier.fillMaxSize().onPreviewKeyEvent(appDuty::handlePreviewKeyEvent)) {
+fun FrameWindowScope.MainWindowContent(oldAppDuty: OldAppDuty, ryoWindowScope: RyoWindowScope) = Box(Modifier.fillMaxSize().onPreviewKeyEvent(oldAppDuty::handlePreviewKeyEvent)) { // 传给AppDuty来处理按键事件
     Column(Modifier.fillMaxSize()) {
-        AppTopBarView(appDuty,ryoWindowScope::WindowControlButtons)
+        AppTopBarView(oldAppDuty,ryoWindowScope::WindowControlButtons)
         Row(Modifier.fillMaxSize()) {
-            SidePanelView(appDuty.sidePanelDuty, appDuty::openSettingsTab, appDuty::showContextMenu)
-            MainWorkspaceView(appDuty)
+            SidePanelView(oldAppDuty.sidePanelDuty, oldAppDuty::openSettingsTab, oldAppDuty::showContextMenu)
+            MainWorkspaceView(oldAppDuty)
         }
     }
 
-    AppMenuHostView(appDuty.menuDuty)
-    AppDialogHostView(appDuty.dialogDuty)
+    AppMenuHostView(oldAppDuty.menuDuty)
+    AppDialogHostView(oldAppDuty.dialogDuty)
 }

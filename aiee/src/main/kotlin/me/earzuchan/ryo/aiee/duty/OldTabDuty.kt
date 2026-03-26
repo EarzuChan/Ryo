@@ -11,7 +11,7 @@ import me.earzuchan.ryo.aiee.ui.page.EmptyPage
 import me.earzuchan.ryo.aiee.ui.page.SettingsPage
 import me.earzuchan.ryo.aiee.ui.page.WelcomePage
 
-abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavis, initialTitle: UiText, initialDirty: Boolean = false) : DutyContext by ctx {
+abstract class OldTabDuty(ctx: DutyContext, val navi: WorkspaceTabNavis, initialTitle: UiText, initialDirty: Boolean = false) : DutyContext by ctx {
     data class State(val title: UiText, val dirty: Boolean)
 
     sealed interface Intent {
@@ -66,25 +66,25 @@ abstract class TabDuty(ctx: DutyContext, val navi: WorkspaceTabNavis, initialTit
     }
 
     @Composable
-    abstract fun Render(appDuty: AppDuty)
+    abstract fun Render(oldAppDuty: OldAppDuty)
 }
 
-class EmptyTabDuty(ctx: DutyContext) : TabDuty(ctx, WorkspaceTabNavis.Empty, UiText.Plain("__empty__")) {
+class EmptyOldTabDuty(ctx: DutyContext) : OldTabDuty(ctx, WorkspaceTabNavis.Empty, UiText.Plain("__empty__")) {
     @Composable
-    override fun Render(appDuty: AppDuty) = EmptyPage()
+    override fun Render(oldAppDuty: OldAppDuty) = EmptyPage()
 }
 
-class WelcomeTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavis.Welcome, title) {
+class WelcomeOldTabDuty(ctx: DutyContext, title: UiText) : OldTabDuty(ctx, WorkspaceTabNavis.Welcome, title) {
     @Composable
-    override fun Render(appDuty: AppDuty) = WelcomePage()
+    override fun Render(oldAppDuty: OldAppDuty) = WelcomePage()
 }
 
-class SettingsTabDuty(ctx: DutyContext, title: UiText) : TabDuty(ctx, WorkspaceTabNavis.Settings, title) {
+class SettingsOldTabDuty(ctx: DutyContext, title: UiText) : OldTabDuty(ctx, WorkspaceTabNavis.Settings, title) {
     @Composable
-    override fun Render(appDuty: AppDuty) = SettingsPage(appDuty)
+    override fun Render(oldAppDuty: OldAppDuty) = SettingsPage(oldAppDuty)
 }
 
-class EditorSessionTabDuty(ctx: DutyContext, navi: WorkspaceTabNavis.EditorSession, title: UiText, initialDirty: Boolean = false) : TabDuty(ctx, navi, title, initialDirty) {
+class EditorSessionOldTabDuty(ctx: DutyContext, navi: WorkspaceTabNavis.EditorSession, title: UiText, initialDirty: Boolean = false) : OldTabDuty(ctx, navi, title, initialDirty) {
     override fun canSave() = dirty
 
     override fun save() {
@@ -98,5 +98,5 @@ class EditorSessionTabDuty(ctx: DutyContext, navi: WorkspaceTabNavis.EditorSessi
     }
 
     @Composable
-    override fun Render(appDuty: AppDuty) = EditorSessionPage()
+    override fun Render(oldAppDuty: OldAppDuty) = EditorSessionPage()
 }

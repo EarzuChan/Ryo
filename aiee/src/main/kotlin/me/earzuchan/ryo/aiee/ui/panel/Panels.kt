@@ -68,6 +68,7 @@ fun AssetsPanel(duty: AssetsPanelDuty, onShowContextMenu: (anchorX: Int, anchorY
     val state by duty.state.collectAsState()
     val volumeInfoText = Res.string.menu_item_volume_info.text
     val saveText = Res.string.menu_item_save.text
+    val saveAsText = Res.string.menu_item_save_as.text
     val closeText = Res.string.action_close.text
 
     val nodes = remember(state.volumes) { state.volumes.map { volume -> TreeNodeModel(volume.name, volume.tokens.map(::TreeNodeModel)) } }
@@ -90,7 +91,16 @@ fun AssetsPanel(duty: AssetsPanelDuty, onShowContextMenu: (anchorX: Int, anchorY
                 val volume = duty.volumeByPath(path) ?: return@TreeView
 
                 duty.onTreeNodeClick(path)
-                onShowContextMenu(anchorX, anchorY, listOf(RyoMenuEntry.MenuItem(volumeInfoText, false), RyoMenuEntry.MenuItem(saveText) { duty.saveVolume(volume.id) }, RyoMenuEntry.MenuItem(closeText) { duty.closeVolume(volume.id) }))
+                onShowContextMenu(
+                    anchorX,
+                    anchorY,
+                    listOf(
+                        RyoMenuEntry.MenuItem(volumeInfoText, false),
+                        RyoMenuEntry.MenuItem(saveText) { duty.saveVolume(volume.id) },
+                        RyoMenuEntry.MenuItem(saveAsText) { duty.saveVolumeAs(volume.id) },
+                        RyoMenuEntry.MenuItem(closeText) { duty.closeVolume(volume.id) }
+                    )
+                )
             })
         }
     }

@@ -98,7 +98,7 @@ compose.desktop {
             }
 
             linux {
-                iconFile.set(project.file("packaging/icons/app.png"))
+                iconFile.set(project.file("packaging/icons/linux.svg"))
                 shortcut = true
                 packageName = appName
                 menuGroup = appAuthor

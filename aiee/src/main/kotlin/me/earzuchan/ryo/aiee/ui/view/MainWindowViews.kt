@@ -41,10 +41,28 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
-import me.earzuchan.ryo.aiee.duty.AppCommand
-import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.app.CloseActiveVolumeOldCommand
+import me.earzuchan.ryo.aiee.app.CloseCurrentTabOldCommand
+import me.earzuchan.ryo.aiee.app.OldCommand
+import me.earzuchan.ryo.aiee.app.DiscardOldCommand
+import me.earzuchan.ryo.aiee.app.FocusAssetsPanelOldCommand
+import me.earzuchan.ryo.aiee.app.FocusSchemasPanelOldCommand
+import me.earzuchan.ryo.aiee.app.OpenEditorSessionTabOldCommand
+import me.earzuchan.ryo.aiee.app.OpenSettingsTabOldCommand
+import me.earzuchan.ryo.aiee.app.OpenVolumeOldCommand
+import me.earzuchan.ryo.aiee.app.OpenWelcomeTabOldCommand
+import me.earzuchan.ryo.aiee.app.RedoOldCommand
+import me.earzuchan.ryo.aiee.app.RequestWindowCloseOldCommand
+import me.earzuchan.ryo.aiee.app.RestoreClosedTabOldCommand
+import me.earzuchan.ryo.aiee.app.SaveActiveVolumeAsOldCommand
+import me.earzuchan.ryo.aiee.app.SaveActiveVolumeOldCommand
+import me.earzuchan.ryo.aiee.app.SaveOldCommand
+import me.earzuchan.ryo.aiee.app.ToggleMaximizeWindowOldCommand
+import me.earzuchan.ryo.aiee.app.ToggleSidePanelOldCommand
+import me.earzuchan.ryo.aiee.app.UndoOldCommand
+import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.duty.SidePanelDuty
-import me.earzuchan.ryo.aiee.duty.TabDuty
+import me.earzuchan.ryo.aiee.duty.OldTabDuty
 import me.earzuchan.ryo.aiee.duty.WorkspaceTabNavis
 import me.earzuchan.ryo.aiee.ui.panel.AssetsPanel
 import me.earzuchan.ryo.aiee.ui.panel.SchemasPanel
@@ -110,20 +128,20 @@ fun SidePanelView(sidePanelDuty: SidePanelDuty, onOpenSettings: () -> Unit, onSh
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
-    val tabStack by appDuty.workspaceDuty.tabStack.subscribeAsState()
+fun MainWorkspaceView(oldAppDuty: OldAppDuty) = Column(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
+    val tabStack by oldAppDuty.oldWorkspaceDuty.tabStack.subscribeAsState()
     val activeTabId = tabStack.active.configuration.takeIf { it !is WorkspaceTabNavis.Empty }?.id
-    val tabs = appDuty.tabs
+    val tabs = oldAppDuty.tabs
 
     @Composable
-    fun TabChip(tab: TabDuty.Tab, selected: Boolean, onSelect: () -> Unit, onClose: () -> Unit, onContextMenu: (anchorX: Int, anchorY: Int) -> Unit = { _, _ -> }, modifier: Modifier = Modifier) {
+    fun TabChip(tab: OldTabDuty.Tab, selected: Boolean, onSelect: () -> Unit, onClose: () -> Unit, onContextMenu: (anchorX: Int, anchorY: Int) -> Unit = { _, _ -> }, modifier: Modifier = Modifier) {
         val textColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         val indicatorColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
         var topLeftInWindow by remember(tab.id) { mutableStateOf(Offset.Zero) }
 
         @Composable
         @OptIn(ExperimentalComposeUiApi::class)
-        fun TabTrailingAction(tab: TabDuty.Tab, selected: Boolean, onClose: () -> Unit) {
+        fun TabTrailingAction(tab: OldTabDuty.Tab, selected: Boolean, onClose: () -> Unit) {
             var hovered by remember(tab.id) { mutableStateOf(false) }
             val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             val showClose = !tab.dirty || hovered
@@ -153,7 +171,7 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
     if (tabs.isNotEmpty()) Column(Modifier.fillMaxWidth()) {
         val lazyListState = rememberLazyListState()
         val scope = rememberCoroutineScope()
-        val reorderState = rememberReorderableLazyListState(lazyListState) { from, to -> appDuty.moveTab(from.index, to.index) }
+        val reorderState = rememberReorderableLazyListState(lazyListState) { from, to -> oldAppDuty.moveTab(from.index, to.index) }
 
         LazyRow(
             Modifier.fillMaxWidth().onPointerEvent(PointerEventType.Scroll) { event ->
@@ -166,28 +184,28 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
             items(tabs, key = { it.id }) { tab ->
                 val hasOtherTabs = tabs.size > 1
                 val hasTabs = tabs.isNotEmpty()
-                val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
+                val menuLabel: (String, OldCommand) -> String = { base, command -> oldAppDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
                 val tabTitle = tab.title.resolve()
                 val closeText = Res.string.tab_context_close_format.text(tabTitle)
                 val closeOthersText = Res.string.tab_context_close_others.text
                 val closeAllText = Res.string.tab_context_close_all.text
-                val newEditorText = menuLabel(Res.string.menu_item_new_editor_session_page.text, AppCommand.OpenEditorSessionTab)
-                val canOpenEditor = appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)
+                val newEditorText = menuLabel(Res.string.menu_item_new_editor_session_page.text, OpenEditorSessionTabOldCommand)
+                val canOpenEditor = oldAppDuty.canExecuteCommand(OpenEditorSessionTabOldCommand)
 
                 ReorderableItem(reorderState, key = tab.id) {
-                    TabChip(tab, activeTabId == tab.id, { appDuty.selectTab(tab.id) }, { appDuty.requestCloseTab(tab.id) }, { anchorX, anchorY ->
-                        appDuty.showContextMenu(
+                    TabChip(tab, activeTabId == tab.id, { oldAppDuty.selectTab(tab.id) }, { oldAppDuty.requestCloseTab(tab.id) }, { anchorX, anchorY ->
+                        oldAppDuty.showContextMenu(
                             anchorX = anchorX,
                             anchorY = anchorY,
                             entries = listOf(
-                                RyoMenuEntry.MenuItem(text = closeText, onClick = { appDuty.requestCloseTab(tab.id) }),
-                                RyoMenuEntry.MenuItem(text = closeOthersText, enabled = hasOtherTabs, onClick = { appDuty.requestCloseOtherTabs(tab.id) }),
-                                RyoMenuEntry.MenuItem(text = closeAllText, enabled = hasTabs, onClick = appDuty::requestCloseAllTabs),
+                                RyoMenuEntry.MenuItem(text = closeText, onClick = { oldAppDuty.requestCloseTab(tab.id) }),
+                                RyoMenuEntry.MenuItem(text = closeOthersText, enabled = hasOtherTabs, onClick = { oldAppDuty.requestCloseOtherTabs(tab.id) }),
+                                RyoMenuEntry.MenuItem(text = closeAllText, enabled = hasTabs, onClick = oldAppDuty::requestCloseAllTabs),
                                 RyoMenuEntry.Divider,
                                 RyoMenuEntry.MenuItem(
                                     text = newEditorText,
                                     enabled = canOpenEditor,
-                                    onClick = { appDuty.commandDuty.execute(AppCommand.OpenEditorSessionTab) }
+                                    onClick = { oldAppDuty.executeCommand(OpenEditorSessionTabOldCommand) }
                                 )
                             )
                         )
@@ -199,58 +217,63 @@ fun MainWorkspaceView(appDuty: AppDuty) = Column(Modifier.fillMaxSize().clip(Rou
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
     }
 
-    Box(Modifier.fillMaxSize()) { Children(appDuty.workspaceDuty.tabStack) { child -> child.instance.Render(appDuty) } }
+    Box(Modifier.fillMaxSize()) { Children(oldAppDuty.oldWorkspaceDuty.tabStack) { child -> child.instance.Render(oldAppDuty) } }
 }
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
+fun FrameWindowScope.AppTopBarView(oldAppDuty: OldAppDuty, windowControlButtons: @Composable () -> Unit) {
     data class MenuGroup(val id: String, val label: String, val entries: List<RyoMenuEntry>)
 
-    val workspaceState by appDuty.sidePanelDuty.workspaceState.collectAsState()
+    val workspaceState by oldAppDuty.sidePanelDuty.workspaceState.collectAsState()
     val hasActiveVolume = workspaceState.activeVolumeId != null
     val activeVolumeName = workspaceState.volumes.firstOrNull { it.id == workspaceState.activeVolumeId }?.name // TODO：以后activeVol，是根据在TreeView的选择呢，还是根据前台的Tab呢？决策下
     val saveActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_save_volume_format.text(it) } ?: Res.string.menu_item_save_active_volume.text
+    val saveActiveVolumeAsText = activeVolumeName?.let { Res.string.menu_item_save_volume_as_format.text(it) } ?: Res.string.menu_item_save_active_volume_as.text
     val closeActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_close_volume_format.text(it) } ?: Res.string.menu_item_close_active_volume.text
-    val menuLabel: (String, AppCommand) -> String = { base, command -> appDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
+    val menuLabel: (String, OldCommand) -> String = { base, command -> oldAppDuty.shortcutFor(command)?.displayText()?.let { "$base\t$it" } ?: base }
     val menuGroups = listOf(
         MenuGroup(
             id = "file",
             label = Res.string.menu_group_file.text,
             entries = listOf(
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_open_volume.text, AppCommand.OpenVolume), appDuty.commandDuty.canExecute(AppCommand.OpenVolume)) { appDuty.commandDuty.execute(AppCommand.OpenVolume) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_open_volume.text, OpenVolumeOldCommand), oldAppDuty.canExecuteCommand(OpenVolumeOldCommand)) { oldAppDuty.executeCommand(OpenVolumeOldCommand) },
                 RyoMenuEntry.MenuItem(
-                    menuLabel(saveActiveVolumeText, AppCommand.SaveActiveVolume),
+                    menuLabel(saveActiveVolumeText, SaveActiveVolumeOldCommand),
                     hasActiveVolume
-                ) { appDuty.commandDuty.execute(AppCommand.SaveActiveVolume) },
+                ) { oldAppDuty.executeCommand(SaveActiveVolumeOldCommand) },
                 RyoMenuEntry.MenuItem(
-                    menuLabel(closeActiveVolumeText, AppCommand.CloseActiveVolume),
+                    menuLabel(saveActiveVolumeAsText, SaveActiveVolumeAsOldCommand),
                     hasActiveVolume
-                ) { appDuty.commandDuty.execute(AppCommand.CloseActiveVolume) },
+                ) { oldAppDuty.executeCommand(SaveActiveVolumeAsOldCommand) },
+                RyoMenuEntry.MenuItem(
+                    menuLabel(closeActiveVolumeText, CloseActiveVolumeOldCommand),
+                    hasActiveVolume
+                ) { oldAppDuty.executeCommand(CloseActiveVolumeOldCommand) },
                 RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(
                     text = Res.string.menu_item_new.text,
                     children = listOf(
-                        RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
-                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_editor_session_page.text, AppCommand.OpenEditorSessionTab), appDuty.commandDuty.canExecute(AppCommand.OpenEditorSessionTab)) { appDuty.commandDuty.execute(AppCommand.OpenEditorSessionTab) },
-                        RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) }
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, OpenWelcomeTabOldCommand), oldAppDuty.canExecuteCommand(OpenWelcomeTabOldCommand)) { oldAppDuty.executeCommand(OpenWelcomeTabOldCommand) },
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_editor_session_page.text, OpenEditorSessionTabOldCommand), oldAppDuty.canExecuteCommand(OpenEditorSessionTabOldCommand)) { oldAppDuty.executeCommand(OpenEditorSessionTabOldCommand) },
+                        RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, OpenSettingsTabOldCommand), oldAppDuty.canExecuteCommand(OpenSettingsTabOldCommand)) { oldAppDuty.executeCommand(OpenSettingsTabOldCommand) }
                     )
                 ),
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_restore_closed_tab.text, AppCommand.RestoreClosedTab), appDuty.commandDuty.canExecute(AppCommand.RestoreClosedTab)) { appDuty.commandDuty.execute(AppCommand.RestoreClosedTab) },
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_close_tab.text, AppCommand.CloseCurrentTab), appDuty.commandDuty.canExecute(AppCommand.CloseCurrentTab)) { appDuty.commandDuty.execute(AppCommand.CloseCurrentTab) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_restore_closed_tab.text, RestoreClosedTabOldCommand), oldAppDuty.canExecuteCommand(RestoreClosedTabOldCommand)) { oldAppDuty.executeCommand(RestoreClosedTabOldCommand) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_close_tab.text, CloseCurrentTabOldCommand), oldAppDuty.canExecuteCommand(CloseCurrentTabOldCommand)) { oldAppDuty.executeCommand(CloseCurrentTabOldCommand) },
                 RyoMenuEntry.Divider,
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_exit.text, AppCommand.RequestWindowClose), appDuty.commandDuty.canExecute(AppCommand.RequestWindowClose)) { appDuty.commandDuty.execute(AppCommand.RequestWindowClose) }
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_exit.text, RequestWindowCloseOldCommand), oldAppDuty.canExecuteCommand(RequestWindowCloseOldCommand)) { oldAppDuty.executeCommand(RequestWindowCloseOldCommand) }
             )
         ),
         MenuGroup(
             id = "edit",
             label = Res.string.menu_group_edit.text,
             entries = listOf(
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_undo.text, AppCommand.Undo), appDuty.commandDuty.canExecute(AppCommand.Undo)) { appDuty.commandDuty.execute(AppCommand.Undo) },
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_redo.text, AppCommand.Redo), appDuty.commandDuty.canExecute(AppCommand.Redo)) { appDuty.commandDuty.execute(AppCommand.Redo) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_undo.text, UndoOldCommand), oldAppDuty.canExecuteCommand(UndoOldCommand)) { oldAppDuty.executeCommand(UndoOldCommand) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_redo.text, RedoOldCommand), oldAppDuty.canExecuteCommand(RedoOldCommand)) { oldAppDuty.executeCommand(RedoOldCommand) },
                 RyoMenuEntry.Divider,
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_save.text, AppCommand.Save), appDuty.commandDuty.canExecute(AppCommand.Save)) { appDuty.commandDuty.execute(AppCommand.Save) },
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_discard_changes.text, AppCommand.Discard), appDuty.commandDuty.canExecute(AppCommand.Discard)) { appDuty.commandDuty.execute(AppCommand.Discard) }
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_save.text, SaveOldCommand), oldAppDuty.canExecuteCommand(SaveOldCommand)) { oldAppDuty.executeCommand(SaveOldCommand) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.menu_item_discard_changes.text, DiscardOldCommand), oldAppDuty.canExecuteCommand(DiscardOldCommand)) { oldAppDuty.executeCommand(DiscardOldCommand) }
             )
         ),
         MenuGroup(
@@ -258,31 +281,31 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
             label = Res.string.menu_group_view.text,
             entries = listOf(
                 RyoMenuEntry.MenuItem(
-                    menuLabel(if (appDuty.sidePanelDuty.expanded) Res.string.menu_item_collapse_sidebar.text else Res.string.menu_item_expand_sidebar.text, AppCommand.ToggleSidePanel),
-                    appDuty.commandDuty.canExecute(AppCommand.ToggleSidePanel)
-                ) { appDuty.commandDuty.execute(AppCommand.ToggleSidePanel) },
+                    menuLabel(if (oldAppDuty.sidePanelDuty.expanded) Res.string.menu_item_collapse_sidebar.text else Res.string.menu_item_expand_sidebar.text, ToggleSidePanelOldCommand),
+                    oldAppDuty.canExecuteCommand(ToggleSidePanelOldCommand)
+                ) { oldAppDuty.executeCommand(ToggleSidePanelOldCommand) },
                 RyoMenuEntry.MenuItem(
                     Res.string.menu_item_switch_panel.text,
                     children = listOf(
-                        RyoMenuEntry.MenuItem(Res.string.panel_assets_manager.text, appDuty.commandDuty.canExecute(AppCommand.FocusAssetsPanel)) { appDuty.commandDuty.execute(AppCommand.FocusAssetsPanel) },
-                        RyoMenuEntry.MenuItem(Res.string.panel_schemas_manager.text, appDuty.commandDuty.canExecute(AppCommand.FocusSchemasPanel)) { appDuty.commandDuty.execute(AppCommand.FocusSchemasPanel) }
+                        RyoMenuEntry.MenuItem(Res.string.panel_assets_manager.text, oldAppDuty.canExecuteCommand(FocusAssetsPanelOldCommand)) { oldAppDuty.executeCommand(FocusAssetsPanelOldCommand) },
+                        RyoMenuEntry.MenuItem(Res.string.panel_schemas_manager.text, oldAppDuty.canExecuteCommand(FocusSchemasPanelOldCommand)) { oldAppDuty.executeCommand(FocusSchemasPanelOldCommand) }
                     )
                 ),
                 RyoMenuEntry.Divider,
                 RyoMenuEntry.MenuItem(
-                    menuLabel(if (appDuty.isMaximized) Res.string.menu_item_exit_fullscreen.text else Res.string.menu_item_fullscreen.text, AppCommand.ToggleMaximizeWindow),
-                    appDuty.commandDuty.canExecute(AppCommand.ToggleMaximizeWindow)
-                ) { appDuty.commandDuty.execute(AppCommand.ToggleMaximizeWindow) }
+                    menuLabel(if (oldAppDuty.isMaximized) Res.string.menu_item_exit_fullscreen.text else Res.string.menu_item_fullscreen.text, ToggleMaximizeWindowOldCommand),
+                    oldAppDuty.canExecuteCommand(ToggleMaximizeWindowOldCommand)
+                ) { oldAppDuty.executeCommand(ToggleMaximizeWindowOldCommand) }
             )
         ),
         MenuGroup(
             id = "help",
             label = Res.string.menu_group_help.text,
             entries = listOf(
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, AppCommand.OpenWelcomeTab), appDuty.commandDuty.canExecute(AppCommand.OpenWelcomeTab)) { appDuty.commandDuty.execute(AppCommand.OpenWelcomeTab) },
-                RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, AppCommand.OpenSettingsTab), appDuty.commandDuty.canExecute(AppCommand.OpenSettingsTab)) { appDuty.commandDuty.execute(AppCommand.OpenSettingsTab) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, OpenWelcomeTabOldCommand), oldAppDuty.canExecuteCommand(OpenWelcomeTabOldCommand)) { oldAppDuty.executeCommand(OpenWelcomeTabOldCommand) },
+                RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, OpenSettingsTabOldCommand), oldAppDuty.canExecuteCommand(OpenSettingsTabOldCommand)) { oldAppDuty.executeCommand(OpenSettingsTabOldCommand) },
                 RyoMenuEntry.Divider,
-                RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = appDuty::showAboutDialog)
+                RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = oldAppDuty::showAboutDialog)
             )
         )
     )
@@ -302,8 +325,8 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
                                 val b = coords.boundsInWindow()
                                 anchors[group.id] = IntOffset(b.left.roundToInt(), b.bottom.roundToInt())
                             }.onPointerEvent(PointerEventType.Enter) {
-                                anchors[group.id]?.also { appDuty.hoverMenuGroup(group.id, it.x, it.y, group.entries) }
-                            }) { anchors[group.id]?.also { appDuty.toggleMenuGroup(group.id, it.x, it.y, group.entries) } }
+                                anchors[group.id]?.also { oldAppDuty.hoverMenuGroup(group.id, it.x, it.y, group.entries) }
+                            }) { anchors[group.id]?.also { oldAppDuty.toggleMenuGroup(group.id, it.x, it.y, group.entries) } }
                         }
                     }
                 }
@@ -314,5 +337,5 @@ fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Comp
         }
     }
 
-    if (appDuty.isMaximized) juche() else WindowDraggableArea(content = juche)
+    if (oldAppDuty.isMaximized) juche() else WindowDraggableArea(content = juche)
 }

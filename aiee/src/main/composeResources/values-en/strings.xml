@@ -50,8 +50,10 @@
     <string name="menu_group_help">Help</string>
     <string name="menu_item_open_volume">Open volume</string>
     <string name="menu_item_save_volume_format">Save %1$s</string>
+    <string name="menu_item_save_volume_as_format">Save %1$s As</string>
     <string name="menu_item_close_volume_format">Close %1$s</string>
     <string name="menu_item_save_active_volume">Save active volume</string>
+    <string name="menu_item_save_active_volume_as">Save active volume as</string>
     <string name="menu_item_close_active_volume">Close active volume</string>
     <string name="menu_item_volume_info">Volume info</string>
     <string name="menu_item_new">New</string>
@@ -62,6 +64,7 @@
     <string name="menu_item_undo">Undo</string>
     <string name="menu_item_redo">Redo</string>
     <string name="menu_item_save">Save</string>
+    <string name="menu_item_save_as">Save As</string>
     <string name="menu_item_discard_changes">Discard changes</string>
     <string name="menu_item_expand_sidebar">Expand sidebar</string>
     <string name="menu_item_collapse_sidebar">Collapse sidebar</string>

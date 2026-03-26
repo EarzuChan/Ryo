@@ -4,10 +4,10 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import me.earzuchan.ryo.aiee.data.dao.ShortcutOverrideDao
+import me.earzuchan.ryo.aiee.data.dao.OldShortcutOverrideDao
 
 @Entity(tableName = "shortcut_overrides")
-data class ShortcutOverrideEntity(
+data class OldShortcutOverrideEntity(
     @PrimaryKey val commandId: String,
     val key: String,
     val ctrl: Boolean,
@@ -16,8 +16,8 @@ data class ShortcutOverrideEntity(
     val meta: Boolean
 )
 
-@Database(entities = [ShortcutOverrideEntity::class], version = 1, exportSchema = true)
+@Database(entities = [OldShortcutOverrideEntity::class], version = 1, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun shortcutOverrideDao(): ShortcutOverrideDao
+    abstract fun shortcutOverrideDao(): OldShortcutOverrideDao
 }
 
