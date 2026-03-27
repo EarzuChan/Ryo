@@ -35,3 +35,7 @@ object OldPathUtils {
 
     fun volumePathKey(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM) = canonicalVolumePath(path, fileSystem).toString()
 }
+
+object FileUtils {
+    val Path.nameWithoutExt get() = this.name.substringBefore('.')
+}

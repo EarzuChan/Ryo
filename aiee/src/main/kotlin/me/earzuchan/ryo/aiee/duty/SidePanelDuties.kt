@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.app.OldWorkspaceService
+import me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.*
 import org.jetbrains.compose.resources.DrawableResource
@@ -72,7 +73,7 @@ class SidePanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, pri
     val activePanelId: String get() = panelStack.value.active.configuration.id
     val activePanel: Panel get() = panels.firstOrNull { it.id == activePanelId } ?: panels.first()
     val state get() = State(expanded, panelWidthDp, activePanelId)
-    val workspaceState: StateFlow<me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository.State> get() = oldWorkspaceService.state
+    val workspaceState: StateFlow<FuckedWorkspaceRepository.State> = oldWorkspaceService.state
     val hasActiveVolume: Boolean get() = oldWorkspaceService.state.value.activeVolumeId != null
 
     fun dispatch(intent: Intent): Effect = when (intent) {
@@ -137,9 +138,9 @@ class SidePanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, pri
 }
 
 class AssetsPanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, private val oldWorkspaceService: OldWorkspaceService) : DutyContext by ctx {
-    val state: StateFlow<me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository.State> = oldWorkspaceService.state
+    val state: StateFlow<FuckedWorkspaceRepository.State> = oldWorkspaceService.state
 
-    fun volumeByPath(path: List<Int>): me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository.VolumeState? = path.firstOrNull()?.let { state.value.volumes.getOrNull(it) }
+    fun volumeByPath(path: List<Int>) = path.firstOrNull()?.let { state.value.volumes.getOrNull(it) }
 
     fun saveVolume(volumeId: String) = dutyScope.launch { oldWorkspaceService.saveVolume(volumeId) }
 

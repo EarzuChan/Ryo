@@ -7,7 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.data.RYO_DATABASE_NAME
 import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
-import me.earzuchan.ryo.aiee.data.database.AppDatabase
+import me.earzuchan.ryo.aiee.data.database.Database
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -16,9 +16,9 @@ import java.net.URI
 import javax.swing.SwingUtilities
 
 object DataUtils {
-    fun buildAppDatabase() = Room.databaseBuilder<AppDatabase>((PlatformUtils.appDatabasePath / RYO_DATABASE_NAME).toString()).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).fallbackToDestructiveMigration(true).build()
+    fun buildDatabase() = Room.databaseBuilder<Database>((PlatformUtils.appDatabasePath / RYO_DATABASE_NAME).toString()).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).fallbackToDestructiveMigration(true).build()
 
-    fun buildAppPreferences() = PreferenceDataStoreFactory.createWithPath(produceFile = { PlatformUtils.appFilesPath / RYO_PREFERENCES_NAME })
+    fun buildPreferences() = PreferenceDataStoreFactory.createWithPath(produceFile = { PlatformUtils.appFilesPath / RYO_PREFERENCES_NAME })
 }
 
 object PlatformUtils {

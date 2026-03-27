@@ -1,4 +1,4 @@
-package me.earzuchan.ryo.aiee.duty
+package me.earzuchan.ryo.aiee.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -6,12 +6,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import me.earzuchan.ryo.aiee.ui.component.ButtonType
 import me.earzuchan.ryo.aiee.ui.UiText
+import me.earzuchan.ryo.aiee.ui.dialog.AboutDialog
 import org.jetbrains.compose.resources.DrawableResource
 
-class DialogDuty {
-    data class DialogAction(
-        val text: UiText, val type: ButtonType = ButtonType.Text, val enabled: Boolean = true, val onClick: (() -> Boolean?)? = null
-    )
+class DialogService {
+    data class DialogAction(val text: UiText, val type: ButtonType = ButtonType.Text, val enabled: Boolean = true, val onClick: (() -> Boolean?)? = null)
 
     sealed interface Model {
         val showOverlay: Boolean
@@ -83,13 +82,7 @@ class DialogDuty {
     ) = order(Model.Common(icon, headline, description, actions, content, showOverlay, closeOnOverlayClick, onOpen, onOpened, onClose, onClosed))
 
     fun orderSpecial(
-        showOverlay: Boolean = true,
-        closeOnOverlayClick: Boolean = false,
-        onOpen: (() -> Unit)? = null,
-        onOpened: (() -> Unit)? = null,
-        onClose: (() -> Unit)? = null,
-        onClosed: (() -> Unit)? = null,
-        content: @Composable (DialogController) -> Unit
+        showOverlay: Boolean = true, closeOnOverlayClick: Boolean = false, onOpen: (() -> Unit)? = null, onOpened: (() -> Unit)? = null, onClose: (() -> Unit)? = null, onClosed: (() -> Unit)? = null, content: @Composable (DialogController) -> Unit
     ) = order(Model.Special(content, showOverlay, closeOnOverlayClick, onOpen, onOpened, onClose, onClosed))
 
     fun clickOverlayCurrent() {
@@ -109,9 +102,7 @@ class DialogDuty {
         if (action.onClick?.invoke() != false) requestCloseCurrent()
     }
 
-    fun notifyCurrentOpened() {
-        currentDialog?.onOpened?.invoke()
-    }
+    fun notifyCurrentOpened() = currentDialog?.onOpened?.invoke()
 
     fun requestCloseCurrent() {
         if (!currentVisible) return
@@ -133,3 +124,5 @@ class DialogDuty {
         ticket.model.onOpen?.invoke()
     }
 }
+
+fun DialogService.orderAbout() = orderSpecial(closeOnOverlayClick = true) { AboutDialog() }

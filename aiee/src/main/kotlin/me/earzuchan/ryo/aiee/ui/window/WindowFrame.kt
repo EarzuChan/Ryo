@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,10 +23,12 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
+import me.earzuchan.ryo.aiee.app.AppService
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.theme.RyoTheme
 import me.earzuchan.ryo.aiee.util.UiUtils.text
+import org.koin.compose.koinInject
 
 interface RyoWindowInterop {
     fun attachWindowController(controller: RyoWindowController) = Unit
@@ -60,8 +64,10 @@ class RyoWindowScope internal constructor(private val windowController: RyoWindo
 }
 
 @Composable
-fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: String, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, forceDarkMode: Boolean?, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
-    Window(onCloseRequest, windowState, visible, title, icon, undecorated = true, transparent = true) {
+fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: String, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
+    val forceDarkMode by koinInject<AppService>().forceDarkMode.collectAsState()
+
+    Window(onCloseRequest, windowState, visible, title, icon, true, true) {
         val windowController = remember(windowState, onCloseRequest) { RyoWindowController(windowState, onCloseRequest) }
         val scope = remember(windowController) { RyoWindowScope(windowController) }
 

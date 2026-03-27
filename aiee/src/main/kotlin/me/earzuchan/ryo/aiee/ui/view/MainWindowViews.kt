@@ -60,6 +60,7 @@ import me.earzuchan.ryo.aiee.app.SaveOldCommand
 import me.earzuchan.ryo.aiee.app.ToggleMaximizeWindowOldCommand
 import me.earzuchan.ryo.aiee.app.ToggleSidePanelOldCommand
 import me.earzuchan.ryo.aiee.app.UndoOldCommand
+import me.earzuchan.ryo.aiee.app.orderAbout
 import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.duty.SidePanelDuty
 import me.earzuchan.ryo.aiee.duty.OldTabDuty
@@ -217,7 +218,7 @@ fun MainWorkspaceView(oldAppDuty: OldAppDuty) = Column(Modifier.fillMaxSize().cl
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
     }
 
-    Box(Modifier.fillMaxSize()) { Children(oldAppDuty.oldWorkspaceDuty.tabStack) { child -> child.instance.Render(oldAppDuty) } }
+    Box(Modifier.fillMaxSize()) { Children(oldAppDuty.oldWorkspaceDuty.tabStack) { child -> child.instance.Render() } }
 }
 
 @Composable
@@ -305,7 +306,7 @@ fun FrameWindowScope.AppTopBarView(oldAppDuty: OldAppDuty, windowControlButtons:
                 RyoMenuEntry.MenuItem(menuLabel(Res.string.welcome.text, OpenWelcomeTabOldCommand), oldAppDuty.canExecuteCommand(OpenWelcomeTabOldCommand)) { oldAppDuty.executeCommand(OpenWelcomeTabOldCommand) },
                 RyoMenuEntry.MenuItem(menuLabel(Res.string.settings.text, OpenSettingsTabOldCommand), oldAppDuty.canExecuteCommand(OpenSettingsTabOldCommand)) { oldAppDuty.executeCommand(OpenSettingsTabOldCommand) },
                 RyoMenuEntry.Divider,
-                RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = oldAppDuty::showAboutDialog)
+                RyoMenuEntry.MenuItem(Res.string.menu_item_about.text, onClick = oldAppDuty.dialogService::orderAbout)
             )
         )
     )

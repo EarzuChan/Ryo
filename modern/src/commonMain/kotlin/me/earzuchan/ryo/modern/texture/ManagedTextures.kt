@@ -9,21 +9,22 @@ import me.earzuchan.ryo.foundation.util.RgbImage
 import me.earzuchan.ryo.foundation.value.RyoValue
 import me.earzuchan.ryo.modern.session.FragmentalImageSession
 
+// TODO：线程安全问题；削脏
 class ManagedTexture internal constructor(private val chamber: TextureChamber) {
     private val revisions = MutableList(chamber.groupCount) { 0L }
     private val _groups = MutableStateFlow(revisions.toList())
 
-    val groups: StateFlow<List<Long>> get() = _groups.asStateFlow()
-    val groupCount: Int get() = revisions.size
+    val groups: StateFlow<List<Long>> = _groups.asStateFlow()
+    val groupCount get() = revisions.size
 
-    fun getGroup(groupIndex: Int): List<RyoValue> = chamber.getGroup(groupIndex)
+    fun getGroup(groupIndex: Int) = chamber.getGroup(groupIndex)
 
     fun setGroup(groupIndex: Int, values: List<RyoValue>) {
         chamber.setGroup(groupIndex, values)
         bump(groupIndex)
     }
 
-    fun createGroup(values: List<RyoValue>): Int = chamber.createGroup(values).also { revisions += 0L; publish() }
+    fun createGroup(values: List<RyoValue>) = chamber.createGroup(values).also { revisions += 0L; publish() }
 
     fun deleteGroup(groupIndex: Int): Boolean {
         if (!chamber.deleteGroup(groupIndex)) return false
@@ -32,7 +33,7 @@ class ManagedTexture internal constructor(private val chamber: TextureChamber) {
         return true
     }
 
-    fun cloneGroup(groupIndex: Int): Int = chamber.cloneGroup(groupIndex).also { revisions += 0L; publish() }
+    fun cloneGroup(groupIndex: Int) = chamber.cloneGroup(groupIndex).also { revisions += 0L; publish() }
 
     fun checkoutFragmentalImage(groupIndex: Int, valueIndex: Int = 0) = FragmentalImageSession(chamber.getFragmentalImage(groupIndex, valueIndex))
 

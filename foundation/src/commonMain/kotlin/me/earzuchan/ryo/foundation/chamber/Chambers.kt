@@ -20,6 +20,7 @@ import me.earzuchan.ryo.foundation.value.RyoValue
 
 // VAMOS，这个Chamber的命名太好了，既表面了它是一个容器，也致敬了尚勃的臭勒。Vamos！
 
+// TODO：卷（本身）克隆
 abstract class Chamber internal constructor(internal val ryo: RyoRuntime) { // TIPS：Id等为内部可用，故不向调库者泄露
     @Suppress("ArrayInDataClass")
     private data class EntryFrame(var gloryBindingId: Int, var metaHeapOffset: Int, var metaHeapCount: Int, var data: ByteArray?)
@@ -576,9 +577,9 @@ class VolumeChamber internal constructor(ryo: RyoRuntime) : Chamber(ryo) {
 
     fun tryDelete(token: String): Result<Boolean> = runCatching { delete(token) }
 
-    fun rename(oldToken: String, newToken: String) {
+    fun rename(oldToken: String, newToken: String, overwrite: Boolean = false) {
         val id = tokenToId.remove(oldToken) ?: error("Token not found: $oldToken")
-        require(newToken !in tokenToId) { "Token exists: $newToken" }
+        if (!overwrite && newToken in tokenToId) error("Token exists: $newToken")
         tokenToId[newToken] = id
     }
 

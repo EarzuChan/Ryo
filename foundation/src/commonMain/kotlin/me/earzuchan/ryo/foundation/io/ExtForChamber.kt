@@ -18,6 +18,6 @@ fun Chamber.writeTo(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM, allo
     fileSystem.write(path) { write(bytes) }
 }
 
-fun Ryo.loadVolumeChamberFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM): VolumeChamber = createVolumeChamber().apply { loadFrom(path, fileSystem) }
+fun Ryo.loadVolumeChamberFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM) = createVolumeChamber().apply { loadFrom(path, fileSystem) }
 
-fun Ryo.loadTextureChamberFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM): TextureChamber = createTextureChamber().apply { loadFrom(path, fileSystem) }
+fun Ryo.loadTextureChamberFrom(path: Path, fileSystem: FileSystem = FileSystem.SYSTEM) = createTextureChamber().apply { loadFrom(path, fileSystem) }

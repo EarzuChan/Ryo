@@ -16,7 +16,7 @@ class FragmentalImageSession internal constructor(initialFi: FragmentalImage) {
     private var cursor = 0
 
     private val _raw = MutableStateFlow(initialFi)
-    val raw: StateFlow<FragmentalImage> get() = _raw.asStateFlow()
+    val raw: StateFlow<FragmentalImage> = _raw.asStateFlow()
 
     val state: Flow<RgbImage> = raw.map(::extractToImage)
 

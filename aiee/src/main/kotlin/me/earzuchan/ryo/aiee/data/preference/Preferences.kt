@@ -1,9 +1,8 @@
 package me.earzuchan.ryo.aiee.data.preference
 
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-object RyoPreferences {
+object Preferences {
     enum class Language { SYSTEM, CHINESE, ENGLISH }
 
     enum class ThemeMode { SYSTEM, DARK, LIGHT }

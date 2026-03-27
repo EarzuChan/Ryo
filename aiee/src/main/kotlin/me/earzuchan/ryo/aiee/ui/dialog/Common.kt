@@ -44,7 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
-import me.earzuchan.ryo.aiee.duty.DialogDuty
+import me.earzuchan.ryo.aiee.app.DialogService
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.ui.resolve
 import me.earzuchan.ryo.aiee.util.UiUtils.vector
@@ -98,7 +98,7 @@ fun DialogBase(ctrlShow: Boolean, showOverlay: Boolean = true, onOverlayClick: (
 }
 
 @Composable
-fun CommonDialog(model: DialogDuty.Model.Common, onActionClick: (DialogDuty.DialogAction) -> Unit) = Column(Modifier.width(IntrinsicSize.Max).widthIn(min = 240.dp, max = 560.dp)) {
+fun CommonDialog(model: DialogService.Model.Common, onActionClick: (DialogService.DialogAction) -> Unit) = Column(Modifier.width(IntrinsicSize.Max).widthIn(min = 240.dp, max = 560.dp)) {
     val tFdp = 24.dp
 
     Column(Modifier.fillMaxWidth().padding(horizontal = tFdp).padding(top = tFdp), verticalArrangement = Arrangement.spacedBy(16.dp)) { // 有icon时，居中title

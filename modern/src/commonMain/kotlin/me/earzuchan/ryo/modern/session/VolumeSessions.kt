@@ -77,7 +77,7 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
     val rootCursor: RyoCursor get() = cursorAt(RyoPath.ROOT)
     inline fun <reified T : RyoCursor> getRootCursorAs(): T = rootCursor as? T ?: error("Root cursor is ${rootCursor::class.simpleName}, expected ${T::class.simpleName}")
 
-    fun extractFinalResult(): RyoValue = currentRoot
+    val snapshot: RyoValue get() = currentRoot
 
     private fun broadcastAll() = flowRegistry.forEach { (path, flow) -> flow.value = resolveValue(currentRoot, path) }
 
@@ -89,7 +89,7 @@ class EditorSession internal constructor(internal val runtime: ModernRuntime, in
 }
 
 sealed class RyoCursor(val session: EditorSession, val path: RyoPath) {
-    val stateFlow: StateFlow<RyoValue?> get() = session.observe(path)
+    val stateFlow: StateFlow<RyoValue?> get() = session.observe(path) // CHECK：有人说这里改用`by lazy`而不是`get()`
     val snapshot: RyoValue? get() = session.resolve(path)
 
     fun asHosted() = this as HostedCursor

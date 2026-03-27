@@ -5,11 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
-import kotlinx.coroutines.flow.stateIn
-import me.earzuchan.ryo.aiee.data.repository.RyoPreferencesRepository
 
 val primaryLight = Color(0xFF275EA7)
 val onPrimaryLight = Color(0xFFFFFFFF)

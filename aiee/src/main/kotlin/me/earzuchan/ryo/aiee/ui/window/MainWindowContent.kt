@@ -26,6 +26,6 @@ fun FrameWindowScope.MainWindowContent(oldAppDuty: OldAppDuty, ryoWindowScope: R
         }
     }
 
-    AppMenuHostView(oldAppDuty.menuDuty)
-    AppDialogHostView(oldAppDuty.dialogDuty)
+    AppMenuHostView(oldAppDuty.menuService)
+    AppDialogHostView(oldAppDuty.dialogService)
 }
