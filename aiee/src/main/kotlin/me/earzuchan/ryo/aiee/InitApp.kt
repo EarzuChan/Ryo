@@ -11,7 +11,6 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import io.github.vinceglb.filekit.FileKit
 import me.earzuchan.ryo.aiee.di.appModule
 import me.earzuchan.ryo.aiee.duty.AppDuty
-import me.earzuchan.ryo.aiee.duty.OldAppDuty
 import me.earzuchan.ryo.aiee.resources.Res
 import me.earzuchan.ryo.aiee.resources.illu_ryo_lawnchair
 import me.earzuchan.ryo.aiee.ui.AppEnvironment
@@ -27,13 +26,12 @@ fun main() {
         KoinApplication(application = { modules(appModule) }) {
             val lifecycle = remember { LifecycleRegistry() }
             val mainWindowState = rememberWindowState(size = DpSize(1280.dp, 820.dp))
-            val oldAppDuty = remember { OldAppDuty(AncestorDutyContext(lifecycle), ::exitApplication) }
             val appDuty = remember { AppDuty(AncestorDutyContext(lifecycle), ::exitApplication) }
 
             LifecycleController(lifecycle, mainWindowState)
 
             AppEnvironment {
-                RyoWindow(oldAppDuty::requestClose, mainWindowState, oldAppDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = oldAppDuty.windowInterop) { MainWindowContent(oldAppDuty, it) }
+                RyoWindow(appDuty::requestQuit, mainWindowState, appDuty.windowTitle, Res.drawable.illu_ryo_lawnchair.paint, ryoWindowInterop = appDuty.windowInterop) { MainWindowContent(appDuty, it) }
             }
         }
     }

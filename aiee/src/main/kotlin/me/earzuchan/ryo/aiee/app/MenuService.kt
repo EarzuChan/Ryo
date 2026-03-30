@@ -46,6 +46,7 @@ class MenuService {
         cachedRequest = currentRequest
     }
 
+    // 传Density实在是不够优雅，要是能LaterResolve就好了
     fun showInPlaceSelectMenu(textX: Int, textCenterY: Int, selectedIndex: Int, density: Density, entries: List<RyoMenuEntry>) {
         val resolvedSelectedIndex = selectedIndex.coerceIn(0, entries.lastIndex.coerceAtLeast(0))
         val menuPanelPaddingPx = with(density) { menuPanelPaddingDp.roundToPx() }

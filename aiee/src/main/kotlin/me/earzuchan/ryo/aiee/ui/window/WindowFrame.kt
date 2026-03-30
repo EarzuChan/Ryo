@@ -25,7 +25,9 @@ import androidx.compose.ui.window.WindowState
 import io.github.kdroidfilter.platformtools.darkmodedetector.isSystemInDarkMode
 import me.earzuchan.ryo.aiee.app.AppService
 import me.earzuchan.ryo.aiee.resources.*
+import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
+import me.earzuchan.ryo.aiee.ui.resolve
 import me.earzuchan.ryo.aiee.ui.theme.RyoTheme
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import org.koin.compose.koinInject
@@ -64,10 +66,10 @@ class RyoWindowScope internal constructor(private val windowController: RyoWindo
 }
 
 @Composable
-fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: String, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
+fun RyoWindow(onCloseRequest: () -> Unit, windowState: WindowState, title: UiText, icon: Painter? = null, visible: Boolean = true, ryoWindowInterop: RyoWindowInterop? = null, content: @Composable FrameWindowScope.(RyoWindowScope) -> Unit) {
     val forceDarkMode by koinInject<AppService>().forceDarkMode.collectAsState()
 
-    Window(onCloseRequest, windowState, visible, title, icon, true, true) {
+    Window(onCloseRequest, windowState, visible, title.resolve(), icon, undecorated = true, transparent = true) {
         val windowController = remember(windowState, onCloseRequest) { RyoWindowController(windowState, onCloseRequest) }
         val scope = remember(windowController) { RyoWindowScope(windowController) }
 

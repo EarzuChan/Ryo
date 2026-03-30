@@ -124,5 +124,3 @@ class DialogService {
         ticket.model.onOpen?.invoke()
     }
 }
-
-fun DialogService.orderAbout() = orderSpecial(closeOnOverlayClick = true) { AboutDialog() }

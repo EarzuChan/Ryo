@@ -38,4 +38,6 @@ object OldPathUtils {
 
 object FileUtils {
     val Path.nameWithoutExt get() = this.name.substringBefore('.')
+
+    suspend fun openFile() = FileKit.openFilePicker(mode = FileKitMode.Single)?.path?.toPath()
 }

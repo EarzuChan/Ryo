@@ -1,8 +1,10 @@
 package me.earzuchan.ryo.aiee.app
 
 import androidx.compose.ui.input.key.KeyEvent
+import kotlinx.coroutines.launch
+import me.earzuchan.ryo.aiee.util.CoroutineObject
 
-class CommandService(private val shortcutService: ShortcutService) {
+class CommandService(private val shortcutService: ShortcutService) : CoroutineObject() {
     private val executors = mutableMapOf<String, suspend () -> Unit>()
 
     private val validators = mutableMapOf<String, () -> Boolean>()
@@ -18,14 +20,18 @@ class CommandService(private val shortcutService: ShortcutService) {
 
     suspend fun execute(commandId: String) = if (canExecute(commandId)) executeInternal(commandId) else error("目前不可执行$commandId")
 
+    fun dispatch(commandId: String) {
+        scope.launch { execute(commandId) }
+    }
+
     private suspend fun executeInternal(commandId: String) = executors[commandId]?.invoke()
 
     // 供 Compose Window 拦截 KeyEvent
-    suspend fun handleKeyEvent(event: KeyEvent): Boolean {
+    fun handleKeyEvent(event: KeyEvent): Boolean {
         val commandId = shortcutService.resolve(event) ?: return false
 
         if (!canExecute(commandId)) return false
-        executeInternal(commandId)
+        scope.launch { executeInternal(commandId) }
         return true
     }
 }

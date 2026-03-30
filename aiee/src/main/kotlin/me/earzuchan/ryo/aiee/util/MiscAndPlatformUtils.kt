@@ -3,7 +3,10 @@ package me.earzuchan.ryo.aiee.util
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.data.RYO_DATABASE_NAME
 import me.earzuchan.ryo.aiee.data.RYO_PREFERENCES_NAME
@@ -14,6 +17,12 @@ import okio.Path.Companion.toPath
 import java.awt.Desktop
 import java.net.URI
 import javax.swing.SwingUtilities
+
+abstract class CoroutineObject {
+    protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    fun destroy() = scope.cancel() // TODO：啊你怎么不取消！干！
+}
 
 object DataUtils {
     fun buildDatabase() = Room.databaseBuilder<Database>((PlatformUtils.appDatabasePath / RYO_DATABASE_NAME).toString()).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).fallbackToDestructiveMigration(true).build()

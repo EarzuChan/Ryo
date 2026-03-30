@@ -1,0 +1,133 @@
+package me.earzuchan.ryo.aiee.ui.page
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import me.earzuchan.ryo.aiee.BuildConfig
+import me.earzuchan.ryo.aiee.app.AppService
+import me.earzuchan.ryo.aiee.app.CommandService
+import me.earzuchan.ryo.aiee.app.DialogService
+import me.earzuchan.ryo.aiee.app.MenuService
+import me.earzuchan.ryo.aiee.data.preference.Preferences
+import me.earzuchan.ryo.aiee.duty.AppDuty
+import me.earzuchan.ryo.aiee.resources.*
+import me.earzuchan.ryo.aiee.ui.UiText
+import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
+import me.earzuchan.ryo.aiee.util.UiUtils.text
+import me.earzuchan.ryo.aiee.util.UiUtils.vector
+import org.jetbrains.compose.resources.DrawableResource
+import org.koin.compose.koinInject
+import kotlin.math.roundToInt
+
+@Composable
+fun SettingsPage() {
+    val appService = koinInject<AppService>()
+    val commandService = koinInject<CommandService>()
+    val menuService = koinInject<MenuService>()
+    val dialogService = koinInject<DialogService>()
+
+    @Composable
+    fun Section(title: String) = Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp, vertical = 4.dp), Alignment.BottomStart) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+    }
+
+    @Composable
+    fun Item(icon: DrawableResource, title: String, subtitle: String? = null, trailing: String? = null, enabled: Boolean = true, onTrailingAnchorChanged: ((IntOffset) -> Unit)? = null, onClick: (() -> Unit)? = null) {
+        val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38F)
+        val sideColor = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38F)
+        val rowModifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).let { if (onClick == null) it else it.clickable(enabled = enabled, onClick = onClick) }.padding(horizontal = 16.dp, vertical = 12.dp)
+
+        Row(rowModifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Icon(icon.vector, title, Modifier.size(24.dp), sideColor)
+
+            Column(Modifier.weight(1F)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
+                if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = sideColor)
+            }
+
+            if (trailing != null) Text(
+                trailing, Modifier.onGloballyPositioned { coords ->
+                    val b = coords.boundsInWindow()
+                    onTrailingAnchorChanged?.invoke(IntOffset(b.left.roundToInt(), ((b.top + b.bottom) / 2F).roundToInt()))
+                }, color = sideColor, style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+
+
+    val (languageTextAnchor, setLanguageTextAnchor) = remember { mutableStateOf(IntOffset.Zero) }
+    val (themeModeTextAnchor, setThemeModeTextAnchor) = remember { mutableStateOf(IntOffset.Zero) }
+    val density = LocalDensity.current
+
+    val themeMode by appService.appThemeMode.collectAsState()
+    val language by appService.appLanguage.collectAsState()
+    val shortcutsDialogTitle = Res.string.set_shortcuts.text
+    val shortcutsDialogDescription = Res.string.settings_shortcuts_dialog_description.text
+    val gotIt = Res.string.action_got_it.text
+
+    val languageOptionLabels = Preferences.Language.entries.associateWith { option ->
+        when (option) {
+            Preferences.Language.SYSTEM -> Res.string.language_option_system.text
+            Preferences.Language.CHINESE -> Res.string.language_option_chinese.text
+            Preferences.Language.ENGLISH -> Res.string.language_option_english.text
+        }
+    }
+    val themeModeOptionLabels = Preferences.ThemeMode.entries.associateWith { option ->
+        when (option) {
+            Preferences.ThemeMode.SYSTEM -> Res.string.theme_mode_system.text
+            Preferences.ThemeMode.DARK -> Res.string.theme_mode_dark.text
+            Preferences.ThemeMode.LIGHT -> Res.string.theme_mode_light.text
+        }
+    }
+
+    fun openLanguageSelectMenu() {
+        val options = Preferences.Language.entries
+        menuService.showInPlaceSelectMenu(languageTextAnchor.x, languageTextAnchor.y, options.indexOf(language), density, options.map { option ->
+            RyoMenuEntry.MenuItem(languageOptionLabels.getValue(option), onClick = { appService.setAppLanguage(option) })
+        })
+    }
+
+    fun openThemeModeSelectMenu() {
+        val options = Preferences.ThemeMode.entries
+        menuService.showInPlaceSelectMenu(themeModeTextAnchor.x, themeModeTextAnchor.y, options.indexOf(themeMode), density, options.map { option ->
+            RyoMenuEntry.MenuItem(themeModeOptionLabels.getValue(option), onClick = { appService.setAppThemeMode(option) })
+        })
+    }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
+        Section(Res.string.settings_section_usage.text)
+
+        Item(Res.drawable.ic_apps_24px, Res.string.preferred_editors.text, enabled = false) // TODO
+
+        Item(Res.drawable.ic_keyboard_24px, Res.string.set_shortcuts.text) {
+            // TODO
+            dialogService.orderCommon(Res.drawable.ic_keyboard_24px, UiText.Plain(shortcutsDialogTitle), UiText.Plain(shortcutsDialogDescription), listOf(DialogService.DialogAction(UiText.Plain(gotIt))))
+        }
+
+        Section(Res.string.settings_section_interface.text)
+        Item(Res.drawable.ic_language_24px, Res.string.settings_item_language.text, trailing = languageOptionLabels.getValue(language), onTrailingAnchorChanged = setLanguageTextAnchor, onClick = ::openLanguageSelectMenu)
+        Item(Res.drawable.ic_ui_mode_24px, Res.string.settings_item_mode.text, trailing = themeModeOptionLabels.getValue(themeMode), onTrailingAnchorChanged = setThemeModeTextAnchor, onClick = ::openThemeModeSelectMenu)
+
+        Item(Res.drawable.ic_palette_24px, Res.string.settings_item_theme.text, trailing = Res.string.settings_theme_default.text, enabled = false) // TODO
+
+        Section(Res.string.settings_section_more.text)
+        Item(Res.drawable.ic_info_24px, Res.string.settings_item_about_format.text(BuildConfig.APP_NAME), subtitle = Res.string.settings_item_about_subtitle_format.text(BuildConfig.APP_AUTHOR)) { commandService.dispatch(AppDuty.CMD_SHOW_ABOUT_DIALOG) }
+        Item(Res.drawable.ic_check_update_24px, Res.string.settings_item_check_update.text, subtitle = BuildConfig.APP_VER, trailing = Res.string.settings_update_latest.text, enabled = false) // TODO
+        Spacer(Modifier.fillMaxWidth().height(16.dp))
+    }
+}

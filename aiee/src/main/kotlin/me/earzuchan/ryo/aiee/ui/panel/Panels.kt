@@ -18,6 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.derivedStateOf
+import me.earzuchan.ryo.aiee.app.MenuService
+import me.earzuchan.ryo.aiee.app.WorkspaceService
+import me.earzuchan.ryo.aiee.duty.AppDuty
 import me.earzuchan.ryo.aiee.duty.AssetsPanelDuty
 import me.earzuchan.ryo.aiee.duty.SchemasPanelDuty
 import me.earzuchan.ryo.aiee.resources.Res
@@ -30,12 +34,13 @@ import me.earzuchan.ryo.aiee.ui.component.TreeView
 import me.earzuchan.ryo.aiee.ui.component.TreeViewState.Companion.rememberTreeViewState
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import org.jetbrains.compose.resources.StringResource
+import org.koin.compose.koinInject
 
 @Composable
 private fun String?.PanelErr() = this?.also { Text(it, Modifier.fillMaxWidth().padding(vertical = 16.dp), MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
 @Composable
-private fun StringResource.EmptyStr()=Box(Modifier.fillMaxSize().padding(bottom = 12.dp), Alignment.Center) { Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
+private fun StringResource.EmptyStr() = Box(Modifier.fillMaxSize().padding(bottom = 12.dp), Alignment.Center) { Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
 
 @Composable
 private fun PanelScaffold(searchHint: StringResource, keyword: String, onKeywordChange: (String) -> Unit, content: @Composable () -> Unit) = Column(Modifier.fillMaxSize()) {
@@ -45,63 +50,51 @@ private fun PanelScaffold(searchHint: StringResource, keyword: String, onKeyword
 
 @Composable
 fun SchemasPanel(duty: SchemasPanelDuty) {
-    var keyword by remember { mutableStateOf("") }
-    val treeState = rememberTreeViewState()
-
-    val state by duty.state.collectAsState()
-
-    val nodes = remember(state.schemas) { state.schemas.map { TreeNodeModel(it.modelId, listOf(TreeNodeModel("kind: ${it.kind.name}")) + it.members.map(::TreeNodeModel)) } }
-
-    PanelScaffold(Res.string.panel_schemas_manager, keyword, { keyword = it }) {
-        state.lastError.PanelErr()
-
-        if (nodes.isEmpty()) Res.string.panel_schemas_empty.EmptyStr()
-        else TreeView(nodes, Modifier.fillMaxSize(), keyword, state = treeState)
-    }
+    Text("啊一个无")
 }
 
 @Composable
-fun AssetsPanel(duty: AssetsPanelDuty, onShowContextMenu: (anchorX: Int, anchorY: Int, entries: List<RyoMenuEntry>) -> Unit) {
+fun AssetsPanel(duty: AssetsPanelDuty) {
+    val menuService = koinInject<MenuService>()
+    val workspaceService = koinInject<WorkspaceService>()
+
     var keyword by remember { mutableStateOf("") }
     val treeState = rememberTreeViewState()
 
-    val state by duty.state.collectAsState()
     val volumeInfoText = Res.string.menu_item_volume_info.text
     val saveText = Res.string.menu_item_save.text
     val saveAsText = Res.string.menu_item_save_as.text
     val closeText = Res.string.action_close.text
 
-    val nodes = remember(state.volumes) { state.volumes.map { volume -> TreeNodeModel(volume.name, volume.tokens.map(::TreeNodeModel)) } }
+    val volumes by workspaceService.volumes.collectAsState()
+    val nodes by derivedStateOf {
+        volumes.map { vol ->
+            TreeNodeModel(vol.displayName,vol.volume.entries.value.keys.map { TreeNodeModel(it) })
+        }
+    }
 
-    LaunchedEffect(state.activeVolumeId, state.volumes) {
+    /*LaunchedEffect(appDuty.activeVolumeState, volumes) {
         val index = state.volumes.indexOfFirst { it.id == state.activeVolumeId }
         if (index < 0) return@LaunchedEffect
         val focusedPath = treeState.pathOfLastClickedNode
         if (focusedPath.firstOrNull() == index) return@LaunchedEffect
         treeState.locatePath(listOf(index))
-    }
+    }*/
 
     PanelScaffold(Res.string.panel_assets_manager, keyword, { keyword = it }) {
         Column(Modifier.fillMaxSize()) {
-            state.lastError.PanelErr()
 
-            if (nodes.isEmpty())  Res.string.panel_assets_empty.EmptyStr()
-            else TreeView(nodes, Modifier.fillMaxSize(), keyword, state = treeState, onNodeClick = duty::onTreeNodeClick, onNodeRightClick = { path, anchorX, anchorY ->
+            if (nodes.isEmpty()) Res.string.panel_assets_empty.EmptyStr()
+            else TreeView(nodes, Modifier.fillMaxSize(), keyword, state = treeState, /*onNodeClick = duty::onTreeNodeClick, onNodeRightClick = { path, anchorX, anchorY ->
                 if (path.size != 1) return@TreeView
                 val volume = duty.volumeByPath(path) ?: return@TreeView
 
                 duty.onTreeNodeClick(path)
-                onShowContextMenu(
+                menuService.showContextMenu(
                     anchorX,
                     anchorY,
-                    listOf(
-                        RyoMenuEntry.MenuItem(volumeInfoText, false),
-                        RyoMenuEntry.MenuItem(saveText) { duty.saveVolume(volume.id) },
-                        RyoMenuEntry.MenuItem(saveAsText) { duty.saveVolumeAs(volume.id) },
-                        RyoMenuEntry.MenuItem(closeText) { duty.closeVolume(volume.id) }
-                    )
-                )
-            })
+                    listOf(RyoMenuEntry.MenuItem(volumeInfoText, false), RyoMenuEntry.MenuItem(saveText) { duty.saveVolume(volume.id) }, RyoMenuEntry.MenuItem(saveAsText) { duty.saveVolumeAs(volume.id) }, RyoMenuEntry.MenuItem(closeText) { duty.closeVolume(volume.id) }))
+            }*/)
         }
     }
 }

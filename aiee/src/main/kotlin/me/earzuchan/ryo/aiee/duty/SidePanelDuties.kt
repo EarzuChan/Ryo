@@ -3,63 +3,36 @@ package me.earzuchan.ryo.aiee.duty
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.arkivanov.decompose.ComponentContext as DutyContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.value.Value
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import me.earzuchan.ryo.aiee.app.OldWorkspaceService
-import me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository
-import me.earzuchan.ryo.aiee.resources.Res
+import me.earzuchan.ryo.aiee.app.CommandService
+import me.earzuchan.ryo.aiee.app.WorkspaceService
 import me.earzuchan.ryo.aiee.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import com.arkivanov.decompose.ComponentContext as DutyContext
 
-class SidePanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, private val oldWorkspaceService: OldWorkspaceService) : DutyContext by ctx {
+class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
+    val commandService by inject<CommandService>()
+
     companion object {
         private const val DEFAULT_WIDTH_DP = 280F
         private const val COLLAPSE_THRESHOLD_DP = 80F
         private const val MAX_WIDTH_DP = 560F
+
+        const val CMD_TOGGLE = "side_panel.toggle"
     }
 
-    data class State(val expanded: Boolean, val panelWidthDp: Float, val activePanelId: String)
-
-    sealed interface Intent {
-        data class Focus(val panelId: String) : Intent
-        data object ToggleExpanded : Intent
-        data class Resize(val deltaDp: Float) : Intent
-    }
-
-    sealed interface Effect {
-        data object NoOp : Effect
-        data class Focused(val panelId: String) : Effect
-        data object Resized : Effect
-    }
-
-    data class Panel(val id: String, val navi: SidePanelNavis, val titleRes: StringResource, val icon: DrawableResource, val selectedIcon: DrawableResource = icon)
-
-    sealed interface PanelChild {
-        val panelId: String
-        val titleRes: StringResource
-
-        data class Assets(val duty: AssetsPanelDuty) : PanelChild {
-            override val panelId = SidePanelNavis.Assets.id
-            override val titleRes = Res.string.panel_assets_manager
-        }
-
-        data class Schemas(val duty: SchemasPanelDuty) : PanelChild {
-            override val panelId = SidePanelNavis.Schemas.id
-            override val titleRes = Res.string.panel_schemas_manager
-        }
-    }
+    data class Panel(val id: String, val navi: SidePanelNavis, val title: StringResource, val icon: DrawableResource, val selectedIcon: DrawableResource = icon)
 
     private val navigation = StackNavigation<SidePanelNavis>()
 
-    val panelStack: Value<ChildStack<SidePanelNavis, PanelChild>> = childStack(navigation, SidePanelNavis.serializer(), SidePanelNavis.Assets, "SidePanelStack", false, ::mapPanelChild)
+    val panelStack: Value<ChildStack<SidePanelNavis, Any>> = childStack(navigation, SidePanelNavis.serializer(), SidePanelNavis.Assets, "SidePanelStack", false, ::mapChild)
 
     val panels = listOf(
         Panel(SidePanelNavis.Assets.id, SidePanelNavis.Assets, Res.string.panel_assets_manager, Res.drawable.ic_list_24px, Res.drawable.ic_list_filled_24px),
@@ -70,90 +43,54 @@ class SidePanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, pri
     var panelWidthDp by mutableStateOf(DEFAULT_WIDTH_DP); private set
     private var collapsedByDrag by mutableStateOf(false)
 
-    val activePanelId: String get() = panelStack.value.active.configuration.id
-    val activePanel: Panel get() = panels.firstOrNull { it.id == activePanelId } ?: panels.first()
-    val state get() = State(expanded, panelWidthDp, activePanelId)
-    val workspaceState: StateFlow<FuckedWorkspaceRepository.State> = oldWorkspaceService.state
-    val hasActiveVolume: Boolean get() = oldWorkspaceService.state.value.activeVolumeId != null
-
-    fun dispatch(intent: Intent): Effect = when (intent) {
-        is Intent.Focus -> focus(intent.panelId)
-        Intent.ToggleExpanded -> toggle()
-        is Intent.Resize -> resize(intent.deltaDp)
+    init {
+        commandService.register(CMD_TOGGLE) { toggle() }
     }
 
-    fun focusPanel(id: String) = dispatch(Intent.Focus(id))
+    // --- 本地视图交互API ---
 
-    fun toggleExpanded() = dispatch(Intent.ToggleExpanded)
-
-    fun resizeBy(deltaDp: Float) = dispatch(Intent.Resize(deltaDp))
-
-    fun openVolumeByDialog() = dutyScope.launch { oldWorkspaceService.openVolumeByDialog() }
-
-    fun saveActiveVolume() = dutyScope.launch { oldWorkspaceService.saveActiveVolume() }
-
-    fun saveActiveVolumeAsByDialog() = dutyScope.launch { oldWorkspaceService.saveActiveVolumeAsByDialog() }
-
-    fun closeActiveVolume() = dutyScope.launch { oldWorkspaceService.closeActiveVolume() }
-
-    private fun focus(id: String): Effect {
-        val panel = panels.firstOrNull { it.id == id } ?: return Effect.NoOp
+    fun focus(id: String) {
+        val panel = panels.firstOrNull { it.id == id } ?: return
         navigation.bringToFront(panel.navi)
-        if (!expanded && collapsedByDrag) panelWidthDp = DEFAULT_WIDTH_DP
-        collapsedByDrag = false
-        expanded = true
-        return Effect.Focused(id)
-    }
 
-    private fun toggle(): Effect {
-        if (expanded) {
-            expanded = false
-            return Effect.NoOp
+        if (!expanded) {
+            if (collapsedByDrag) panelWidthDp = DEFAULT_WIDTH_DP
+            collapsedByDrag = false
+            expanded = true
         }
-
-        if (collapsedByDrag) panelWidthDp = DEFAULT_WIDTH_DP
-        collapsedByDrag = false
-        expanded = true
-        return Effect.NoOp
     }
 
-    private fun resize(deltaDp: Float): Effect {
+    fun resizeBy(deltaDp: Float) {
         val targetWidth = panelWidthDp + deltaDp
         if (targetWidth <= COLLAPSE_THRESHOLD_DP) {
             collapsedByDrag = true
             expanded = false
-            return Effect.Resized
+        } else {
+            panelWidthDp = targetWidth.coerceAtMost(MAX_WIDTH_DP)
+            collapsedByDrag = false
+            expanded = true
         }
+    }
 
-        panelWidthDp = targetWidth.coerceAtMost(MAX_WIDTH_DP)
+    fun toggle() = if (expanded) expanded = false else {
+        if (collapsedByDrag) panelWidthDp = DEFAULT_WIDTH_DP
         collapsedByDrag = false
         expanded = true
-        return Effect.Resized
     }
 
-    private fun mapPanelChild(navi: SidePanelNavis, subCtx: DutyContext): PanelChild = when (navi) {
-        SidePanelNavis.Assets -> PanelChild.Assets(AssetsPanelDuty(subCtx, dutyScope, oldWorkspaceService))
-        SidePanelNavis.Schemas -> PanelChild.Schemas(SchemasPanelDuty(subCtx, oldWorkspaceService))
-    }
-}
+    fun mentionSettings() = commandService.dispatch(MainPanelDuty.CMD_MENTION_SETTINGS)
 
-class AssetsPanelDuty(ctx: DutyContext, private val dutyScope: CoroutineScope, private val oldWorkspaceService: OldWorkspaceService) : DutyContext by ctx {
-    val state: StateFlow<FuckedWorkspaceRepository.State> = oldWorkspaceService.state
+    // --- 私有实现 ---
 
-    fun volumeByPath(path: List<Int>) = path.firstOrNull()?.let { state.value.volumes.getOrNull(it) }
-
-    fun saveVolume(volumeId: String) = dutyScope.launch { oldWorkspaceService.saveVolume(volumeId) }
-
-    fun saveVolumeAs(volumeId: String) = dutyScope.launch { oldWorkspaceService.saveVolumeAsByDialog(volumeId) }
-
-    fun closeVolume(volumeId: String) = dutyScope.launch { oldWorkspaceService.closeVolume(volumeId) }
-
-    fun onTreeNodeClick(path: List<Int>) {
-        val volume = volumeByPath(path) ?: return
-        oldWorkspaceService.selectVolume(volume.id)
+    // 直接映射到真实的子 Duty，UI 层通过 when(val duty = instance) 来分配对应的 Composable
+    private fun mapChild(navi: SidePanelNavis, subCtx: DutyContext): Any = when (navi) {
+        SidePanelNavis.Assets -> AssetsPanelDuty(subCtx)
+        SidePanelNavis.Schemas -> SchemasPanelDuty(subCtx)
     }
 }
 
-class SchemasPanelDuty(ctx: DutyContext, oldWorkspaceService: OldWorkspaceService) : DutyContext by ctx {
-    val state: StateFlow<me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository.State> = oldWorkspaceService.state
+class AssetsPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
+    val workspaceService by inject<WorkspaceService>()
 }
+
+class SchemasPanelDuty(ctx: DutyContext) : DutyContext by ctx

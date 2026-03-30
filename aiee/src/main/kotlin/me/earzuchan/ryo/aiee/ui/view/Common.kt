@@ -7,9 +7,12 @@ import me.earzuchan.ryo.aiee.app.MenuService
 import me.earzuchan.ryo.aiee.ui.component.RyoMenu
 import me.earzuchan.ryo.aiee.ui.dialog.CommonDialog
 import me.earzuchan.ryo.aiee.ui.dialog.DialogBase
+import org.koin.compose.koinInject
 
 @Composable
-fun AppDialogHostView(dialogService: DialogService) {
+fun AppDialogHostView() {
+    val dialogService = koinInject<DialogService>()
+
     val dialog = dialogService.currentDialog ?: return
     val dialogId = dialogService.currentDialogId ?: return
 
@@ -30,7 +33,9 @@ fun AppDialogHostView(dialogService: DialogService) {
 }
 
 @Composable
-fun AppMenuHostView(menuService: MenuService) {
+fun AppMenuHostView() {
+    val menuService = koinInject<MenuService>()
+
     val request = menuService.renderRequest ?: return
     RyoMenu(menuService.expanded, request.anchorX, request.anchorY, request.entries, menuService::dismiss, selectedIndex = request.selectedIndex)
 }

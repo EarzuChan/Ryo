@@ -8,20 +8,20 @@ enum class AppLifecycleStage {
 }
 
 @Serializable
-sealed class WorkspaceTabNavis {
+sealed class MainPanelTabNavis {
     abstract val id: String
 
     @Serializable
-    data object Empty : WorkspaceTabNavis() { override val id = "__empty__" }
+    data object Empty : MainPanelTabNavis() { override val id = "__empty__" }
 
     @Serializable
-    data object Welcome : WorkspaceTabNavis() { override val id = "welcome" }
+    data object Welcome : MainPanelTabNavis() { override val id = "welcome" }
 
     @Serializable
-    data object Settings : WorkspaceTabNavis() { override val id = "settings" }
+    data object Settings : MainPanelTabNavis() { override val id = "settings" }
 
     @Serializable
-    data class EditorSession(override val id: String, val index: Int, val initialDirty: Boolean = false) : WorkspaceTabNavis()
+    data class EditorSession(override val id: String) : MainPanelTabNavis()
 }
 
 @Serializable

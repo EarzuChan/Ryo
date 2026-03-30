@@ -14,10 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.data.repository.ShortcutRepository
+import me.earzuchan.ryo.aiee.util.CoroutineObject
 import kotlin.collections.component1
 import kotlin.collections.component2
 
-class ShortcutService(private val shortcutRepo: ShortcutRepository): ScopedService() {
+class ShortcutService(private val shortcutRepo: ShortcutRepository): CoroutineObject() {
     data class Stroke(val key: Key, val ctrl: Boolean = false, val alt: Boolean = false, val shift: Boolean = false, val meta: Boolean = false) {
         fun matches(event: KeyEvent): Boolean {
             if (event.type != KeyEventType.KeyDown) return false

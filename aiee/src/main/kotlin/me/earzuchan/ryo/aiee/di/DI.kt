@@ -2,7 +2,6 @@ package me.earzuchan.ryo.aiee.di
 
 import me.earzuchan.ryo.aiee.app.*
 import me.earzuchan.ryo.aiee.data.database.Database
-import me.earzuchan.ryo.aiee.data.repository.FuckedWorkspaceRepository
 import me.earzuchan.ryo.aiee.data.repository.PreferencesRepository
 import me.earzuchan.ryo.aiee.data.repository.ShortcutRepository
 import me.earzuchan.ryo.aiee.util.DataUtils
@@ -16,7 +15,6 @@ val appModule = module {
 
     single { PreferencesRepository(get()) }
     single { ShortcutRepository(get()) }
-    single { FuckedWorkspaceRepository() }
 
     single { MenuService() }
     single { DialogService() }
@@ -24,5 +22,4 @@ val appModule = module {
     single { CommandService(get()) }
     single { AppService(get()) }
     single { WorkspaceService(get()) }
-    single { OldWorkspaceService(get()) }
 }
