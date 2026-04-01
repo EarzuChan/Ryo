@@ -14,8 +14,10 @@ import me.earzuchan.ryo.aiee.ui.window.RyoWindowController
 import me.earzuchan.ryo.aiee.ui.window.RyoWindowInterop
 import me.earzuchan.ryo.aiee.util.CoroutineObject
 import me.earzuchan.ryo.aiee.util.FileUtils
+import me.earzuchan.ryo.aiee.util.LanguageExtensions.requireAs
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.*
 import com.arkivanov.decompose.ComponentContext as DutyContext
 
 class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext by ctx, KoinComponent, CoroutineObject() {
@@ -67,30 +69,50 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
         const val CMD_OPEN_VOLUME = "$TAG.OpenVolume"
         const val CMD_SAVE_ACTIVE_VOLUME = "$TAG.SaveActiveVolume"
+        const val CMD_SAVE_VOLUME = "$TAG.SaveVolume"
         const val CMD_SAVE_ACTIVE_VOLUME_AS = "$TAG.SaveActiveVolumeAs"
+        const val CMD_SAVE_VOLUME_AS = "$TAG.SaveVolumeAs"
         const val CMD_CLOSE_ACTIVE_VOLUME = "$TAG.CloseActiveVolume"
+        const val CMD_CLOSE_VOLUME = "$TAG.CloseVolume"
         const val CMD_SHOW_ABOUT_DIALOG = "$TAG.ShowAboutDialog"
     }
 
     init {
         // 命令注册
-        commandService.register(CMD_OPEN_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F7), { true }) {
+        commandService.register(CMD_OPEN_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F6), { true }) {
             FileUtils.openFile()?.let { workspaceService.openVolume(it) }
         }
 
         commandService.register(CMD_SAVE_ACTIVE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F7), { _activeVolumeState.value != null }) {
-            workspaceService.save(_activeVolumeState.value!!.id)
+            workspaceService.saveVolume(_activeVolumeState.value!!.id)
+        }
+
+        commandService.register(CMD_SAVE_VOLUME) {
+            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
+            workspaceService.saveVolume(id)
         }
 
         commandService.register(CMD_SAVE_ACTIVE_VOLUME_AS, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F8), { false }) {
             // TODO：接入
         }
 
-        commandService.register(CMD_CLOSE_ACTIVE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9), { false }) {
+        commandService.register(CMD_SAVE_VOLUME_AS) {
+            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
             // TODO：接入
         }
 
-        commandService.register(CMD_SHOW_ABOUT_DIALOG){dialogService.orderSpecial(closeOnOverlayClick = true) { AboutDialog() }}
+        commandService.register(CMD_CLOSE_ACTIVE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9), { false }) {
+            // TODO：检查保存境况
+            workspaceService.closeVolume(activeVolumeState.value!!.id)
+        }
+
+        commandService.register(CMD_CLOSE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9), { false }) {
+            // TODO：检查保存境况
+            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
+            workspaceService.closeVolume(id)
+        }
+
+        commandService.register(CMD_SHOW_ABOUT_DIALOG) { dialogService.orderSpecial(closeOnOverlayClick = true) { AboutDialog() } }
 
         // 刷新
         scope.launch {

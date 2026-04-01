@@ -24,6 +24,10 @@ abstract class CoroutineObject {
     fun destroy() = scope.cancel() // TODO：啊你怎么不取消！干！
 }
 
+fun interface Disposable {
+    fun dispose()
+}
+
 object DataUtils {
     fun buildDatabase() = Room.databaseBuilder<Database>((PlatformUtils.appDatabasePath / RYO_DATABASE_NAME).toString()).setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).fallbackToDestructiveMigration(true).build()
 
@@ -60,5 +64,12 @@ object PlatformUtils {
     fun openLink(url: String) {
         if (!Desktop.isDesktopSupported()) return
         runCatching { Desktop.getDesktop().browse(URI(url)) }
+    }
+}
+
+object LanguageExtensions {
+    inline fun <reified T> requireAs(obj: Any?, errMsg: String = "对象一定要类型正确"): T {
+        require(obj is T) { errMsg }
+        return obj
     }
 }

@@ -39,7 +39,7 @@ class WorkspaceService(private val appService: AppService) : CoroutineObject() {
 
     fun openVolume(path: Path, name: String = path.nameWithoutExt) = _volumes.update { it + VolumeState(name, modernRyo.manage(ryo.loadVolumeChamberFrom(path))) }
 
-    fun save(volumeId: UUID, targetPath: Path? = null) {
+    fun saveVolume(volumeId: UUID, targetPath: Path? = null) {
         val vol = _volumes.value.find { it.id == volumeId } ?: return
         val finalPath = targetPath ?: vol.filePath ?: return // 既没传新路径也没旧路径则返回
 

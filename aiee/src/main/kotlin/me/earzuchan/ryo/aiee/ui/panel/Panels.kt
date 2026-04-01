@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.derivedStateOf
+import me.earzuchan.ryo.aiee.app.CommandService
 import me.earzuchan.ryo.aiee.app.MenuService
 import me.earzuchan.ryo.aiee.app.WorkspaceService
 import me.earzuchan.ryo.aiee.duty.AppDuty
@@ -56,9 +57,9 @@ fun SchemasPanel(duty: SchemasPanelDuty) {
 @Composable
 fun AssetsPanel(duty: AssetsPanelDuty) {
     val menuService = koinInject<MenuService>()
-    val workspaceService = koinInject<WorkspaceService>()
+    val commandService = koinInject<CommandService>()
 
-    var keyword by remember { mutableStateOf("") }
+    var keyword by duty.keyword
     val treeState = rememberTreeViewState()
 
     val volumeInfoText = Res.string.menu_item_volume_info.text
@@ -66,35 +67,28 @@ fun AssetsPanel(duty: AssetsPanelDuty) {
     val saveAsText = Res.string.menu_item_save_as.text
     val closeText = Res.string.action_close.text
 
-    val volumes by workspaceService.volumes.collectAsState()
-    val nodes by derivedStateOf {
-        volumes.map { vol ->
-            TreeNodeModel(vol.displayName,vol.volume.entries.value.keys.map { TreeNodeModel(it) })
-        }
-    }
-
-    /*LaunchedEffect(appDuty.activeVolumeState, volumes) {
-        val index = state.volumes.indexOfFirst { it.id == state.activeVolumeId }
-        if (index < 0) return@LaunchedEffect
-        val focusedPath = treeState.pathOfLastClickedNode
-        if (focusedPath.firstOrNull() == index) return@LaunchedEffect
-        treeState.locatePath(listOf(index))
-    }*/
+    val nodes by duty.nodes.collectAsState()
 
     PanelScaffold(Res.string.panel_assets_manager, keyword, { keyword = it }) {
         Column(Modifier.fillMaxSize()) {
 
             if (nodes.isEmpty()) Res.string.panel_assets_empty.EmptyStr()
-            else TreeView(nodes, Modifier.fillMaxSize(), keyword, state = treeState, /*onNodeClick = duty::onTreeNodeClick, onNodeRightClick = { path, anchorX, anchorY ->
-                if (path.size != 1) return@TreeView
-                val volume = duty.volumeByPath(path) ?: return@TreeView
+            else TreeView(nodes, Modifier.fillMaxSize(), keyword, state = treeState, /*onNodeClick = duty::onTreeNodeClick, */onNodeRightClick = { path, anchorX, anchorY ->
+                if (path.size != 1) return@TreeView // 仅能右击卷
 
-                duty.onTreeNodeClick(path)
+                val id = duty.getVolumeUUID(path[0]) ?: return@TreeView
+
                 menuService.showContextMenu(
                     anchorX,
                     anchorY,
-                    listOf(RyoMenuEntry.MenuItem(volumeInfoText, false), RyoMenuEntry.MenuItem(saveText) { duty.saveVolume(volume.id) }, RyoMenuEntry.MenuItem(saveAsText) { duty.saveVolumeAs(volume.id) }, RyoMenuEntry.MenuItem(closeText) { duty.closeVolume(volume.id) }))
-            }*/)
+                    listOf(
+                        RyoMenuEntry.MenuItem(volumeInfoText, false),
+                        RyoMenuEntry.MenuItem(saveText) { commandService.dispatch(AppDuty.CMD_SAVE_VOLUME, id) },
+                        RyoMenuEntry.MenuItem(saveAsText) { commandService.dispatch(AppDuty.CMD_SAVE_VOLUME_AS, id) },
+                        RyoMenuEntry.MenuItem(closeText) { commandService.dispatch(AppDuty.CMD_CLOSE_VOLUME, id) }
+                    )
+                )
+            })
         }
     }
 }

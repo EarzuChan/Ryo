@@ -103,7 +103,7 @@ fun TreeView(nodes: List<TreeNodeModel>, modifier: Modifier = Modifier, filterTe
                             flattenedChildren = process(node.children, level + 1, path)
 
                             // 超绝复用，直接从刚刚处理好的展开列表中找：递归返回的列表里，层级l+1的就是被保留下来的直接子节点；这样完美避免了再次遍历去匹配 contains 字符串。
-                            displayChildrenCount = if (filterText.isBlank()) node.children.size ?: 0 else flattenedChildren.count { it.level == level + 1 }
+                            displayChildrenCount = if (filterText.isBlank()) node.children.size else flattenedChildren.count { it.level == level + 1 }
                         } else displayChildrenCount = (if (filterText.isBlank()) node.children.size else node.children.count { child -> child.children != null || child.name.contains(filterText, ignoreCase = true) } ?: 0)
                         // 修复性能隐患：避免乱深度递归：折叠状态下，原代码即使折叠也会递归整个树去算 process；优化后，遇到折叠节点绝不深层递归，只轻量地看一眼它的第一层直接子节点来算 count 即可
 

@@ -140,7 +140,7 @@ class ShortcutService(private val shortcutRepo: ShortcutRepository): CoroutineOb
         return SetStrokeResult.Accepted
     }
 
-    fun clearDefaultFor(commandId: String) {
+    fun clearDefault(commandId: String) {
         _overrides.value -= commandId
     }
 
