@@ -22,12 +22,12 @@ import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.app.AppService
 import me.earzuchan.ryo.aiee.app.CommandService
 import me.earzuchan.ryo.aiee.app.DialogService
-import me.earzuchan.ryo.aiee.app.MenuService
 import me.earzuchan.ryo.aiee.data.preference.Preferences
 import me.earzuchan.ryo.aiee.duty.AppDuty
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
+import me.earzuchan.ryo.aiee.ui.window.LocalWindowDutyScope
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import me.earzuchan.ryo.aiee.util.UiUtils.vector
 import org.jetbrains.compose.resources.DrawableResource
@@ -38,8 +38,10 @@ import kotlin.math.roundToInt
 fun SettingsPage() {
     val appService = koinInject<AppService>()
     val commandService = koinInject<CommandService>()
-    val menuService = koinInject<MenuService>()
-    val dialogService = koinInject<DialogService>()
+
+    val windowDutyScope = LocalWindowDutyScope.current
+    val menuService = windowDutyScope.menuService
+    val dialogService = windowDutyScope.dialogService
 
     @Composable
     fun Section(title: String) = Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp, vertical = 4.dp), Alignment.BottomStart) {

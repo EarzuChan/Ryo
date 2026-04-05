@@ -12,7 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import com.arkivanov.decompose.ComponentContext as DutyContext
 
-class MainPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
+class MainPanelDuty(ctx: DutyContext) : EmpoweredDuty(ctx), KoinComponent {
     val commandService by inject<CommandService>()
 
     companion object {
@@ -26,9 +26,9 @@ class MainPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
 
     data class TabData(val id: String, val duty: TabDuty, val isResidential: Boolean)
 
-    fun getUiModels(stackItems: List<Child<MainPanelTabNavis, TabDuty>>): List<TabData> = slots.mapNotNull { slot ->
-        val child = stackItems.find { it.configuration.id == slot.id }
-        if (child == null) null else TabData(slot.id, child.instance!!, slot.residential)
+    fun getUiModels(stackItems: List<Child<MainPanelTabNavis, TabDuty>>): List<TabData> {
+        val childMap = stackItems.associateBy { it.configuration.id }
+        return slots.mapNotNull { slot -> childMap[slot.id]?.instance?.let { TabData(slot.id, it, slot.residential) } }
     }
 
     data class TabSlot(val id: String, val navi: MainPanelTabNavis, val residential: Boolean = false)
@@ -45,10 +45,10 @@ class MainPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
     val activeTabId: String get() = tabStack.value.active.configuration.id
 
     init {
-        commandService.register(CMD_CLOSE_ACTIVE_TAB) { if (activeTabId != MainPanelTabNavis.Empty.id) close(activeTabId) }
-        commandService.register(CMD_CLOSE_ALL_TABS) { closeAll() }
-        commandService.register(CMD_MENTION_WELCOME) { mentionWelcome() }
-        commandService.register(CMD_MENTION_SETTINGS) { mentionSettings() }
+        commandService.register(CMD_CLOSE_ACTIVE_TAB) { if (activeTabId != MainPanelTabNavis.Empty.id) close(activeTabId) }.autoDispose()
+        commandService.register(CMD_CLOSE_ALL_TABS) { closeAll() }.autoDispose()
+        commandService.register(CMD_MENTION_WELCOME) { mentionWelcome() }.autoDispose()
+        commandService.register(CMD_MENTION_SETTINGS) { mentionSettings() }.autoDispose()
     }
 
     // --- 精细化的 Mention (唤起) 逻辑 ---
@@ -65,7 +65,6 @@ class MainPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
         focus(id)
     }
 
-    // 未来去掉Preview，并改为自动替换非常驻
     fun mentionSession(session: MainPanelTabNavis.EditorSession) {
         val existingIndex = slots.indexOfFirst { it.id == session.id }
 
@@ -90,7 +89,7 @@ class MainPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
 
     // --- Tab 状态变更 (给编辑器内部或者 Tab 双击事件用的) ---
 
-    /** 双击 Tab，使其转正(变成常驻) */
+    // Tab转正
     fun makeResidential(id: String) {
         val index = slots.indexOfFirst { it.id == id }
         if (index != -1 && !slots[index].residential) slots[index] = slots[index].copy(residential = true)

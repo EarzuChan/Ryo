@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 
+// CHECK：暂不改名不挪窝
 // FIXME：有一个无伤大雅的小问题：就是从表现上看，从一个右键菜单切到另一个，或者是从菜单栏菜单切到右键菜单时，中间没有“旧”菜单关闭、“新”菜单打开的动画，而且“旧”菜单的hover会被“继承”到新菜单
 class MenuService {
     data class Request(val anchorX: Int, val anchorY: Int, val entries: List<RyoMenuEntry>, val selectedIndex: Int? = null)

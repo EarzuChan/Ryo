@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import me.earzuchan.ryo.aiee.util.CoroutineObject
+import me.earzuchan.ryo.aiee.util.CoroutineScopeOwner
 import me.earzuchan.ryo.aiee.util.FileUtils.nameWithoutExt
 import me.earzuchan.ryo.foundation.io.loadVolumeChamberFrom
 import me.earzuchan.ryo.foundation.io.writeTo
@@ -14,7 +14,7 @@ import me.earzuchan.ryo.modern.volume.ManagedVolume
 import okio.Path
 import java.util.UUID
 
-class WorkspaceService(private val appService: AppService) : CoroutineObject() {
+class WorkspaceService(private val appService: AppService) : CoroutineScopeOwner() {
     // 卷管理
 
     private val ryo get() = appService.ryo
@@ -74,4 +74,7 @@ class WorkspaceService(private val appService: AppService) : CoroutineObject() {
     init {
 
     }
+
+    // CLEAR UP
+    fun shutdown() = shutdownCoroutineScope()
 }

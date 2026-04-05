@@ -3,6 +3,7 @@ package me.earzuchan.ryo.aiee.util
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,14 +15,15 @@ import me.earzuchan.ryo.aiee.data.database.Database
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
+import org.koin.core.component.KoinComponent
 import java.awt.Desktop
 import java.net.URI
 import javax.swing.SwingUtilities
 
-abstract class CoroutineObject {
-    protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+abstract class CoroutineScopeOwner(defaultDispatcher: CoroutineDispatcher = Dispatchers.Default) {
+    protected val scope = CoroutineScope(SupervisorJob() + defaultDispatcher)
 
-    fun destroy() = scope.cancel() // TODO：啊你怎么不取消！干！
+    fun shutdownCoroutineScope() = scope.cancel()
 }
 
 fun interface Disposable {
@@ -64,12 +66,5 @@ object PlatformUtils {
     fun openLink(url: String) {
         if (!Desktop.isDesktopSupported()) return
         runCatching { Desktop.getDesktop().browse(URI(url)) }
-    }
-}
-
-object LanguageExtensions {
-    inline fun <reified T> requireAs(obj: Any?, errMsg: String = "对象一定要类型正确"): T {
-        require(obj is T) { errMsg }
-        return obj
     }
 }

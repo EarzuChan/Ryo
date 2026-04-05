@@ -8,6 +8,8 @@ sealed interface UiText {
     data class Plain(val value: String) : UiText
 
     data class Res(val resource: StringResource, val args: List<UiText> = emptyList()) : UiText
+
+    // 现在仅有Res支持嵌入Sub Texts，Plain则不支持，也不支持文本组合（“+”）
 }
 
 @Composable

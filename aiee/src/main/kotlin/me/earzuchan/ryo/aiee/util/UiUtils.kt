@@ -25,7 +25,7 @@ object UiUtils {
 
     @Composable
     fun StringResource.text(vararg format: String): String {
-        LocalAppLanguage.current // For trigger the StrLang refresh
+        LocalAppLanguage.current // TIPS：为了在语言变换时触发重渲染
         return stringResource(this, *format)
     }
 

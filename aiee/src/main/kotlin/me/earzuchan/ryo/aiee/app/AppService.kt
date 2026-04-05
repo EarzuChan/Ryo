@@ -7,13 +7,13 @@ import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.data.preference.Preferences
 import me.earzuchan.ryo.aiee.data.preference.Preferences.ThemeMode.*
 import me.earzuchan.ryo.aiee.data.repository.PreferencesRepository
-import me.earzuchan.ryo.aiee.util.CoroutineObject
+import me.earzuchan.ryo.aiee.util.CoroutineScopeOwner
 import me.earzuchan.ryo.foundation.Ryo
 import me.earzuchan.ryo.modern.modernize
 
 // CHECK：应让本玩意管理：偏好设置（快捷键、语言、偏好编辑器等；这个管理的意思是，你到时App要获取编辑器什么的，也要通过这个中枢）、Ryo实例和Schema
 
-class AppService(private val prefsRepo: PreferencesRepository): CoroutineObject() {
+class AppService(private val prefsRepo: PreferencesRepository): CoroutineScopeOwner() {
     // PREFS
 
     val appThemeMode = prefsRepo.themeModeFlow.stateIn(scope, SharingStarted.WhileSubscribed(5000), Preferences.DEFAULT_THEME_MODE)
@@ -36,4 +36,7 @@ class AppService(private val prefsRepo: PreferencesRepository): CoroutineObject(
 
     val ryo = Ryo()
     val modernRyo = ryo.modernize()
+
+    // CLEAR UP
+    fun shutdown() = shutdownCoroutineScope()
 }

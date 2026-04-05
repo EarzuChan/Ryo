@@ -59,6 +59,7 @@ import me.earzuchan.ryo.aiee.ui.component.RyoIconButton
 import me.earzuchan.ryo.aiee.ui.component.RyoButton
 import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.resolve
+import me.earzuchan.ryo.aiee.ui.window.LocalWindowDutyScope
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import me.earzuchan.ryo.aiee.util.UiUtils.vector
 import org.jetbrains.compose.resources.DrawableResource
@@ -118,7 +119,7 @@ fun SidePanelView(duty: SidePanelDuty) {
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
 fun MainPanelView(duty: MainPanelDuty) = Column(Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 16.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
-    val menuService = koinInject<MenuService>()
+    val menuService = LocalWindowDutyScope.current.menuService
 
     val stackState by duty.tabStack.subscribeAsState()
     val activeTabId = stackState.active.configuration.takeIf { it !is MainPanelTabNavis.Empty }?.id
@@ -146,7 +147,7 @@ fun MainPanelView(duty: MainPanelDuty) = Column(Modifier.fillMaxSize().clip(Roun
             if (!event.buttons.isSecondaryPressed) return@onPointerEvent
             val localPress = event.changes.firstOrNull()?.position ?: return@onPointerEvent
             onContextMenu((topLeftInWindow.x + localPress.x).roundToInt(), (topLeftInWindow.y + localPress.y).roundToInt())
-        }.pointerInput(tab.id) { detectTapGestures({ onDoubleClick() }, onTap = { onSelect() }) }) {
+        }.pointerInput(tab.id) { detectTapGestures({ onDoubleClick() }, onTap = { onSelect() }) }) { // TODO：小细节，没有点击水波纹了，因为不是clickable
             Spacer(Modifier.fillMaxWidth().height(3.dp))
             Row(Modifier.fillMaxWidth().weight(1F).padding(start = 12.dp, end = 6.dp), Arrangement.spacedBy(6.dp), Alignment.CenterVertically) {
                 Text(tab.duty.title.value.resolve(), Modifier, textColor, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelLarge, fontStyle = if(tab.isResidential) FontStyle.Normal else FontStyle.Italic)
@@ -204,13 +205,13 @@ fun MainPanelView(duty: MainPanelDuty) = Column(Modifier.fillMaxSize().clip(Roun
 fun FrameWindowScope.AppTopBarView(appDuty: AppDuty, windowControlButtons: @Composable () -> Unit) {
     val commandService = koinInject<CommandService>()
     val shortcutService = koinInject<ShortcutService>()
-    val menuService = koinInject<MenuService>()
+    val menuService = appDuty.menuService
 
     data class MenuGroup(val id: String, val label: String, val entries: List<RyoMenuEntry>)
 
-    val activeVolumeState by appDuty.activeVolumeState.collectAsState()
+    val activeVolumeState by appDuty.activeVolumeId.collectAsState()
     val hasActiveVolume = activeVolumeState != null
-    val activeVolumeName = activeVolumeState?.displayName
+    val activeVolumeName = activeVolumeState?.toString()
     val saveActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_save_volume_format.text(it) } ?: Res.string.menu_item_save_active_volume.text
     val saveActiveVolumeAsText = activeVolumeName?.let { Res.string.menu_item_save_volume_as_format.text(it) } ?: Res.string.menu_item_save_active_volume_as.text
     val closeActiveVolumeText = activeVolumeName?.let { Res.string.menu_item_close_volume_format.text(it) } ?: Res.string.menu_item_close_active_volume.text

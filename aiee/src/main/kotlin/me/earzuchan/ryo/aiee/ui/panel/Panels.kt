@@ -33,6 +33,7 @@ import me.earzuchan.ryo.aiee.ui.component.RyoMenuEntry
 import me.earzuchan.ryo.aiee.ui.component.TreeNodeModel
 import me.earzuchan.ryo.aiee.ui.component.TreeView
 import me.earzuchan.ryo.aiee.ui.component.TreeViewState.Companion.rememberTreeViewState
+import me.earzuchan.ryo.aiee.ui.window.LocalWindowDutyScope
 import me.earzuchan.ryo.aiee.util.UiUtils.text
 import org.jetbrains.compose.resources.StringResource
 import org.koin.compose.koinInject
@@ -56,7 +57,7 @@ fun SchemasPanel(duty: SchemasPanelDuty) {
 
 @Composable
 fun AssetsPanel(duty: AssetsPanelDuty) {
-    val menuService = koinInject<MenuService>()
+    val menuService = LocalWindowDutyScope.current.menuService
     val commandService = koinInject<CommandService>()
 
     var keyword by duty.keyword

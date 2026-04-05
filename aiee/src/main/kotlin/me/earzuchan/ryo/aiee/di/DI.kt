@@ -4,8 +4,10 @@ import me.earzuchan.ryo.aiee.app.*
 import me.earzuchan.ryo.aiee.data.database.Database
 import me.earzuchan.ryo.aiee.data.repository.PreferencesRepository
 import me.earzuchan.ryo.aiee.data.repository.ShortcutRepository
+import me.earzuchan.ryo.aiee.duty.AppDuty
 import me.earzuchan.ryo.aiee.util.DataUtils
 import org.koin.dsl.module
+import org.koin.dsl.onClose
 
 val appModule = module {
     single { DataUtils.buildPreferences() }
@@ -16,10 +18,8 @@ val appModule = module {
     single { PreferencesRepository(get()) }
     single { ShortcutRepository(get()) }
 
-    single { MenuService() }
-    single { DialogService() }
-    single { ShortcutService(get()) }
-    single { CommandService(get()) }
-    single { AppService(get()) }
-    single { WorkspaceService(get()) }
+    single { ShortcutService(get()) } onClose {it?.shutdown()}
+    single { CommandService(get()) } onClose {it?.shutdown()}
+    single { AppService(get()) } onClose {it?.shutdown()}
+    single { WorkspaceService(get()) } onClose {it?.shutdown()}
 }

@@ -1,36 +1,37 @@
 package me.earzuchan.ryo.aiee.duty
 
-import kotlinx.serialization.Serializable
+import com.arkivanov.decompose.ComponentContext as DutyContext
+import com.arkivanov.essenty.lifecycle.Lifecycle
+import com.arkivanov.essenty.lifecycle.doOnDestroy
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import me.earzuchan.ryo.aiee.app.DialogService
+import me.earzuchan.ryo.aiee.app.MenuService
+import me.earzuchan.ryo.aiee.util.CoroutineScopeOwner
+import me.earzuchan.ryo.aiee.util.Disposable
 
-enum class AppLifecycleStage {
-    Running,
-    Closing
+
+abstract class EmpoweredDuty(ctx: DutyContext) : DutyContext by ctx, CoroutineScopeOwner(Dispatchers.Main.immediate) {
+    private val disposables = mutableListOf<Disposable>()
+
+    init {
+        lifecycle.doOnDestroy(::dispose)
+    }
+
+    // 这个会被自动调用，非必要别主动调用
+    protected fun dispose() {
+        disposables.forEach { it.dispose() }
+        shutdownCoroutineScope()
+    }
+
+    protected fun Disposable.autoDispose() {
+        disposables += this
+    }
 }
 
-@Serializable
-sealed class MainPanelTabNavis {
-    abstract val id: String
-
-    @Serializable
-    data object Empty : MainPanelTabNavis() { override val id = "__empty__" }
-
-    @Serializable
-    data object Welcome : MainPanelTabNavis() { override val id = "welcome" }
-
-    @Serializable
-    data object Settings : MainPanelTabNavis() { override val id = "settings" }
-
-    @Serializable
-    data class EditorSession(override val id: String) : MainPanelTabNavis()
+interface WindowDutyScope {
+    val menuService: MenuService
+    val dialogService: DialogService
 }
 
-@Serializable
-sealed class SidePanelNavis {
-    abstract val id: String
-
-    @Serializable
-    data object Assets : SidePanelNavis() { override val id = "assets" }
-
-    @Serializable
-    data object Schemas : SidePanelNavis() { override val id = "schemas" }
-}
+// TIPS：最高指示，把Duty视为主线程对象，Vamos！

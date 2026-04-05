@@ -21,35 +21,54 @@ import me.earzuchan.ryo.aiee.app.CommandService
 import me.earzuchan.ryo.aiee.app.WorkspaceService
 import me.earzuchan.ryo.aiee.resources.*
 import me.earzuchan.ryo.aiee.ui.component.TreeNodeModel
-import me.earzuchan.ryo.aiee.util.CoroutineObject
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.collections.emptyList
-import kotlin.coroutines.CoroutineContext
 import com.arkivanov.decompose.ComponentContext as DutyContext
 
-class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
+class SidePanelDuty(ctx: DutyContext, windowDutyScope: WindowDutyScope) : EmpoweredDuty(ctx), KoinComponent {
     val commandService by inject<CommandService>()
 
     companion object {
+        private const val TAG = "SidePanelDuty"
+
         private const val DEFAULT_WIDTH_DP = 280F
         private const val COLLAPSE_THRESHOLD_DP = 80F
         private const val MAX_WIDTH_DP = 560F
 
-        const val CMD_TOGGLE = "side_panel.toggle"
+        const val CMD_TOGGLE = "$TAG.Toggle"
     }
 
-    data class Panel(val id: String, val navi: SidePanelNavis, val title: StringResource, val icon: DrawableResource, val selectedIcon: DrawableResource = icon)
+    data class Panel(
+        val id: String,
+        val navi: SidePanelNavis,
+        val title: StringResource,
+        val icon: DrawableResource,
+        val selectedIcon: DrawableResource = icon
+    )
 
     private val navigation = StackNavigation<SidePanelNavis>()
 
-    val panelStack: Value<ChildStack<SidePanelNavis, Any>> = childStack(navigation, SidePanelNavis.serializer(), SidePanelNavis.Assets, "SidePanelStack", false, ::mapChild)
+    val panelStack: Value<ChildStack<SidePanelNavis, Any>> =
+        childStack(navigation, SidePanelNavis.serializer(), SidePanelNavis.Assets, "SidePanelStack", false, ::mapChild)
 
     val panels = listOf(
-        Panel(SidePanelNavis.Assets.id, SidePanelNavis.Assets, Res.string.panel_assets_manager, Res.drawable.ic_list_24px, Res.drawable.ic_list_filled_24px),
-        Panel(SidePanelNavis.Schemas.id, SidePanelNavis.Schemas, Res.string.panel_schemas_manager, Res.drawable.ic_schemas_24px, Res.drawable.ic_schemas_filled_24px)
+        Panel(
+            SidePanelNavis.Assets.id,
+            SidePanelNavis.Assets,
+            Res.string.panel_assets_manager,
+            Res.drawable.ic_list_24px,
+            Res.drawable.ic_list_filled_24px
+        ),
+        Panel(
+            SidePanelNavis.Schemas.id,
+            SidePanelNavis.Schemas,
+            Res.string.panel_schemas_manager,
+            Res.drawable.ic_schemas_24px,
+            Res.drawable.ic_schemas_filled_24px
+        )
     )
 
     var expanded by mutableStateOf(true); private set
@@ -57,7 +76,7 @@ class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
     private var collapsedByDrag by mutableStateOf(false)
 
     init {
-        commandService.register(CMD_TOGGLE) { toggle() }
+        commandService.register(CMD_TOGGLE) { toggle() }.autoDispose()
     }
 
     // --- 本地视图交互API ---
@@ -102,7 +121,7 @@ class SidePanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent {
     }
 }
 
-class AssetsPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent, CoroutineObject() {
+class AssetsPanelDuty(ctx: DutyContext) : EmpoweredDuty(ctx), KoinComponent {
     val workspaceService by inject<WorkspaceService>()
 
     val keyword = mutableStateOf("")
@@ -119,7 +138,7 @@ class AssetsPanelDuty(ctx: DutyContext) : DutyContext by ctx, KoinComponent, Cor
         }
     }.stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun getVolumeUUID(index: Int) = runCatching{ workspaceService.volumes.value[index].id }.getOrNull()
+    fun getVolumeUUID(index: Int) = runCatching { workspaceService.volumes.value[index].id }.getOrNull()
 }
 
 class SchemasPanelDuty(ctx: DutyContext) : DutyContext by ctx

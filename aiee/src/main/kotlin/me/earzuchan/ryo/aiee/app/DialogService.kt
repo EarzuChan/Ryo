@@ -9,6 +9,7 @@ import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.ui.dialog.AboutDialog
 import org.jetbrains.compose.resources.DrawableResource
 
+// CHECK：暂不改名不挪窝
 class DialogService {
     data class DialogAction(val text: UiText, val type: ButtonType = ButtonType.Text, val enabled: Boolean = true, val onClick: (() -> Boolean?)? = null)
 

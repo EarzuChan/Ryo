@@ -14,11 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.data.repository.ShortcutRepository
-import me.earzuchan.ryo.aiee.util.CoroutineObject
+import me.earzuchan.ryo.aiee.util.CoroutineScopeOwner
 import kotlin.collections.component1
 import kotlin.collections.component2
 
-class ShortcutService(private val shortcutRepo: ShortcutRepository): CoroutineObject() {
+class ShortcutService(private val shortcutRepo: ShortcutRepository): CoroutineScopeOwner() {
     data class Stroke(val key: Key, val ctrl: Boolean = false, val alt: Boolean = false, val shift: Boolean = false, val meta: Boolean = false) {
         fun matches(event: KeyEvent): Boolean {
             if (event.type != KeyEventType.KeyDown) return false
@@ -136,13 +136,16 @@ class ShortcutService(private val shortcutRepo: ShortcutRepository): CoroutineOb
     fun setDefault(commandId: String, stroke: Stroke): SetStrokeResult {
         val conflicts = findDefaultConflicts(commandId, stroke)
         if (conflicts.isNotEmpty()) return SetStrokeResult.Rejected(conflicts)
-        _overrides.value += (commandId to stroke)
+        _defaults.value += (commandId to stroke)
         return SetStrokeResult.Accepted
     }
 
     fun clearDefault(commandId: String) {
-        _overrides.value -= commandId
+        _defaults.value -= commandId
     }
 
     fun resolve(event: KeyEvent): String? = effective.entries.firstOrNull { (_, stroke) -> stroke.matches(event) }?.key
+
+    // CLEAR UP
+    fun shutdown() = shutdownCoroutineScope()
 }

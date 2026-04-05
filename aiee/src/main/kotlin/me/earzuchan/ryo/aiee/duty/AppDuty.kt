@@ -1,44 +1,46 @@
 package me.earzuchan.ryo.aiee.duty
 
+import com.arkivanov.decompose.childContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.earzuchan.ryo.aiee.BuildConfig
 import me.earzuchan.ryo.aiee.app.CommandService
 import me.earzuchan.ryo.aiee.app.DialogService
+import me.earzuchan.ryo.aiee.app.MenuService
 import me.earzuchan.ryo.aiee.app.ShortcutService
 import me.earzuchan.ryo.aiee.app.WorkspaceService
 import me.earzuchan.ryo.aiee.ui.UiText
 import me.earzuchan.ryo.aiee.ui.dialog.AboutDialog
 import me.earzuchan.ryo.aiee.ui.window.RyoWindowController
 import me.earzuchan.ryo.aiee.ui.window.RyoWindowInterop
-import me.earzuchan.ryo.aiee.util.CoroutineObject
 import me.earzuchan.ryo.aiee.util.FileUtils
-import me.earzuchan.ryo.aiee.util.LanguageExtensions.requireAs
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.*
 import com.arkivanov.decompose.ComponentContext as DutyContext
 
-class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext by ctx, KoinComponent, CoroutineObject() {
+class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : KoinComponent, EmpoweredDuty(ctx), WindowDutyScope {
     val workspaceService by inject<WorkspaceService>()
     val commandService by inject<CommandService>()
-    val dialogService by inject<DialogService>()
 
-    val sidePanelDuty = SidePanelDuty(ctx)
-    val mainPanelDuty = MainPanelDuty(ctx)
+    override val dialogService = DialogService()
+    override val menuService = MenuService()
+
+    val sidePanelDuty = SidePanelDuty(childContext("SidePanel"), this)
+    val mainPanelDuty = MainPanelDuty(childContext("MainPanel"))
 
     // 活跃卷【短期：最后树点击；长期：tab对应卷】，是否应该下放到工作空间？
 
-    private val _activeVolumeState = MutableStateFlow<WorkspaceService.VolumeState?>(null)
-    val activeVolumeState = _activeVolumeState.asStateFlow()
+    private val _activeVolumeId = MutableStateFlow<UUID?>(null)
+    val activeVolumeId = _activeVolumeId.asStateFlow()
 
-    fun setActiveVolumeState(state: WorkspaceService.VolumeState) {
-        _activeVolumeState.value = state
+    fun setActiveVolumeId(id: UUID) {
+        _activeVolumeId.value = id
     }
 
-    fun clearActiveVolumeState() {
-        _activeVolumeState.value = null
+    fun clearActiveVolumeId() {
+        _activeVolumeId.value = null
     }
 
     // 窗口
@@ -79,44 +81,57 @@ class AppDuty(ctx: DutyContext, private val exitApp: () -> Unit) : DutyContext b
 
     init {
         // 命令注册
-        commandService.register(CMD_OPEN_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F6), { true }) {
+        commandService.register(
+            CMD_OPEN_VOLUME,
+            ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F6),
+            { true }) {
             FileUtils.openFile()?.let { workspaceService.openVolume(it) }
-        }
+        }.autoDispose()
 
-        commandService.register(CMD_SAVE_ACTIVE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F7), { _activeVolumeState.value != null }) {
-            workspaceService.saveVolume(_activeVolumeState.value!!.id)
-        }
+        commandService.register(
+            CMD_SAVE_ACTIVE_VOLUME,
+            ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F7),
+            { _activeVolumeId.value != null }) {
+            workspaceService.saveVolume(_activeVolumeId.value!!)
+        }.autoDispose()
 
         commandService.register(CMD_SAVE_VOLUME) {
-            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
+            val id = it[0] as? UUID ?: error("ID一定要是UUID")
             workspaceService.saveVolume(id)
-        }
+        }.autoDispose()
 
-        commandService.register(CMD_SAVE_ACTIVE_VOLUME_AS, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F8), { false }) {
+        commandService.register(
+            CMD_SAVE_ACTIVE_VOLUME_AS,
+            ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F8),
+            { false }) {
             // TODO：接入
-        }
+        }.autoDispose()
 
         commandService.register(CMD_SAVE_VOLUME_AS) {
-            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
+            val id = it[0] as? UUID ?: error("ID一定要是UUID")
             // TODO：接入
-        }
+        }.autoDispose()
 
-        commandService.register(CMD_CLOSE_ACTIVE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9), { false }) {
+        commandService.register(
+            CMD_CLOSE_ACTIVE_VOLUME,
+            ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9)
+        ) {
             // TODO：检查保存境况
-            workspaceService.closeVolume(activeVolumeState.value!!.id)
-        }
+            workspaceService.closeVolume(activeVolumeId.value!!)
+        }.autoDispose()
 
-        commandService.register(CMD_CLOSE_VOLUME, ShortcutService.Stroke(ctrl = true, key = ShortcutService.Key.F9), { false }) {
+        commandService.register(CMD_CLOSE_VOLUME) {
             // TODO：检查保存境况
-            val id = requireAs<UUID>(it[1], "ID一定要是UUID")
+            val id = it[0] as? UUID ?: error("ID一定要是UUID")
             workspaceService.closeVolume(id)
-        }
+        }.autoDispose()
 
         commandService.register(CMD_SHOW_ABOUT_DIALOG) { dialogService.orderSpecial(closeOnOverlayClick = true) { AboutDialog() } }
+            .autoDispose()
 
         // 刷新
         scope.launch {
-            workspaceService.volumes.collect { l -> if (l.none { it === _activeVolumeState.value }) clearActiveVolumeState() } // 清理届不到的活跃
+            workspaceService.volumes.collect { l -> if (l.none { it.id == _activeVolumeId.value }) clearActiveVolumeId() } // 清理届不到的活跃
         }
     }
 }
